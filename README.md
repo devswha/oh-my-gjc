@@ -28,6 +28,14 @@ oh-my-gjc/
 
 Inside a `gjc` interactive session:
 
+> **Plugins are managed only from inside an interactive `gjc` session, via the
+> `/plugin` slash command.** A shell command like `gjc plugin install …` does
+> **not** work for marketplace plugins — it is treated as a chat message and
+> starts a session instead. (The gjc binary still prints a `gjc plugin install
+> <package>` hint, but that CLI is not wired up; it refers to a separate native
+> `gjc/pi` plugin concept, not this marketplace.) This is a gjc-side limitation,
+> not a problem with this repo.
+
 ```
 /plugin marketplace add devswha/oh-my-gjc      # GitHub shorthand
 # or: /plugin marketplace add https://github.com/devswha/oh-my-gjc.git
