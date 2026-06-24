@@ -18,9 +18,9 @@
       "category": "examples"
     },
     {
-      "name": "my-workflows",
-      "source": "./plugins/my-workflows",
-      "description": "자주 쓰는 gjc 워크플로 스킬 모음. 첫 스킬: easy-answer (최종 답변을 전문용어 없이 쉬운 말로).",
+      "name": "oh-my-gjc",
+      "source": "./plugins/oh-my-gjc",
+      "description": "자주 쓰는 gjc 워크플로 스킬 모음. easy-answer 스킬(최종 답변을 쉬운 말로) + /oh-my-gjc:easy 강제 토글.",
       "version": "0.1.0",
       "category": "workflows"
     }

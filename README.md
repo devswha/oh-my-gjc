@@ -33,10 +33,17 @@ Inside a `gjc` interactive session:
 # or: /plugin marketplace add https://github.com/devswha/oh-my-gjc.git
 # or (local checkout): /plugin marketplace add ./
 
-/plugin install example-plugin@oh-my-gjc
+/plugin install oh-my-gjc@oh-my-gjc         # the workflow-skills plugin
+# or: /plugin install example-plugin@oh-my-gjc   # the template/reference plugin
 ```
 
-Then `/example-plugin:changelog` is available and the `example-skill` skill loads.
+After installing `oh-my-gjc`, the `easy-answer` skill loads (gjc rephrases its
+final answer in plain language when relevant) and the toggle command is available:
+
+```
+/oh-my-gjc:easy        # force plain-language final answers ON for the session
+/oh-my-gjc:easy off    # turn it back OFF
+```
 
 Manage installs with `/plugin` (list / enable / disable / uninstall) and refresh
 the catalog with `/plugin marketplace update oh-my-gjc`.
