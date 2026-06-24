@@ -1,0 +1,10 @@
+# gjc runtime state (never commit local session/plugin state)
+.gjc/
+
+# OS / editor noise
+.DS_Store
+*.swp
+*~
+
+# Dependencies (only if a plugin uses them)
+node_modules/

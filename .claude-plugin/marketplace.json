@@ -1,0 +1,21 @@
+{
+  "name": "oh-my-gjc",
+  "owner": {
+    "name": "devswha",
+    "email": "devswha@gmail.com",
+    "url": "https://github.com/devswha"
+  },
+  "metadata": {
+    "description": "Community plugin marketplace for Gajae Code (gjc).",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "example-plugin",
+      "source": "./plugins/example-plugin",
+      "description": "Starter template plugin: ships one slash command and one skill. Copy it to build your own plugin.",
+      "version": "0.1.0",
+      "category": "examples"
+    }
+  ]
+}
