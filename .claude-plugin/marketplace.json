@@ -16,6 +16,13 @@
       "description": "Starter template plugin: ships one slash command and one skill. Copy it to build your own plugin.",
       "version": "0.1.0",
       "category": "examples"
+    },
+    {
+      "name": "my-workflows",
+      "source": "./plugins/my-workflows",
+      "description": "자주 쓰는 gjc 워크플로 스킬 모음. 첫 스킬: easy-answer (최종 답변을 전문용어 없이 쉬운 말로).",
+      "version": "0.1.0",
+      "category": "workflows"
     }
   ]
 }
