@@ -102,3 +102,31 @@ the catalog with `/plugin marketplace update oh-my-gjc`.
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
+## Tools: Discord notification bridge
+
+`tools/discord-notify-bridge.ts` forwards a running gjc session's
+**action-needed / idle / resolved** notifications to a Discord channel via an
+incoming webhook. It is a client of gjc's Notifications SDK (it connects to the
+per-session loopback WebSocket at `.gjc/state/notifications/<sessionId>.json`),
+so it works regardless of whether the bundled Discord *adapter* (added in gjc
+0.7.2) is wired into a delivery daemon.
+
+```sh
+# 1. put your webhook URL where the bridge can read it (gitignored under .gjc/)
+mkdir -p .gjc/secrets && printf '%s' 'https://discord.com/api/webhooks/…' > .gjc/secrets/discord-webhook
+#    …or export DISCORD_WEBHOOK_URL=…
+
+# 2. run it next to a live gjc session that has notifications enabled
+bun tools/discord-notify-bridge.ts
+```
+
+- **Notify-only.** A Discord *webhook* is push-only; the bridge cannot send
+  replies back into the session. Interactive replies need a Discord *bot*
+  (gateway), not a webhook.
+- **Secrets.** The webhook URL is read from `$DISCORD_WEBHOOK_URL` or
+  `.gjc/secrets/discord-webhook` and is never logged; the WS token is redacted.
+- **Tests.** `bun test tools/test/e2e-bridge.test.ts` proves the full pipeline
+  (mock gjc endpoint → bridge → Discord webhook receiver) with no real secret.
+  `bun tools/test/mock-notify-endpoint.ts` stands up a mock endpoint for a manual
+  run against a real webhook.
