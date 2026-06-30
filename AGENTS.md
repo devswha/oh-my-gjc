@@ -111,7 +111,14 @@ Content is discovered by **convention directories** above; explicit paths in
 - Non-Goals: read-only Q&A (→ `codex-cli-control`), App/CDP (→ `codex-app-control`), lazycodex
   auto-install, multi-session orchestration, auto-commit/push.
 
-### `codex-app-control` (built; live verification env-gated)
+### `lazycodex` (working)
+- Commands: `/lazycodex:setup [doctor|install|update|uninstall]` (manage the OmO Codex Light harness in `~/.codex` via `npx lazycodex-ai`) + `/lazycodex:work` (run a plan→work→verify *ultrawork* task via `codex exec`).
+- **Setup mutates `~/.codex`** (skills/hooks/agents/config) + uses npm/network. Check `lazycodex doctor` first; never reinstall a healthy install or uninstall without explicit user request; no auto-login.
+- `:work` writes files (default `workspace-write`); same injection-safe contract as `codex-deepwork` (task via stdin, enum sandbox, `timeout_s` ≤ 3600, cwd dir, unknown-arg reject, no bypass derivation).
+- Verified here: `lazycodex doctor` = System OK (omo 4.11.0); `codex exec` auto-engages `omo:programming` + verification gates.
+- Non-Goals: codex/lazycodex auto-login, App/CDP (→ `codex-app-control`), read-only Q&A (→ `codex-cli-control`), opencode (Ultimate) edition.
+
+### `codex-app-control` (live-verified)
 - Skill `codex-app-cdp` + command `/codex-app-control:ask`. gjc attaches its
   `browser` tool to a running Codex desktop App via an explicit `cdp_url`, sends one
   prompt, and reads the latest completed response (hybrid turn-completion detection).

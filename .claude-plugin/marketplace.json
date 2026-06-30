@@ -44,6 +44,13 @@
       "description": "Skill-first plugin that delegates an autonomous, file-writing coding task to Codex ('codex exec' with a write sandbox), automatically leveraging the LazyCodex harness (deep-work skills, specialist agents, verification) when installed.",
       "version": "0.1.0",
       "category": "automation"
+    },
+    {
+      "name": "lazycodex",
+      "source": "./plugins/lazycodex",
+      "description": "Set up and drive the LazyCodex (OmO Codex Light) deep-work harness: install/update/check it in ~/.codex via npx, then run plan->work->verify (ultrawork) coding tasks through Codex with its skills/hooks/verification engaged.",
+      "version": "0.1.0",
+      "category": "automation"
     }
   ]
 }

@@ -25,6 +25,7 @@ does not work for marketplace plugins):
 | `my-workflows` | Handy workflow skills — `easy-answer` (plain-language answers) + `/my-workflows:easy` toggle |
 | `codex-cli-control` | gjc drives the local **Codex CLI** (`codex exec`): one prompt → final answer. No App/CDP needed. Sandbox defaults to `read-only`. |
 | `codex-deepwork` | gjc delegates an **autonomous, file-writing** task to Codex (`codex exec`, write sandbox). Auto-uses the **LazyCodex** harness when installed. |
+| `lazycodex` | Install/manage the **LazyCodex** deep-work harness in Codex (`npx lazycodex-ai`) + run `ultrawork` (plan→work→verify) tasks through it |
 | `codex-app-control` | gjc controls the **Codex desktop App** over CDP (attaches to an already-running app) |
 | `example-plugin` | Starter template — copy it to build your own |
 
