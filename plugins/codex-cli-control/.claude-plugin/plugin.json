@@ -1,0 +1,13 @@
+{
+  "name": "codex-cli-control",
+  "version": "0.1.0",
+  "description": "Drive the locally installed Codex CLI from gjc: run 'codex exec' non-interactively with a sandbox policy, send one prompt, and return Codex's final message. Works with the same app-server engine as the desktop App, no GUI/CDP required.",
+  "author": {
+    "name": "devswha",
+    "email": "devswha@gmail.com"
+  },
+  "homepage": "https://github.com/devswha/oh-my-gjc",
+  "repository": "https://github.com/devswha/oh-my-gjc",
+  "license": "MIT",
+  "keywords": ["gjc", "codex", "cli", "exec", "automation", "skill"]
+}

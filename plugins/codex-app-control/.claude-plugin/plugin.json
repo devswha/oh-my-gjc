@@ -1,0 +1,13 @@
+{
+  "name": "codex-app-control",
+  "version": "0.1.0",
+  "description": "Attach gjc's browser tool to an already-running Codex desktop App via an explicit CDP URL, send one prompt, and return the latest completed response. v1 is attach-only: no build/launch/restart and no CDP auto-discovery.",
+  "author": {
+    "name": "devswha",
+    "email": "devswha@gmail.com"
+  },
+  "homepage": "https://github.com/devswha/oh-my-gjc",
+  "repository": "https://github.com/devswha/oh-my-gjc",
+  "license": "MIT",
+  "keywords": ["gjc", "codex", "cdp", "browser", "skill", "automation"]
+}

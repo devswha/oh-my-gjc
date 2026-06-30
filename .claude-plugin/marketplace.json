@@ -23,6 +23,27 @@
       "description": "자주 쓰는 gjc 워크플로 스킬 모음. easy-answer 스킬(최종 답변을 쉬운 말로) + /my-workflows:easy 강제 토글.",
       "version": "0.1.0",
       "category": "workflows"
+    },
+    {
+      "name": "codex-app-control",
+      "source": "./plugins/codex-app-control",
+      "description": "Skill-first plugin that attaches gjc's browser tool to a running Codex App via an explicit CDP URL, sends one prompt, and returns the latest completed response. v1 attach-only.",
+      "version": "0.1.0",
+      "category": "automation"
+    },
+    {
+      "name": "codex-cli-control",
+      "source": "./plugins/codex-cli-control",
+      "description": "Skill-first plugin that runs the local Codex CLI ('codex exec') non-interactively with a sandbox policy, sends one prompt, and returns Codex's final message. No desktop App/CDP required.",
+      "version": "0.1.0",
+      "category": "automation"
+    },
+    {
+      "name": "codex-deepwork",
+      "source": "./plugins/codex-deepwork",
+      "description": "Skill-first plugin that delegates an autonomous, file-writing coding task to Codex ('codex exec' with a write sandbox), automatically leveraging the LazyCodex harness (deep-work skills, specialist agents, verification) when installed.",
+      "version": "0.1.0",
+      "category": "automation"
     }
   ]
 }
