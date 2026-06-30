@@ -13,6 +13,26 @@ Plugins are installed **only from inside a `gjc` session** via the `/plugin` sla
 command. A shell `gjc plugin install …` does NOT install marketplace plugins (gjc
 treats it as a chat message). Do not document or rely on a shell install path.
 
+## Setup / Environment
+
+### gjc
+- Install gjc, then sign in to model providers via OAuth (Claude / OpenAI Codex / Kimi — no API key needed). Model presets:
+  - `gjc --mpreset claude-max` — highest quality
+  - `gjc --mpreset kimi` — cheaper worker / parallel
+- **API keys** (web search, Gemini, etc.) must live in a **trusted location**, NOT the project `cwd/.env` (gjc ignores cwd `.env` for credentials). Copy the template and symlink it into your gjc home:
+  ```sh
+  cp .env.example .env                 # then fill in keys
+  ln -sf "$(pwd)/.env" ~/.gjc/.env     # run once from the repo root
+  ```
+  Credential precedence: live env → `~/.gjc/agent/.env` → `~/.gjc/.env` → `~/.env`.
+- **Web search:** `gjc config set providers.webSearch exa` (fallback: duckduckgo). Full key list (Exa/Tavily/Gemini/…) is in [`.env.example`](./.env.example).
+
+### Plugin prerequisites
+- `codex-cli-control` / `codex-deepwork`: Codex CLI installed + signed in (`codex --version`, `codex login status`). Plugins never auto-install or auto-login.
+- `codex-deepwork` (recommended): LazyCodex harness — `npx lazycodex-ai install` — adds deep-work skills/agents/verification to Codex runs. Works without it (plain `codex exec`).
+- `codex-app-control`: a running, CDP-enabled Codex desktop App + an explicit `cdp_url`. v1 does not launch/build the app.
+- `my-workflows` / `example-plugin`: no external prerequisites.
+
 ## Layout
 
 ```

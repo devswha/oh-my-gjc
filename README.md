@@ -16,6 +16,8 @@ does not work for marketplace plugins):
 /plugin install <plugin>@oh-my-gjc
 ```
 
+**Setup** (gjc keys, model presets, plugin prerequisites): see [AGENTS.md → Setup / Environment](./AGENTS.md#setup--environment) and [`.env.example`](./.env.example).
+
 ## Plugins
 
 | Plugin | What it does |
