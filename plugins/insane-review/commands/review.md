@@ -11,6 +11,8 @@ argument-hint: "<리뷰 대상/질문>  예) review the auth flow in src/auth"
 > **원칙: 사용자에게 CLI 타이핑을 시키지 않는다.** 환경이 안 갖춰졌으면 gjc가 `--check-env`/`--ensure-env`로 감지하고,
 > 필요한 결정은 gjc **`ask` 도구 선택지**로 물어본 뒤 gjc가 대신 실행한다. 초보자도 클릭만으로 따라올 수 있어야 한다.
 
+> **참고 — 자동활성화(스킬)는 별도 설치.** gjc는 마켓플레이스 플러그인의 `SKILL.md`를 스킬로 싣지 않는다(native `.gjc` 스킬만). 이 커맨드(`/insane-review:review`)는 그대로 동작하지만, "GPT한테 물어봐" 같은 자연어 트리거·`skill` 툴로 뜨게 하려면 `bash "$(dirname "$IR")/install-skill.sh"`로 네이티브 스킬을 1회 설치한다(아래 Step 0에서 `$IR` 해석 후).
+
 ## Step 0 — 엔진 경로 해석 (`$IR`)
 
 `${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않으므로 실제 경로를 잡아 `$IR`에 담는다:

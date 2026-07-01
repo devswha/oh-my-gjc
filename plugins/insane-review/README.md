@@ -28,12 +28,28 @@ Or inside a running gjc chat session: `/plugin` → install `insane-review`.
 ```
 /insane-review:review review the auth flow in src/auth
 ```
-Or just say "have Pro review this" / "GPT Pro로 이거 리뷰해줘" — the `insane-review` skill activates,
-gjc figures out the target, packs it, and sends it to Pro.
-
 The command's Step 0 auto-onboards the environment (deps → browser → login) using gjc's `ask` tool; you
 click through choices instead of typing CLI flags. First-run browser + ChatGPT login is manual (it can't
 be automated); everything else is handled for you.
+
+## Enable the skill (auto-activation) — one-time
+
+> **gjc does not surface a marketplace plugin's `SKILL.md` as a skill.** By design, gjc's skill registry
+> only loads *native* `.gjc` skills (`if (provider !== "native") return false`). So after
+> `gjc plugin install`, the `/insane-review:review` **command** works, but natural-language triggers
+> ("have Pro review this", "GPT한테 물어봐") and the `skill` tool / `/skill:insane-review` will **not** —
+> the skill won't show up in a new session. This is true for every marketplace plugin, not just this one.
+
+To get the auto-activating **skill** surface, install the SKILL.md as a native gjc skill:
+
+```sh
+IR="$(ls ~/.gjc/plugins/cache/plugins/*insane-review*/bin/pack_and_ask.py)"
+bash "$(dirname "$IR")/install-skill.sh"            # user scope → ~/.gjc/agent/skills/insane-review/
+# or: bash "$(dirname "$IR")/install-skill.sh" project   # this repo only → <cwd>/.gjc/skills/
+```
+
+Open a new gjc session and `insane-review` now auto-activates and appears in the `skill` tool. Re-run after
+a plugin upgrade to refresh the copy. Uninstall: `install-skill.sh uninstall [user|project]`.
 
 ## How it works
 
