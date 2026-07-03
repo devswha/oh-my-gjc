@@ -1,0 +1,24 @@
+{
+  "name": "multivendor-presets",
+  "version": "0.1.0",
+  "description": "멀티벤더 모델 프로파일 프리셋(멀티벤더 프로바이더 프리셋)을 ~/.gjc/agent/models.yml에 안전하게 병합한다. ultimate(비용무시·역할별 최강)와 ultimate-f5(escalation 리네임: 라우터는 Opus 유지, executor만 Fable 5 구원투수) 2종. gjc --mpreset <name>으로 활성화.",
+  "author": {
+    "name": "devswha",
+    "email": "devswha@gmail.com",
+    "url": "https://github.com/devswha"
+  },
+  "homepage": "https://github.com/devswha/oh-my-gjc",
+  "repository": "https://github.com/devswha/oh-my-gjc",
+  "license": "MIT",
+  "keywords": [
+    "gjc",
+    "model-profiles",
+    "mpreset",
+    "multi-vendor",
+    "presets",
+    "anthropic",
+    "openai-codex",
+    "google-antigravity",
+    "xai"
+  ]
+}

@@ -20,8 +20,8 @@
     {
       "name": "my-workflows",
       "source": "./plugins/my-workflows",
-      "description": "자주 쓰는 gjc 워크플로 스킬 모음. easy-answer 스킬(최종 답변을 쉬운 말로) + /my-workflows:easy 강제 토글.",
-      "version": "0.1.0",
+      "description": "자주 쓰는 gjc 워크플로 스킬 모음. easy-answer 스킬(최종 답변을 쉬운 말로, 정확성이 흔들리면 전문용어 유지) + /my-workflows:easy 세션 토글 + /my-workflows:easy-always 상시 적용(~/.gjc/agent/AGENTS.md에 규칙 블록 주입, 모든 세션·매 턴).",
+      "version": "0.2.0",
       "category": "workflows"
     },
     {
@@ -57,6 +57,20 @@
       "source": "./plugins/insane-review",
       "description": "Use GPT-5.5 Pro (web-only, no API) from inside gjc: gjc scopes the complete relevant file set, repomix-packs it (full code, line numbers, secretlint), drives your logged-in ChatGPT web session over CDP, verifies the model fail-closed, and harvests the review to .insane-review/. Zero API cost. Also works as a web-only agent-council member. Faithful port of fivetaku/insane-review with the engine kept intact.",
       "version": "0.5.3",
+      "category": "automation"
+    },
+    {
+      "name": "multivendor-presets",
+      "source": "./plugins/multivendor-presets",
+      "description": "Install multi-vendor model-profile presets into ~/.gjc/agent/models.yml: ultimate (cost-no-object, best model per role across anthropic/openai-codex/google-antigravity/xai) and ultimate-f5 (the escalation profile renamed — router stays on Opus, executor escalates to Fable 5 as a relief pitcher). Name-scoped safe merge; activate with gjc --mpreset <name>.",
+      "version": "0.1.0",
+      "category": "models"
+    },
+    {
+      "name": "gjc-bugwatch",
+      "source": "./plugins/gjc-bugwatch",
+      "description": "Dogfooding bug collector for gjc: a batch scanner reads ~/.gjc/logs (+ optional session transcripts), extracts/dedupes/redacts runtime errors and crashes, then /gjc-bugwatch:scan triages each candidate, reproduces it against a gajae-code clone, and collects upstream issue/PR drafts under .gjc/bugwatch/drafts/. Drafts only (no auto PR), read-only.",
+      "version": "0.1.0",
       "category": "automation"
     }
   ]
