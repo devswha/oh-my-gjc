@@ -1,6 +1,6 @@
 ---
 name: gjc-bugwatch
-description: gjc를 쓰다 놓친 gjc 자체 버그를 배치 스캔해 upstream 이슈/PR 초안으로 모은다. "버그 스캔 돌려줘 / gjc 버그 찾아줘 / 놓친 버그 있나 / 로그에서 에러 뽑아줘 / bugwatch / PR 낼 버그 정리" 같은 요청에 활성화. ~/.gjc/logs(+선택 세션)에서 런타임 에러/크래시를 추출·중복제거·레닥션하고, gajae-code clone에서 재현·근거 확인 후 .gjc/bugwatch/drafts/에 초안만 저장한다(자동 PR 없음).
+description: gjc를 dogfooding하며 놓친 gjc 자체 버그를 라이브 모니터링 + 배치 스캔으로 잡아 upstream 이슈/PR 초안으로 모은다. "버그 모니터링 시작 / bugwatch 켜줘 / 버그 스캔 돌려줘 / gjc 버그 찾아줘 / 놓친 버그 있나 / 로그에서 에러 뽑아줘 / PR 낼 버그 정리" 같은 요청에 활성화. ~/.gjc/logs(+선택 세션)에서 런타임 에러/크래시를 추출·중복제거·stale표시·레닥션하고, gajae-code clone에서 재현·근거 확인 후 .gjc/bugwatch/drafts/에 초안만 저장한다(자동 PR 없음, 제출은 사람이).
 ---
 
 # gjc-bugwatch — gjc dogfooding 버그 수집기
@@ -9,10 +9,20 @@ description: gjc를 쓰다 놓친 gjc 자체 버그를 배치 스캔해 upstream
 선택)을 **배치로** 훑어, 사용자가 몰랐던 **gjc 자체 버그**를 뽑아 upstream 제출용
 **초안**으로 모은다. 초안만 만든다 — 제출은 사람이.
 
-## 형태 = 배치 스캐너
-실시간 감시가 아니라 "그동안 쌓인 로그를 몰아서 읽는" 방식. 로그에 다 남으므로
-실시간일 필요가 없고, 몰아 읽어야 같은 버그를 중복 묶고 심각도순 정렬해 깔끔한
-초안이 나온다. 상시 감시가 필요하면 별도 라이브 tail(로드맵)로 얹는다.
+## 두 축: 라이브 모니터 + 배치 스캐너
+- **라이브 모니터** (`bin/follow.ts --dir`): 최신 `gjc*.log`를 tail해 error/gjc-internal(🔴/🟠)이 뜨는 즉시 알림. 날짜 롤오버(`.log.gz`) 견딤. 세션 단위(persistent).
+- **배치 스캐너** (`bin/collect.ts`): 그동안 쌓인 로그(.gz 포함)를 몰아 읽어 중복 묶고 심각도순 정렬, 최근 `--fresh-days`(기본 2) 재발 없는 건 ⏳stale(이미 고쳐졌을 확률)로 표시. 초안 만들 후보는 여기서 나온다.
+
+## 활성화 시 흐름 (매 활성화마다)
+
+경로: 이 머신 기준 `~/workspace/oh-my-gjc/plugins/gjc-bugwatch/bin/`. (설치 캐시면 `~/.gjc/plugins/cache/plugins/*gjc-bugwatch*/bin/`로 glob 해석.)
+
+1. **라이브 모니터 켜기** — `monitor` 도구로 persistent 실행 (이미 떠 있으면 중복 실행 금지, `ps -eo pid,args | grep follow.ts`로 확인 후):
+   `bun run <bin>/follow.ts --dir ~/.gjc/logs --min medium`
+   → 이후 신호는 이 대화로 뜬다.
+2. **초기 배치 스캔** — `bun run <bin>/collect.ts --days 7 --fresh-days 2 --json` → **fresh(비-stale)** 후보만 진지하게 본다. stale은 이미 고쳐졌을 확률이 높으니 기본 스킵.
+3. **보고** — fresh 후보 목록(severity/category/count/last-seen)만 요약하고, "뭐부터 팔지" 물어본다. 자동으로 초안·PR 만들지 않는다.
+4. 사용자가 고르면 아래 파이프라인(트리아지→근거→초안)으로 진행.
 
 ## 파이프라인 (세부는 `/gjc-bugwatch:scan` 커맨드 본문과 동일)
 
