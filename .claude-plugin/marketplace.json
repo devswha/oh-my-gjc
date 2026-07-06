@@ -14,7 +14,7 @@
       "name": "oh-my-gjc",
       "source": "./plugins/oh-my-gjc",
       "description": "The core plugin — install this first. easy-answer (plain-language answers), gate-briefing (domain-blind approval-gate briefings), multivendor model presets (ideal / escalate-surgical / monorepo), session toggles + always-on semaphores (AGENTS.md marker blocks), /oh-my-gjc:fable (Fable 5 adversarial safety audit, proven to catch consensus-missed CRITICALs), and /oh-my-gjc:setup which detects your environment and recommends the optional plugins below. Absorbs the former my-workflows and multivendor-presets plugins.",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "category": "core"
     },
     {

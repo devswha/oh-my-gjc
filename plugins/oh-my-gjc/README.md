@@ -10,6 +10,12 @@
 ```
 /plugin marketplace add devswha/oh-my-gjc     # 최초 1회
 /plugin install oh-my-gjc@oh-my-gjc
+
+# ⚠ gjc는 마켓플레이스 플러그인의 커맨드·스킬을 세션에 로드하지 않는다.
+#    네이티브 설치 1회 (셸에서 — setup 커맨드 자체가 아직 안 뜨므로):
+bash ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/bin/install-skill.sh all
+
+# 새 gjc 세션을 연 뒤 (또는 /move .):
 /oh-my-gjc:setup
 ```
 

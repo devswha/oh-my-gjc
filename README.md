@@ -19,11 +19,18 @@ model presets, and a cross-CLI delegation suite** (gjc driving Codex & ChatGPT w
 ```
 /plugin marketplace add devswha/oh-my-gjc
 /plugin install oh-my-gjc@oh-my-gjc
+
+# gjc does not load marketplace-plugin commands/skills into a session, so do a
+# one-time NATIVE install from the shell (the setup command itself isn't live yet):
+bash ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/bin/install-skill.sh all
+
+# then open a new gjc session (or /move .) and run:
 /oh-my-gjc:setup
 ```
 
-That's it. `setup` installs the native skills, offers the model presets, and detects
-your environment to recommend the optional plugins below.
+The shell step natively installs the skills + `/oh-my-gjc:*` commands (required — gjc
+won't surface plugin commands otherwise). `setup` then refreshes that install, offers the
+model presets, and detects your environment to recommend the optional plugins below.
 
 ## Core plugin — `oh-my-gjc`
 

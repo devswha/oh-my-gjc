@@ -1,5 +1,5 @@
 ---
-description: oh-my-gjc 초기 설정 — 네이티브 스킬 설치, 프리셋 병합 제안, 환경을 감지해 어울리는 옵션 플러그인을 추천한다. 여러 번 실행해도 안전(멱등).
+description: oh-my-gjc 초기 설정 — 네이티브 스킬+커맨드 설치, 프리셋 병합 제안, 환경을 감지해 어울리는 옵션 플러그인을 추천한다. 여러 번 실행해도 안전(멱등).
 argument-hint: "(인자 없음)"
 ---
 
@@ -20,16 +20,26 @@ echo "OMG_ROOT=$OMG_ROOT"
 ```
 비면 `/plugin install oh-my-gjc@oh-my-gjc`를 안내하고 멈춘다.
 
-## Step 1 — 네이티브 스킬 설치 (자동활성화 표면)
+## Step 1 — 네이티브 스킬 + 커맨드 설치 (필수)
 
-gjc는 플러그인 SKILL.md를 자동 로드하지 않으므로(native `.gjc` 스킬만) 1회 복사한다:
+gjc는 마켓플레이스 플러그인의 **스킬도 커맨드도 세션에 로드하지 않는다**(스킬 레지스트리는
+native `.gjc`만; 슬래시 커맨드 provider(`discovery/claude-plugins.ts`)는 `discovery/index.ts`가
+import하지 않아 등록조차 안 됨 — gjc 0.8.2 `main`/`dev` 실측, ACP `available_commands_update`에
+플러그인 커맨드 0개). 따라서 스킬·커맨드를 네이티브로 1회 복사해야 한다:
 
 ```bash
 bash "${OMG_ROOT}bin/install-skill.sh" all
 ```
 
-설치되는 스킬: `easy-answer`(쉬운 답변), `gate-briefing`(승인 게이트 브리핑),
-`multivendor-presets`(프리셋 병합). 이미 있으면 최신본으로 덮어쓴다.
+- 스킬 3종 → `~/.gjc/agent/skills/<name>/SKILL.md` (트리거 자동활성화):
+  `easy-answer`, `gate-briefing`, `multivendor-presets`.
+- 커맨드 7종 → `~/.gjc/agent/commands/oh-my-gjc:<name>.md` (파일명이 곧 커맨드명이라
+  `/oh-my-gjc:<name>` UX 유지): `setup`, `easy`, `gate`, `easy-always`, `gate-always`,
+  `presets`, `fable`.
+
+⚠ **최초 부트스트랩은 셸에서** 돌려야 한다 — `/oh-my-gjc:setup` 자체가 설치 전엔 안 뜨는
+커맨드라 (닭-달걀): `bash ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/bin/install-skill.sh all`.
+설치 후 **새 세션**을 열거나 `/move .`로 커맨드 팔레트를 재빌드한다. 플러그인 업그레이드 후 재실행.
 
 ## Step 2 — 레거시 정리 (있을 때만)
 
