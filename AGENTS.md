@@ -205,3 +205,9 @@ logged. Tests: `bun test tools/test/e2e-bridge.test.ts`.
 | `author` | no | `{ name, email, url }` |
 | `homepage` / `repository` / `license` / `keywords` / `category` | no | metadata |
 | `commands` / `agents` / `skills` / `hooks` / `mcpServers` | no | explicit paths; omit to use convention dirs |
+
+## G1 컨텍스트 (자산 목표 — 작업 우선순위 기준)
+
+> 정본: `~/workspace/profile/agent/G1-CONTEXT.md` — **작업 시작 전 한 번 읽을 것.**
+> 목표: 자산 1억 / 2026-12-31. 이 레포의 역할: **도구 — 단기 수익화 대상 아님. G1 직결 작업(patina 출시·magi-stock) 대비 시간 배분 후순위.**
+> 공통 규칙: 비슷한 가치면 매출/수익에 가까운 작업 먼저. 완성도 < 출시/과금 경로.
