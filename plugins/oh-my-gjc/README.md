@@ -36,7 +36,7 @@ bash ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/bin/install-skill.sh all
 |---|---|
 | `/oh-my-gjc:setup` | 셋업 + 환경 감지 → 옵션 플러그인 추천 (멱등) |
 | `/oh-my-gjc:easy [on\|off]` | 쉬운 답변 — 이번 세션 토글 |
-| `/oh-my-gjc:easy-always [on\|off\|status]` | 쉬운 답변 — 전 세션 상시 (AGENTS.md 마커 세마포어) |
+| `/oh-my-gjc:easy-always [on\|off\|status]` | 쉬운 답변 — 전 세션 상시 (SYSTEM.md 마커 세마포어) |
 | `/oh-my-gjc:gate [on\|off]` | 게이트 브리핑 — 이번 세션 토글 |
 | `/oh-my-gjc:gate-always [on\|off\|status]` | 게이트 브리핑 — 전 세션 상시 |
 | `/oh-my-gjc:presets [이름\|all]` | 모델 프리셋 병합 (`ideal` / `escalate-surgical` / `monorepo`) |
@@ -55,10 +55,14 @@ bash ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/bin/install-skill.sh all
 
 ## 세마포어 구조
 
-`*-always` 커맨드는 `~/.gjc/agent/AGENTS.md`에 마커 블록
+`*-always` 커맨드는 `~/.gjc/agent/SYSTEM.md`에 마커 블록
 (`<!-- BEGIN oh-my-gjc:<name> -->` ~ `<!-- END ... -->`)을 넣고 빼는 방식이다 —
-블록의 존재가 ON. gjc 훅 표면은 매 턴 지시문 주입에 제약이 있어, "매번 자동"의
-올바른 메커니즘은 컨텍스트 파일이다. 구버전(my-workflows) 마커는 자동 마이그레이션.
+블록의 존재가 ON. **live-verified (gjc 0.8.2):** 예전 대상이던 사용자 전역
+`~/.gjc/agent/AGENTS.md`는 gjc가 발견만 하고 주입 단계에서 버린다(project 레벨만
+통과) — 매 턴 실제로 주입되는 사용자 전역 표면은 SYSTEM.md
+(`<system-prompt-customization>`)가 유일하다. 구버전(my-workflows) 마커와
+AGENTS.md 세대 마커는 자동 마이그레이션. 주의: 프로젝트 `.gjc/SYSTEM.md`가 있는
+레포에선 프로젝트 파일이 사용자 파일을 통째로 대체한다.
 
 ## 마이그레이션 (my-workflows / multivendor-presets 사용자)
 

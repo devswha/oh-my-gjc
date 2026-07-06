@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>가재코드(GJC) 실전 가이드</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2d3748;
+    --txt:#e6edf3; --muted:#8b98a9; --accent:#ff7849; --accent2:#4ea1ff;
+    --good:#3fb950; --warn:#d29922; --bad:#f85149; --code:#0a0e14;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.7;font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,pre{font-family:"SF Mono",ui-monospace,"Cascadia Code","Roboto Mono",Menlo,monospace}
+
+  /* layout */
+  .wrap{max-width:920px;margin:0 auto;padding:0 20px}
+  header.hero{
+    text-align:center;padding:72px 20px 48px;
+    background:radial-gradient(900px 360px at 50% -120px, rgba(255,120,73,.18), transparent 70%);
+    border-bottom:1px solid var(--border);
+  }
+  .hero .badge{
+    display:inline-block;font-size:13px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--accent);border-radius:999px;
+    padding:5px 14px;margin-bottom:22px;font-weight:600;
+  }
+  .hero h1{font-size:clamp(34px,6vw,54px);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+  .hero h1 .gj{color:var(--accent)}
+  .hero p{color:var(--muted);font-size:18px;margin-top:18px;max-width:600px;margin-left:auto;margin-right:auto}
+
+  /* toc */
+  nav.toc{
+    display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+    padding:26px 20px;border-bottom:1px solid var(--border);
+    position:sticky;top:0;background:rgba(13,17,23,.85);backdrop-filter:blur(10px);z-index:10;
+  }
+  nav.toc a{
+    font-size:14px;color:var(--muted);border:1px solid var(--border);
+    border-radius:999px;padding:6px 13px;transition:.15s;
+  }
+  nav.toc a:hover{color:var(--txt);border-color:var(--accent);text-decoration:none}
+
+  section{padding:54px 0;border-bottom:1px solid var(--border)}
+  section h2{
+    font-size:28px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px;
+    display:flex;align-items:center;gap:12px;
+  }
+  section h2 .num{
+    font-size:15px;color:var(--accent);border:1px solid var(--accent);
+    width:32px;height:32px;display:grid;place-items:center;border-radius:9px;flex:0 0 auto;font-weight:700;
+  }
+  section .lead{color:var(--muted);margin:8px 0 26px;font-size:17px}
+  section h3{font-size:18px;font-weight:700;margin:26px 0 10px}
+  p{margin:12px 0}
+  ul,ol{margin:12px 0 12px 4px;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#fff;font-weight:700}
+  .accent{color:var(--accent)}
+
+  /* cards */
+  .grid{display:grid;gap:16px;margin-top:18px}
+  .grid.cols-2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px 22px;transition:.15s;
+  }
+  .card:hover{border-color:#3b4860;transform:translateY(-2px)}
+  .card h4{font-size:16px;font-weight:700;margin-bottom:6px;display:flex;gap:9px;align-items:center}
+  .card h4 .tag{font-size:12px;padding:2px 9px;border-radius:6px;font-weight:600;background:var(--panel2);color:var(--accent2);border:1px solid var(--border)}
+  .card p{color:var(--muted);font-size:14.5px;margin:6px 0 0}
+
+  /* code blocks */
+  pre{
+    background:var(--code);border:1px solid var(--border);border-radius:12px;
+    padding:16px 18px;overflow-x:auto;font-size:14px;line-height:1.6;margin:14px 0;
+  }
+  pre code{color:#c9d6e3}
+  .c-com{color:#5c6b7a}
+  .c-good{color:var(--good)}
+  .c-bad{color:var(--bad)}
+  .c-key{color:var(--accent)}
+  p code,li code,td code{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13.5px;color:#ffcaa8}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--accent);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+  tr:hover td{background:var(--panel)}
+
+  /* callouts */
+  .note{border-left:3px solid var(--accent2);background:var(--panel);border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0}
+  .note.do{border-left-color:var(--good)}
+  .note.dont{border-left-color:var(--bad)}
+  .note .h{font-weight:700;display:block;margin-bottom:4px}
+  .note.do .h{color:var(--good)}
+  .note.dont .h{color:var(--bad)}
+
+  /* do/dont split */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  @media(max-width:640px){.split{grid-template-columns:1fr}}
+  .box{border-radius:12px;padding:16px 18px;border:1px solid var(--border)}
+  .box.bad{background:rgba(248,81,73,.07);border-color:rgba(248,81,73,.3)}
+  .box.good{background:rgba(63,185,80,.07);border-color:rgba(63,185,80,.3)}
+  .box .lbl{font-weight:800;font-size:13px;letter-spacing:.05em;margin-bottom:8px}
+  .box.bad .lbl{color:var(--bad)}
+  .box.good .lbl{color:var(--good)}
+  .box p{font-size:14px;margin:4px 0;color:var(--muted)}
+
+  .ev{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--good);border:1px solid rgba(63,185,80,.4);background:rgba(63,185,80,.08);border-radius:6px;padding:2px 8px;vertical-align:middle;margin-left:8px}
+  .no{color:var(--bad);font-weight:700}
+  .yes{color:var(--good);font-weight:700}
+  td.k{font-family:"SF Mono",ui-monospace,monospace;font-size:13px;color:#ffcaa8;white-space:nowrap}
+
+  footer{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
+  footer .gj{color:var(--accent);font-weight:700}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <span class="badge">실전 가이드</span>
+  <h1><span class="gj">가재코드</span> 제대로 굴리기</h1>
+  <p>빈말·이론 빼고, 진짜 결과 뽑아내는 GJC 사용법. 제약 신경 끄고 일 시키는 법.</p>
+</header>
+
+<nav class="toc">
+  <a href="#req">요청법</a>
+  <a href="#mode">모드 선택</a>
+  <a href="#ctx">컨텍스트</a>
+  <a href="#tools">도구</a>
+  <a href="#agents">서브에이전트</a>
+  <a href="#verify">검증</a>
+  <a href="#limit">제한/보안</a>
+  <a href="#anti">안티패턴</a>
+  <a href="#cheat">치트시트</a>
+  <a href="#env">환경실측</a>
+  <a href="#providers">모델·프로바이더</a>
+  <a href="#search">검색엔진</a>
+  <a href="#settings">최적설정</a>
+  <a href="#pay">과금 우선순위</a>
+  <a href="#models">모델 선택 (증거)</a>
+
+</nav>
+
+<div class="wrap">
+
+<!-- 1 -->
+<section id="req">
+  <h2><span class="num">1</span>요청은 "결과"로 던져라</h2>
+  <p class="lead">"방법"을 지시하면 에이전트의 판단력을 죽인다. 목표·제약·완료조건을 한 문장에 박아라.</p>
+
+  <div class="split">
+    <div class="box bad">
+      <div class="lbl">✗ 이렇게 하지 마라</div>
+      <p>"이 파일 좀 봐줘"</p>
+      <p>"어떻게 하는 게 좋을까?"</p>
+      <p>"버그 있나 확인해줘"</p>
+    </div>
+    <div class="box good">
+      <div class="lbl">✓ 이렇게 던져라</div>
+      <p>"auth.ts 토큰 만료에 race condition 있는지 찾아 고치고 테스트 추가해"</p>
+      <p>"이 함수 50ms 이하로 떨어뜨려, 벤치로 증명해"</p>
+    </div>
+  </div>
+
+  <h3>좋은 요청의 3요소</h3>
+  <ul>
+    <li><strong>목표</strong> — 무엇을 이뤄야 하는가</li>
+    <li><strong>제약</strong> — 건드리면 안 되는 것, 지켜야 할 컨벤션</li>
+    <li><strong>완료조건</strong> — 어떻게 됐을 때 끝난 건가 (테스트 통과, 벤치 수치 등)</li>
+  </ul>
+</section>
+
+<!-- 2 -->
+<section id="mode">
+  <h2><span class="num">2</span>작업 크기에 맞는 모드</h2>
+  <p class="lead">작은 버그에 ralplan 부르지 말고, 모호한 대형 기능을 "그냥 해줘"로 던지지 마라.</p>
+
+  <table>
+    <thead><tr><th>상황</th><th>쓸 것</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>그냥 명확한 작업</td><td><code>바로 지시</code></td><td>스킬 안 거치고 즉시 탐색→수정→검증</td></tr>
+      <tr><td>요구사항이 모호함</td><td><code>/skill:deep-interview</code></td><td>소크라테스식 질문으로 스펙부터 추출</td></tr>
+      <tr><td>요구 명확, 설계가 위험</td><td><code>/skill:ralplan</code></td><td>Planner·Architect·Critic 합의 플랜. 승인 전 코드 안 건드림</td></tr>
+      <tr><td>긴 다중 목표 추적</td><td><code>/skill:ultragoal</code></td><td>목표 상태·체크포인트·증거 장부</td></tr>
+      <tr><td>워커 병렬 실행</td><td><code>/skill:team</code></td><td>tmux 기반 다중 워커 조율</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="h">핵심 흐름</span>
+    모호함 → <code>deep-interview</code>(스펙) → <code>ralplan</code>(합의 플랜) → <strong>승인</strong> → 실행. 계획 단계는 승인 전까지 제품 코드를 절대 수정하지 않는다.
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="ctx">
+  <h2><span class="num">3</span>컨텍스트를 미리 다 줘라</h2>
+  <p class="lead">병렬 서브에이전트는 네 대화 히스토리를 못 본다. "전에 말한 그거"는 안 통한다.</p>
+  <ul>
+    <li>파일 경로를 <strong>정확히</strong> 박아라 — 추측하게 만들지 마라</li>
+    <li>지켜야 할 컨벤션·패턴을 처음에 명시</li>
+    <li>큰 자료는 붙여넣기보다 파일/URL 경로로 넘겨라</li>
+    <li>하지 말아야 할 것(non-goal)도 적어라 — 범위 폭주 방지</li>
+  </ul>
+  <pre><code><span class="c-com"># 좋은 위임 한 방</span>
+src/payment/refund.ts 의 <span class="c-key">processRefund</span> 가 부분환불 시
+잔액을 음수로 떨어뜨림. 음수 가드 추가하고,
+기존 패턴(Result&lt;T,E&gt; 반환) 따라서, refund.test.ts 에
+음수·0·초과 케이스 테스트 추가. UI 는 건드리지 마.</code></pre>
+</section>
+
+<!-- 4 -->
+<section id="tools">
+  <h2><span class="num">4</span>도구를 믿어라</h2>
+  <p class="lead">셸 <code>cat/grep/sed</code>로 일일이 시키지 마라. 전용 도구가 더 빠르고 정확하다.</p>
+  <div class="grid cols-2">
+    <div class="card"><h4>read <span class="tag">읽기</span></h4><p>파일·디렉토리·아카이브·PDF·이미지·SQLite·URL 전부 한 도구로. 섹션 단위로 읽음.</p></div>
+    <div class="card"><h4>search <span class="tag">내용 검색</span></h4><p>정규식 기반. grep/rg 대체. .gitignore 인식.</p></div>
+    <div class="card"><h4>find <span class="tag">파일 찾기</span></h4><p>glob 기반 파일명 탐색. 최근 수정순 정렬.</p></div>
+    <div class="card"><h4>lsp <span class="tag">코드 인텔</span></h4><p>정의·참조·구현·타입·리네임. "이 심볼 어디 쓰여?" → 정확히 추적.</p></div>
+    <div class="card"><h4>ast_grep / ast_edit <span class="tag">구조</span></h4><p>구문 단위 검색·코드모드. 텍스트 치환보다 안전.</p></div>
+    <div class="card"><h4>debug <span class="tag">디버거</span></h4><p>DAP 기반. 브레이크포인트·스텝·변수 검사·멈춘 프로세스 인터럽트.</p></div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="agents">
+  <h2><span class="num">5</span>큰 작업은 쪼개서 병렬로</h2>
+  <p class="lead">다중 파일 리팩터·독립 모듈 작업은 서브에이전트로 fan-out. 단, 의존 없을 때만 이득.</p>
+  <div class="grid cols-2">
+    <div class="card"><h4>executor</h4><p>경계가 명확한 구현·수정·리팩터. 실제 코드 편집 담당.</p></div>
+    <div class="card"><h4>planner</h4><p>읽기 전용. 순서·완료조건·리스크 매핑.</p></div>
+    <div class="card"><h4>architect</h4><p>읽기 전용. 아키텍처 평가·코드 리뷰(심각도 등급).</p></div>
+    <div class="card"><h4>critic</h4><p>읽기 전용. 플랜 비판. 추측 없이 실행 가능할 때만 승인.</p></div>
+  </div>
+  <div class="note">
+    <span class="h">병렬의 철칙</span>
+    "B가 A의 출력을 봐야 하나?" → <strong>그렇다면 순차</strong>. 디스크상 파일이 안 겹치고 독립적일 때만 병렬이 진짜 이득이다.
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="verify">
+  <h2><span class="num">6</span>검증을 강제해라</h2>
+  <p class="lead">"고쳤다"는 말 믿지 말고 증거를 요구해라.</p>
+  <div class="note do">
+    <span class="h">✓ 증거 요구 문구</span>
+    "테스트 돌려서 통과 출력 보여줘" · "그 시나리오 실제로 재현해봐" · "벤치 수치 before/after 보여줘"
+  </div>
+  <ul>
+    <li>관찰 가능한 동작·엣지값·분기 조건·에러 처리를 테스트</li>
+    <li>기본값이나 동어반복(tautology)은 테스트하지 마라 — 의미 없다</li>
+    <li>비자명한 변경은 검증 없이 끝내지 않는 게 기본 동작</li>
+  </ul>
+</section>
+
+<!-- 7 -->
+<section id="limit">
+  <h2><span class="num">7</span>"제한 없이"에 대한 솔직한 답</h2>
+  <p class="lead">코드 작업 자체엔 사실상 제약 없다.</p>
+  <p>시스템 깊은 곳 디버깅, 바이너리 분석·리버싱, 익스플로잇 PoC, 네트워크 도구, 저수준 메모리 조작 — 뭐든 짠다. 막히는 거의 유일한 선은 단 두 개:</p>
+  <div class="split">
+    <div class="box bad">
+      <div class="lbl">차단되는 것</div>
+      <p><strong>남의 작업 날리기</strong> — 명시적 지시 없이 revert / stash / force-push / 삭제 안 함. (검열이 아니라 안전장치)</p>
+      <p><strong>거짓 보고</strong> — 안 돌린 테스트를 돌렸다고 하지 않음. 출력 날조 안 함.</p>
+    </div>
+    <div class="box good">
+      <div class="lbl">팁</div>
+      <p>보안·저수준 작업이면 <strong>목적을 명확히</strong> 말해라. 우회하느라 시간 버리지 않게.</p>
+      <p>이 두 선만 빼면 "보안 상관없이" 굴려도 된다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="anti">
+  <h2><span class="num">8</span>안티패턴 모음</h2>
+  <table>
+    <thead><tr><th>하지 마라</th><th>대신</th></tr></thead>
+    <tbody>
+      <tr><td>"전체 코드베이스 분석해줘"</td><td>구체적 목표/파일을 줘라. 막연한 분석은 토큰만 태움</td></tr>
+      <tr><td>작은 수정에 ralplan/team 호출</td><td>그냥 바로 지시</td></tr>
+      <tr><td>의존 있는 작업을 병렬로 던짐</td><td>순차로. A 끝나고 B</td></tr>
+      <tr><td>"대충 알아서"로 대형 기능 요청</td><td>deep-interview로 스펙부터</td></tr>
+      <tr><td>검증 없이 "됐지?"</td><td>테스트/재현 증거를 요구</td></tr>
+      <tr><td>셸 grep/sed/cat 떡칠</td><td>search/edit/read 도구</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 9 -->
+<section id="cheat">
+  <h2><span class="num">9</span>치트시트</h2>
+  <pre><code><span class="c-com"># 명확한 작업 → 바로</span>
+"X 고치고 테스트 추가, Y는 건드리지 마"
+
+<span class="c-com"># 모호 → 스펙 먼저</span>
+<span class="c-key">/skill:deep-interview</span>
+
+<span class="c-com"># 설계 위험 → 합의 플랜 (승인 전 코드 안 건드림)</span>
+<span class="c-key">/skill:ralplan</span>
+
+<span class="c-com"># 긴 다중 목표 → 장부</span>
+<span class="c-key">/skill:ultragoal</span>
+
+<span class="c-com"># 병렬 워커 → 팀</span>
+<span class="c-key">/skill:team</span>
+
+<span class="c-com"># 항상: 결과로 던지고, 증거를 요구하라</span></code></pre>
+  <div class="note do">
+    <span class="h">한 줄 요약</span>
+    <strong>결과로 던지고, 컨텍스트 다 주고, 증거를 요구하라.</strong> 나머지는 알아서 돈다.
+  </div>
+</section>
+
+<!-- EVIDENCE -->
+<section id="env">
+  <h2><span class="num">★</span>내 환경 실측 <span class="ev">측정값 · 2026-06-28</span></h2>
+  <p class="lead">아래는 일반론이 아니라 <strong>이 머신에서 직접 측정</strong>한 값이다. <code>gjc config list</code> · <code>gjc --list-models</code> · CLIProxyAPI <code>auths/</code> · 실제 검색 1회로 확인했다.</p>
+  <table>
+    <thead><tr><th>항목</th><th>실측 결과</th></tr></thead>
+    <tbody>
+      <tr><td>인증된 모델 프로바이더</td><td><span class="yes">Claude Max</span> + <span class="yes">Codex(Pro)</span> + <span class="yes">Kimi(K2.7)</span> + <span class="yes">Gemini</span> — 전부 검증됨</td></tr>
+      <tr><td>활성 모델 프로필</td><td><code>opus-codex</code> · default = <code>gpt-5.5 :xhigh</code></td></tr>
+      <tr><td>검색 프로바이더</td><td><code>providers.webSearch=exa</code> → <span class="yes">Exa 작동</span> (폴백 DuckDuckGo)</td></tr>
+      <tr><td>머신</td><td>Ryzen 9 5950X · 16C / 32T</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- PROVIDERS -->
+<section id="providers">
+  <h2><span class="num">10</span>모델 &amp; 프로바이더</h2>
+  <p class="lead">카탈로그엔 수백 개 모델이 보이지만, <strong>실제 호출되는 건 인증된 프로바이더뿐</strong>이다.</p>
+
+  <h3>인증 실태 (CLIProxyAPI <code>auths/</code> 기준)</h3>
+  <table>
+    <thead><tr><th>프로바이더</th><th>상태</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr><td>anthropic (Claude)</td><td><span class="yes">✓ 사용 가능</span></td><td><code>auths/claude-…json</code></td></tr>
+      <tr><td>openai-codex (GPT-5.x)</td><td><span class="yes">✓ 사용 가능 · Pro</span></td><td><code>auths/codex-…-pro.json</code></td></tr>
+      <tr><td>google (Gemini)</td><td><span class="yes">✓ 사용 가능</span></td><td><code>GEMINI_API_KEY</code>(신뢰 .env) → <code>google/gemini-3-flash-preview</code> 검증됨</td></tr>
+      <tr><td>kimi-code</td><td><span class="yes">✓ 사용 가능</span></td><td>gjc authStorage(<code>kimi-device-id</code>) 로그인됨 → <code>--mpreset kimi</code>, K2.7-code 검증됨</td></tr>
+      <tr><td>antigravity</td><td><span class="no">✗ 비활성</span></td><td><code>auths/disabled/</code>로 이동됨</td></tr>
+    </tbody>
+  </table>
+
+  <h3>현재 역할별 모델 (<code>modelRoles</code>)</h3>
+  <table>
+    <thead><tr><th>역할</th><th>모델</th></tr></thead>
+    <tbody>
+      <tr><td>default</td><td class="k">openai-codex/gpt-5.5 :xhigh</td></tr>
+      <tr><td>slow</td><td class="k">openai-codex/gpt-5.5 :xhigh</td></tr>
+      <tr><td>plan</td><td class="k">openai-codex/gpt-5.5 :high</td></tr>
+      <tr><td>smol</td><td class="k">openai-codex/gpt-5.4-mini :medium</td></tr>
+    </tbody>
+  </table>
+
+  <h3>프로필 추천</h3>
+  <div class="grid cols-2">
+    <div class="card"><h4>opus-codex <span class="tag">현재</span></h4><p>균형형. gpt-5.5 xhigh 기본. 일상 코딩엔 충분 — 그대로 둬도 됨.</p></div>
+    <div class="card"><h4>claude-max <span class="tag">최고품질</span></h4><p>Opus 4.8 xhigh를 전 역할에. anthropic 인증돼 있어 <strong>즉시 사용 가능</strong>. 가장 어려운 작업용.<br><code>gjc --mpreset claude-max</code> (영구화 <code>--default</code>)</p></div>
+  </div>
+  <div class="note">
+    <span class="h">thinking 예산 (토큰)</span>
+    minimal 1,024 · low 2,048 · medium 8,192 · high 16,384 · xhigh 32,768 · max 65,536. 현재 기본 <code>high</code>. 어려운 작업만 세션 중 <code>xhigh</code>로 올려라.
+  </div>
+</section>
+
+<!-- SEARCH -->
+<section id="search">
+  <h2><span class="num">11</span>검색 엔진 <span class="ev">설정 완료 · 검증됨</span></h2>
+  <p class="lead">처음엔 유료 검색 키가 0개라 <code>auto</code>가 DuckDuckGo로 폴백했다. 지금은 <strong>Exa 키 적용 + 작동 검증 완료</strong>(<code>Provider: Exa</code> 확인).</p>
+  <div class="note do">
+    <span class="h">핵심 함정 (꼭 기억)</span>
+    gjc 는 <strong>프로젝트(cwd) <code>.env</code> 의 키를 보안상 의도적으로 무시</strong>한다. 신뢰 위치에서만 읽음 — 우선순위 <code>라이브env → ~/.gjc/agent/.env → ~/.gjc/.env → ~/.env</code>. 그래서 레포 <code>.env</code> 를 <code>~/.gjc/.env</code> 로 심링크해 둠. <code>source</code> 불필요.
+  </div>
+
+  <h3>코딩 에이전트용 추천 우선순위</h3>
+  <table>
+    <thead><tr><th>엔진</th><th>강점</th><th>키</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Exa</strong> · 1순위</td><td>의미/기술문서/코드 검색 최강. researcher 심층모드 보유. config에 이미 <code>exa.enabled=true</code></td><td class="k">EXA_API_KEY</td></tr>
+      <tr><td><strong>Perplexity</strong></td><td>합성 답변·최신성. Pro 구독이면 키 없이 쿠키로도 가능</td><td class="k">PERPLEXITY_API_KEY / PERPLEXITY_COOKIES</td></tr>
+      <tr><td>Brave</td><td>독립 인덱스 범용. 무료 티어 있음</td><td class="k">BRAVE_API_KEY</td></tr>
+      <tr><td>Tavily</td><td>LLM 에이전트 전용 설계. 무료 티어 있음</td><td class="k">TAVILY_API_KEY</td></tr>
+      <tr><td>Kagi</td><td>고품질·광고없음. 유료</td><td class="k">KAGI_API_KEY</td></tr>
+    </tbody>
+  </table>
+
+  <h3>설정 방법 (이미 적용됨)</h3>
+  <pre><code><span class="c-com"># 1) 레포 .env 를 신뢰 위치로 심링크 (1회, 완료됨)</span>
+ln -sf ~/workspace/oh-my-gjc/.env ~/.gjc/.env
+
+<span class="c-com"># 2) .env 에 키만 채우면 gjc 가 자동으로 읽음 (source 불필요)</span>
+EXA_API_KEY=...
+TAVILY_API_KEY=...
+
+<span class="c-com"># 3) 검색 설정 (적용 완료)</span>
+gjc config set providers.webSearch exa
+gjc config set web_search.fallback '["duckduckgo"]'
+
+<span class="c-com"># 4) 검증</span>
+gjc web-search "test" --limit 2 --compact   <span class="c-com"># → Provider: Exa</span></code></pre>
+  <div class="note do">
+    <span class="h">새 키 추가 시</span>
+    <code>~/.gjc/.env</code>(=레포 <code>.env</code>)에 줄만 추가하면 끝. <strong>리서처(심층) 모드 ON</strong> (<code>exa.enableResearcher=true</code>) — 리서치 강화용, deep $12/1k·deep-reasoning $15/1k라 크레딧 더 씀. 며칠 써보고 과하면 <code>false</code>로.
+  </div>
+</section>
+
+<!-- MODELS / EVIDENCE -->
+<section id="models">
+  <h2><span class="num">12</span>모델 선택 — 벤치 증거 <span class="ev">2026 검색 확인</span></h2>
+  <p class="lead">"Kimi vs Codex 뭐가 낫나"를 벤치마크로 검증한 결과. 결론부터: <strong>코딩 품질은 Codex(GPT-5.5)가 명확히 우위</strong>, Kimi는 가격·툴호출 강점.</p>
+
+  <h3>코딩: GPT-5.5(Codex) vs Kimi K2.7-Code</h3>
+  <table>
+    <thead><tr><th>벤치</th><th>GPT-5.5 (Codex)</th><th>Kimi K2.7-Code</th></tr></thead>
+    <tbody>
+      <tr><td>SWE-bench Verified</td><td class="yes">88.7% (#1)</td><td>독립 점수 없음 (K2.6=80.2%)</td></tr>
+      <tr><td>Program Bench</td><td class="yes">69.1</td><td>53.6</td></tr>
+      <tr><td>Kimi Code Bench v2</td><td class="yes">69.0</td><td>62.0</td></tr>
+      <tr><td>Terminal-Bench 2.0</td><td class="yes">82.7% (SOTA)</td><td>—</td></tr>
+      <tr><td>MCP Mark (툴 호출 정확도)</td><td>—</td><td class="yes">81.1 (Opus 4.8&gt;76.4)</td></tr>
+      <tr><td>가격(토큰당)</td><td>$5/$30 /1M</td><td class="yes">$0.95/$4 (12배↓)</td></tr>
+    </tbody>
+  </table>
+  <div class="note do">
+    <span class="h">결론 (앞 추천 정정)</span>
+    실제 코드 작성은 <strong>Codex가 분명히 위</strong>. 너는 Codex Pro(정액)라 executor를 Codex로 돌려도 <strong>돈 추가 없음 — 쿼터만 씀</strong>. 그래서 <code>executor→Kimi</code> 자동 라우팅은 "품질 깎아 쿼터 절약"이라 <strong>쿼터가 실제 병목일 때만</strong> 이득. → <strong>기본은 executor도 Codex 유지</strong>(현 <code>task.agentModelOverrides={}</code> 그대로). Kimi는 대량 병렬·툴헤비 작업에 <code>gjc --mpreset kimi</code> 수동 레인.
+  </div>
+  <div class="note dont">
+    <span class="h">철회</span>
+    이전에 권한 "executor=Kimi 자동화"는 벤치 확인 전 성급했음 — 증거상 Codex가 코딩 우위라 철회. 단 K2.7은 MCP 툴호출 정확도 1위라 <strong>툴 의존 높은 파이프라인</strong>엔 여전히 강함.
+  </div>
+
+  <h3>리서치 검색: Exa vs Perplexity</h3>
+  <table>
+    <thead><tr><th>항목</th><th>Exa</th><th>Perplexity Sonar</th></tr></thead>
+    <tbody>
+      <tr><td>독립 정확도 (500쿼리)</td><td class="yes">64.8%</td><td>60.1%</td></tr>
+      <tr><td>의미/개념 검색</td><td class="yes">최강</td><td>약함</td></tr>
+      <tr><td>레이트 리밋</td><td class="yes">Instant &lt;200ms</td><td>50 calls/min (에이전트엔 치명적)</td></tr>
+      <tr><td>비용</td><td>$7/1k (deep $12·deep-reasoning $15)</td><td>$0.30~1.30+/쿼리 (가변)</td></tr>
+      <tr><td>강점</td><td>검증가능 정밀 검색</td><td>합성된 인용 답변</td></tr>
+    </tbody>
+  </table>
+  <div class="note do">
+    <span class="h">결론 (리서치 많이 함 → 조치 완료)</span>
+    정확도·속도·비용 다 <strong>Exa 우위</strong>. 그래서 Perplexity 추가 대신 <strong>Exa 리서처(심층) 모드 ON</strong> (<code>exa.enableResearcher=true</code>, 적용·검증됨). 며칠 써보고 크레딧 소모 보고 조정. Perplexity는 "합성 답변 UX"가 꼭 필요할 때만 보조(Pro 있으면 쿠키로 무료).
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section id="settings">
+  <h2><span class="num">13</span>최적 설정값</h2>
+  <p class="lead">현재값 → 권장값. 전부 <code>gjc config list</code> 실측 기준, 등급순.</p>
+
+  <h3>A · 무조건 켜라 (순이득·저위험·되돌리기 쉬움)</h3>
+  <table>
+    <thead><tr><th>키</th><th>현재</th><th>→</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td class="k">bashInterceptor.enabled</td><td>false</td><td class="yes">true</td><td>cat/grep/find/sed 자동 차단 → read/search/find/edit 유도. 토큰↓ 정확도↑</td></tr>
+      <tr><td class="k">checkpoint.enabled</td><td>false</td><td class="yes">true</td><td>작업 롤백 포인트 자동 생성. 안전망</td></tr>
+      <tr><td class="k">bash.autoBackground.enabled</td><td>false</td><td class="yes">true</td><td>60초+ 명령 자동 백그라운드(서버·빌드 멈춤 방지)</td></tr>
+      <tr><td class="k">lsp.diagnosticsOnEdit</td><td>false</td><td class="yes">true</td><td>edit 직후 에러 즉시 감지 (write는 이미 on)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>B · 네 머신 사양상 켜는 게 맞음 (5950X 16C/32T)</h3>
+  <table>
+    <thead><tr><th>키</th><th>현재</th><th>→</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td class="k">task.maxConcurrency</td><td>8</td><td class="yes">12</td><td>서브에이전트 동시성. 16코어면 여유</td></tr>
+      <tr><td class="k">task.enableLsp</td><td>false</td><td class="yes">true</td><td>서브에이전트도 진단 받음(코드작업 품질↑)</td></tr>
+      <tr><td class="k">async.enabled</td><td>false</td><td class="yes">true</td><td>비동기 잡 병렬 허용</td></tr>
+    </tbody>
+  </table>
+  <p style="color:var(--muted);font-size:14px;margin-top:6px">※ B는 실제 fan-out 할 때만 비용↑. 평소엔 영향 없음.</p>
+
+  <h3>C · 긴 세션/반복작업이면 (선택) <span class="ev" style="color:var(--warn);border-color:var(--warn);background:rgba(210,153,34,.1)">보류 · 기록만</span></h3>
+  <table>
+    <thead><tr><th>키</th><th>현재</th><th>→</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td class="k">compaction.strategy</td><td>context-full</td><td>handoff</td><td>긴 세션 맥락 보존 더 좋음</td></tr>
+      <tr><td class="k">memory.backend</td><td>off</td><td>local</td><td>세션 간 학습 누적</td></tr>
+    </tbody>
+  </table>
+
+  <h3>D · 그대로 둬라 (이미 최적)</h3>
+  <ul>
+    <li><code>edit.mode = hashline</code> — 현대 기본값, 정확도 최고</li>
+    <li><code>lsp.formatOnWrite = false</code> — 프로젝트 포매터 충돌 방지(임의 리포맷 금지 원칙)</li>
+    <li><code>temperature = -1</code> — 프로바이더 기본. 코딩엔 손대지 마라</li>
+    <li><code>modelRoles default = gpt-5.5:xhigh</code> — 코딩 최적. 더 빡세게는 <code>claude-max</code> 프로필</li>
+  </ul>
+
+  <h3>A+B 한 방 적용</h3>
+  <pre><code>gjc config set bashInterceptor.enabled true
+gjc config set checkpoint.enabled true
+gjc config set bash.autoBackground.enabled true
+gjc config set lsp.diagnosticsOnEdit true
+gjc config set task.maxConcurrency 12
+gjc config set task.enableLsp true
+gjc config set async.enabled true</code></pre>
+  <div class="note do">
+    <span class="h">되돌리기</span>
+    각 키는 <code>gjc config reset &lt;키&gt;</code> 또는 <code>set ... false</code>로 원복. 안전하게 실험 가능.
+  </div>
+</section>
+
+<!-- PAY / SUBSCRIPTIONS -->
+<section id="pay">
+  <h2><span class="num">14</span>과금 우선순위 <span class="ev">요금 실측 · 2026</span></h2>
+  <p class="lead">처음 실측은 "검색 키 0개 · 모델 Claude+Codex뿐"이었으나 지금은 <strong>Claude Max + Codex Pro + Kimi + Gemini + Exa/Tavily까지 전부 셋업·검증 완료</strong>. 아래는 ROI 기준 우선순위 기록.</p>
+
+  <h3>1순위 · 검색 — 진짜 구멍, ROI 최고</h3>
+  <table>
+    <thead><tr><th>엔진</th><th>무료</th><th>유료</th><th>판정</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Tavily</strong></td><td>1,000 크레딧/월 (카드 불필요)</td><td>PAYG $0.008/크레딧 · Researcher $30/월</td><td><span class="yes">무료로 즉시 업글</span> · 에이전트 전용 설계</td></tr>
+      <tr><td><strong>Exa</strong></td><td>1,000 검색/월</td><td>표준 $7/1k · Instant $5/1k · deep $12/1k · deep-reasoning $15/1k</td><td><span class="yes">품질 최고</span> · 코드/문서/시맨틱</td></tr>
+      <tr><td>Perplexity Sonar</td><td>—</td><td>Sonar $1/1M + 요청당 $5–12/1k · Pro $3/$15 + $6–14/1k</td><td>Perplexity Pro 있으면 쿠키로 키리스. 아니면 코딩엔 Exa가 나음</td></tr>
+      <tr><td>Brave</td><td><span class="no">폐지(’26.2)</span> · 월 $5 크레딧(출처표기)</td><td>$5/1k~</td><td>무료티어 사라져 매력↓ · 스킵</td></tr>
+      <tr><td>Kagi</td><td>—</td><td>$15–25/1k (영업문의)</td><td>프리미엄·과함 · 스킵</td></tr>
+    </tbody>
+  </table>
+  <div class="note do">
+    <span class="h">추천 조합</span>
+    <strong>Exa 주 + Tavily(또는 DuckDuckGo) 폴백.</strong> 둘 다 무료 티어라 개인 사용(월 수백~1천 쿼리)이면 <strong>실질 $0</strong>. 넘쳐도 Exa 표준 $7/1k라 한 달 몇 달러 수준.
+  </div>
+
+  <h3>2순위 · 모델 프로바이더 — 이미 최상위라 한계효용</h3>
+  <p>너는 이미 코딩 1·2위급 모델(<strong>Claude + GPT-5.x Codex</strong>)을 쥐고 있다. 또 다른 프리미엄 코딩모델에 돈 쓸 이유는 약하다. 진짜 레버는 이미 가진 것에 있다.</p>
+  <div class="grid cols-2">
+    <div class="card"><h4>claude-max 프로필 <span class="tag">0원 해금</span></h4><p>어려운 작업을 Opus 4.8 xhigh로. anthropic 인증돼 있어 추가비용 없이 즉시. <strong>단 Claude 구독이 Max여야 풀로 작동</strong> — Pro면 Pro→Max 업글이 살 수 있는 최대 품질 점프.</p></div>
+    <div class="card"><h4>Gemini API 키 <span class="tag">유틸</span></h4><p>품질 점프 아님, 싸고 유용. 1M 컨텍스트(대형 코드베이스), 초저가 flash로 smol 역할. 무료 티어 있음.<br>3 Flash $0.50/$3 · 3.1 Flash-Lite $0.25/$1.50 · 3 Pro $2/$12(>200k $4/$18)</p></div>
+  </div>
+
+  <h3>워크호스 일꾼 — 이미 보유 (Kimi)</h3>
+  <div class="note do">
+    <span class="h">정정: Kimi 이미 로그인됨</span>
+    <code>kimi-device-id</code> 로 gjc authStorage에 로그인돼 있어 <strong>추가 구독 불필요</strong>. <code>gjc --mpreset kimi</code> 로 바로 일꾼 레인 가동(K2.7-code 검증됨). 병렬·대량·일회성 작업을 Claude Max/Codex 쿼터 안 태우고 여기로 돌리면 됨.
+  </div>
+  <p style="color:var(--muted);font-size:14px">아래는 <strong>혹시</strong> 일꾼을 더 늘리고 싶을 때의 옵션일 뿐 — 지금은 살 이유 없음. (요금 2026 검색 확인값)</p>
+  <table>
+    <thead><tr><th>구독</th><th>요금</th><th>특징</th><th>판정</th></tr></thead>
+    <tbody>
+      <tr><td><strong>z.ai GLM Coding</strong></td><td>Lite $18 · Pro $72 · Max $160/월 (인트로 30%↓)</td><td>GLM-5.2 정액·고쿼터. 추적된 에이전트 IDE 플랜 중 최저가</td><td><span class="yes">가성비 1순위</span></td></tr>
+      <tr><td><strong>Kimi Code</strong></td><td>$19 · $39 · $99 · $199/월</td><td>K2.7 Code(1T MoE). 상위 티어 Agent Swarm 최대 300 병렬</td><td><span class="yes">이미 보유</span> · 상위 티어만 고려</td></tr>
+      <tr><td>OpenRouter (PAYG)</td><td>토큰당</td><td>여러 모델 한 키로. 가끔 쓰는 보조</td><td>정액 싫으면</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <span class="h">언제 사나</span>
+    task 툴로 서브에이전트 여러 개 fan-out 하거나, 리팩터·테스트 생성 같은 대량 작업을 자주 돌릴 때. <strong>지금은 Kimi(보유) + Claude Max + Codex Pro로 충분 — 살 필요 없다.</strong> 일꾼을 더 늘리고 싶을 때만 GLM Coding 고려.
+  </div>
+  <div class="note dont">
+    <span class="h">안 사도 됨</span>
+    또 다른 플래그십 코딩 API 직과금(OpenAI/Anthropic 별도), xAI Grok — 이미 구독으로 커버되는 중복 결제. 품질 점프 없음.
+  </div>
+
+  <h3>월 비용 시나리오</h3>
+  <table>
+    <thead><tr><th>강도</th><th>구성</th><th>대략 비용</th></tr></thead>
+    <tbody>
+      <tr><td>라이트(취미)</td><td>Tavily/Exa 무료 티어 + DuckDuckGo 폴백</td><td class="yes">$0</td></tr>
+      <tr><td>미디엄(매일)</td><td>Exa 유료 약간 + Gemini flash 소액</td><td>~$5–15/월</td></tr>
+      <tr><td>헤비</td><td>Exa deep + Claude <strong>Max</strong> 구독</td><td>구독료 + 검색 수십$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>현재 상태 (검증 완료)</h3>
+  <ol>
+    <li><span class="yes">✓</span> 검색: Exa 키 적용 + <code>providers.webSearch=exa</code> → <code>Provider: Exa</code> 검증됨 (폴백 DuckDuckGo). Tavily 키도 대기 중.</li>
+    <li><span class="yes">✓</span> 최고품질 모델: Claude <strong>Max</strong> 확인 → <code>gjc --mpreset claude-max</code> (Opus 4.8, 검증됨)</li>
+    <li><span class="yes">✓</span> Gemini: <code>google/gemini-3-flash-preview</code> 작동 검증 (대용량 컨텍스트·저가용)</li>
+    <li><span class="yes">✓</span> 일꾼 모델: <strong>Kimi 이미 로그인</strong>(<code>kimi-device-id</code>) → <code>gjc --mpreset kimi</code> (K2.7-code 검증). 추가 구독 불필요</li>
+    <li>남은 선택: Perplexity Pro 쿠키, exa researcher 모드(비용↑), smol 역할 튜닝</li>
+  </ol>
+  <div class="note">
+    <span class="h">키 적는 곳</span>
+    <code>oh-my-gjc/.env</code> 에 키만 채우면 끝(<code>~/.gjc/.env</code> 로 심링크돼 gjc 가 자동 인식, <code>source</code> 불필요). <strong>cwd 프로젝트 .env 는 자격증명으로 무시되니 반드시 신뢰 위치 경유.</strong> 이 파일은 gitignore 처리됨.
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <span class="gj">가재코드(GJC)</span> 실전 가이드 · 추상론보다 작업 하나 시켜보는 게 감 잡기 제일 빠르다.
+</footer>
+
+</body>
+</html>

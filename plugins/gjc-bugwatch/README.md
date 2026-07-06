@@ -32,6 +32,8 @@ bun run plugins/gjc-bugwatch/bin/collect.ts --all                # 환경/자격
 bun run plugins/gjc-bugwatch/bin/collect.ts --json               # 기계용 JSON을 stdout으로
 bun run plugins/gjc-bugwatch/bin/collect.ts --fresh-days 2         # N일 내 재발 없으면 ⏳stale(이미 고쳐진 듯) 표시
 bun run plugins/gjc-bugwatch/bin/collect.ts --fresh-only          # stale(오래된) 후보는 아예 제외
+bun run plugins/gjc-bugwatch/bin/collect.ts --hide-resolved      # resolved.jsonl에 등록된(이미 고쳐진) 후보 제외
+bun run plugins/gjc-bugwatch/bin/collect.ts --resolved FILE      # resolved 원장 경로(기본 .gjc/bugwatch/resolved.jsonl)
 ```
 
 무엇을 후보로 잡나:
@@ -64,6 +66,7 @@ bash ~/.gjc/plugins/cache/plugins/*gjc-bugwatch*/bin/install-skill.sh
 ## 산출물
 
 - `.gjc/bugwatch/candidates.jsonl` — collector가 뽑은 원시 후보(레닥션됨).
+- `.gjc/bugwatch/resolved.jsonl` — **upstream에서 이미 고쳐진 게 확인된 버그**를 fingerprint로 기록한 원장. collector가 이걸 읽어 매칭 후보를 `✅resolved`로 태깅하고 맨 아래로 가라앉힌다(`--hide-resolved`로 숨김) → 죽은 버그를 매번 다시 쫓는 혼동 방지. `.gjc/bugwatch/RESOLVED.md`는 사람용 표.
 - `.gjc/bugwatch/drafts/<severity>-<slug>-<fp8>.md` — 이슈/PR 초안(중복은 fingerprint로 스킵).
 - `.gjc/bugwatch/drafts/INDEX.md` — 초안 목록.
 

@@ -43,9 +43,10 @@ bash "${OMG_ROOT}bin/install-skill.sh" all
 
 ## Step 2 — 레거시 정리 (있을 때만)
 
-- `~/.gjc/agent/skills/` 나 `~/.gjc/agent/AGENTS.md`에 구버전(my-workflows) 잔재가
-  보이면: AGENTS.md의 `my-workflows:easy-always`/`gate-always` 마커 블록은
-  `/oh-my-gjc:easy-always`·`gate-always`가 자동 마이그레이션한다고 안내.
+- `~/.gjc/agent/skills/` 나 `~/.gjc/agent/AGENTS.md`에 구버전 잔재가 보이면 안내:
+  `~/.gjc/agent/AGENTS.md`의 `my-workflows:*` 마커와 v0.3.0 세대 `oh-my-gjc:*` 마커는
+  둘 다 **죽은 표면**(gjc가 user 레벨 AGENTS.md를 주입하지 않음 — 0.8.2 실증)이라
+  `/oh-my-gjc:easy-always`·`gate-always`가 `~/.gjc/agent/SYSTEM.md`로 자동 마이그레이션한다.
 - 구 플러그인이 설치돼 있으면 제거를 제안: `/plugin uninstall my-workflows@oh-my-gjc`,
   `/plugin uninstall multivendor-presets@oh-my-gjc` (동의 후에만).
 

@@ -41,6 +41,8 @@
  *   bun run collect.ts --out FILE      # spool JSONL candidates (default .gjc/bugwatch/candidates.jsonl)
  *   bun run collect.ts --fresh-days 2  # candidates not seen within N days are marked ⏳stale (likely already fixed)
  *   bun run collect.ts --fresh-only    # drop stale candidates entirely (only recently-recurring bugs)
+ *   bun run collect.ts --hide-resolved # drop candidates listed in the resolved ledger (fixed upstream)
+ *   bun run collect.ts --resolved FILE # resolved ledger path (default .gjc/bugwatch/resolved.jsonl)
  *
  * Scans both live `*.log` and rotated `*.log.gz` so history is covered — and marks
  * candidates whose last occurrence predates the freshness window as ⏳stale, so
@@ -73,6 +75,10 @@ export interface GroupedCandidate extends Candidate {
 	stale?: boolean;
 	/** whole days since lastSeen (undefined when no timestamp). */
 	lastSeenDaysAgo?: number;
+	/** true when this fingerprint is in the resolved ledger (already fixed upstream) — don't re-chase. */
+	resolved?: boolean;
+	/** upstream reference for the fix, e.g. "#1462 / PR #1465". */
+	resolvedRef?: string;
 }
 
 // ── noise: environmental / credential, not a code bug ────────────────────────
@@ -104,10 +110,45 @@ export function isNoise(message: string): boolean {
 /** Strip credentials/PII/volatile bits so a candidate is safe to paste upstream. */
 export function redact(text: string): string {
 	return text
+		// URLs carrying inline credentials (scheme://user:pass@host) — before email so the creds aren't half-matched
+		.replace(/https?:\/\/[^@\s"]+@[^\s"]+/g, "<url-with-creds>")
 		.replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "<email>")
 		.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "<uuid>")
-		.replace(/(sk-|Bearer\s+|token[=:]\s*)[A-Za-z0-9._-]{12,}/gi, "$1<redacted>")
-		.replace(/https?:\/\/[^@\s"]+@[^\s"]+/g, "<url-with-creds>");
+		// JSON Web Tokens (three base64url segments)
+		.replace(/\beyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]*/g, "<jwt>")
+		// well-known standalone credential shapes
+		.replace(/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g, "<aws-key>")
+		.replace(/\b(?:gh[pousr]_|github_pat_)[A-Za-z0-9_]{20,}/g, "<gh-token>")
+		.replace(/\bxox[baprs]-[A-Za-z0-9-]{10,}/gi, "<slack-token>")
+		.replace(/\bBasic\s+[A-Za-z0-9+/=]{8,}/g, "Basic <redacted>")
+		// key=value / key: value secrets — the key name identifies the secret, so redact any length
+		.replace(
+			/\b(authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|secret|password|passwd|pwd|token)(\s*[=:]\s*)("?)[^\s"',;}]+\3/gi,
+			"$1$2<redacted>",
+		)
+		// prefixed opaque tokens (sk-…, Bearer …, token=…) with a lower length floor than before
+		.replace(/(sk-|Bearer\s+|token[=:]\s*)[A-Za-z0-9._-]{6,}/gi, "$1<redacted>");
+}
+
+// A key whose *name* signals a secret — its value is dropped wholesale in redactValue.
+const SENSITIVE_KEY =
+	/(?:authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|secret|password|passwd|pwd|token|cookie|credential)/i;
+
+/**
+ * Deep-copy a value with every string field scrubbed via redact(); when a key name
+ * itself signals a secret (token/password/authorization/…), its string value is
+ * dropped wholesale. Used to make the raw `sample` safe for --json / spool output —
+ * the human report only ever prints the already-redacted message/stackTop.
+ */
+export function redactValue(v: unknown, key?: string): unknown {
+	if (typeof v === "string") return key && SENSITIVE_KEY.test(key) ? "<redacted>" : redact(v);
+	if (Array.isArray(v)) return v.map(x => redactValue(x));
+	if (v && typeof v === "object") {
+		const out: Record<string, unknown> = {};
+		for (const [k, val] of Object.entries(v as Record<string, unknown>)) out[k] = redactValue(val, k);
+		return out;
+	}
+	return v;
 }
 
 /** Normalize a message+stack into a stable dedupe key (volatile parts removed). */
@@ -143,7 +184,7 @@ export function classifyLogEntry(o: Record<string, unknown>, includeNoise = fals
 	const extraKeys = Object.keys(o).filter(k => !NOISE_MSG_KEYS.has(k));
 
 	return {
-		fingerprint: fingerprint(category, message, stackTop),
+		fingerprint: fingerprint(category, redact(message), stackTop ? redact(stackTop) : undefined),
 		category,
 		severity,
 		message: redact(message),
@@ -164,7 +205,7 @@ export function extractSessionSignals(entry: unknown, includeNoise = false): Can
 					v.split("\n").find(l => SESSION_RUNTIME_SIGNATURE.test(l))?.trim() ?? v.slice(0, 200);
 				if (!includeNoise && isNoise(line)) return;
 				const stackTop = v.split("\n").find(l => l.trim().startsWith("at "))?.trim();
-				const fp = fingerprint("gjc-internal", line, stackTop);
+				const fp = fingerprint("gjc-internal", redact(line), stackTop ? redact(stackTop) : undefined);
 				if (!seen.has(fp)) {
 					seen.add(fp);
 					out.push({
@@ -186,7 +227,7 @@ export function extractSessionSignals(entry: unknown, includeNoise = false): Can
 			// gjc bugs) — only under --all, and only with a real message.
 			const rawMsg = o.message ?? o.error ?? o.text;
 			if (includeNoise && o.isError === true && typeof rawMsg === "string" && rawMsg.trim()) {
-				const msg = redact(rawMsg.slice(0, 200));
+				const msg = redact(rawMsg).slice(0, 200);
 				if (!isNoise(msg)) {
 					const fp = fingerprint("error", msg);
 					if (!seen.has(fp)) {
@@ -244,7 +285,7 @@ function group(items: { c: Candidate; ts: string; raw: Record<string, unknown> }
 			if (ts && (!g.firstSeen || ts < g.firstSeen)) g.firstSeen = ts;
 			if (ts && (!g.lastSeen || ts > g.lastSeen)) g.lastSeen = ts;
 		} else {
-			by.set(c.fingerprint, { ...c, count: 1, firstSeen: ts || undefined, lastSeen: ts || undefined, sample: raw });
+			by.set(c.fingerprint, { ...c, count: 1, firstSeen: ts || undefined, lastSeen: ts || undefined, sample: redactValue(raw) as Record<string, unknown> });
 		}
 	}
 	return [...by.values()];
@@ -276,6 +317,63 @@ export function applyStaleFlags(groups: GroupedCandidate[], nowMs: number, fresh
 		if (Number.isNaN(t)) continue;
 		g.lastSeenDaysAgo = Math.floor((nowMs - t) / 86_400_000);
 		g.stale = nowMs - t > freshMs;
+	}
+	return groups;
+}
+
+
+// ── resolved ledger: bugs confirmed fixed upstream, so future scans don't re-chase ──
+export interface ResolvedEntry {
+	/** exact collector fingerprint of the already-fixed candidate (dedupe key). */
+	fingerprint: string;
+	/** optional display reference; built from issue/pr when absent. */
+	ref?: string;
+	issue?: number;
+	pr?: number;
+	message?: string;
+	note?: string;
+}
+
+/** Load the resolved ledger (fixed-upstream bugs) keyed by fingerprint. Missing/corrupt file → empty map. */
+export function loadResolved(path: string): Map<string, ResolvedEntry> {
+	const map = new Map<string, ResolvedEntry>();
+	let raw: string;
+	try {
+		raw = readFileSync(path, "utf8");
+	} catch {
+		return map; // no ledger yet
+	}
+	for (const line of raw.split("\n")) {
+		const t = line.trim();
+		if (!t) continue;
+		try {
+			const e = JSON.parse(t) as ResolvedEntry;
+			if (e && typeof e.fingerprint === "string" && e.fingerprint) map.set(e.fingerprint, e);
+		} catch {
+			/* skip corrupt line */
+		}
+	}
+	return map;
+}
+
+/** Human-readable reference for a resolved entry (explicit `ref`, else built from issue/pr). */
+export function resolvedRef(e: ResolvedEntry): string {
+	if (e.ref) return e.ref;
+	const parts: string[] = [];
+	if (e.issue) parts.push(`#${e.issue}`);
+	if (e.pr) parts.push(`PR #${e.pr}`);
+	return parts.join(" / ");
+}
+
+/** Tag candidates present in the resolved ledger as fixed-upstream. Mutates + returns. */
+export function applyResolved(groups: GroupedCandidate[], resolved: Map<string, ResolvedEntry>): GroupedCandidate[] {
+	if (resolved.size === 0) return groups;
+	for (const g of groups) {
+		const e = resolved.get(g.fingerprint);
+		if (!e) continue;
+		g.resolved = true;
+		const ref = resolvedRef(e);
+		if (ref) g.resolvedRef = ref;
 	}
 	return groups;
 }
@@ -330,6 +428,8 @@ function main(): void {
 	const days = Number(arg("--days", "7"));
 	const freshDays = Number(arg("--fresh-days", "2"));
 	const freshOnly = has("--fresh-only");
+	const hideResolved = has("--hide-resolved");
+	const resolvedPath = arg("--resolved", join(process.cwd(), ".gjc", "bugwatch", "resolved.jsonl"))!;
 	const maxSessions = Number(arg("--session-limit", arg("--sessions", "40")));
 	const sinceMs = Date.now() - days * 86_400_000;
 
@@ -351,9 +451,15 @@ function main(): void {
 		Date.now(),
 		freshDays,
 	);
-	// Fresh (recently-seen) first so likely-already-fixed candidates sink to the bottom.
-	groups.sort((a, b) => Number(a.stale ?? false) - Number(b.stale ?? false));
+	applyResolved(groups, loadResolved(resolvedPath));
+	// Sink order: live first, then ⏳stale, then ✅resolved (fixed upstream) at the very bottom.
+	groups.sort(
+		(a, b) =>
+			Number(a.resolved ?? false) - Number(b.resolved ?? false) ||
+			Number(a.stale ?? false) - Number(b.stale ?? false),
+	);
 	if (freshOnly) groups = groups.filter(g => !g.stale);
+	if (freshOnly || hideResolved) groups = groups.filter(g => !g.resolved);
 
 	if (has("--json")) {
 		process.stdout.write(JSON.stringify(groups, null, 2) + "\n");
@@ -366,10 +472,14 @@ function main(): void {
 		);
 		const staleN = groups.filter(g => g.stale).length;
 		if (staleN && !freshOnly) process.stdout.write(`  (${staleN} marked ⏳stale = no hit in ${freshDays}d, likely already fixed; --fresh-only to hide)\n\n`);
+		const resolvedN = groups.filter(g => g.resolved).length;
+		if (resolvedN && !(freshOnly || hideResolved))
+			process.stdout.write(`  (${resolvedN} marked ✅resolved = fixed upstream, in resolved.jsonl; --hide-resolved to hide)\n\n`);
 		for (const g of groups) {
 			const staleTag = g.stale ? ` ⏳stale(${g.lastSeenDaysAgo}d)` : "";
+			const resolvedTag = g.resolved ? ` ✅resolved(${g.resolvedRef ?? "fixed upstream"})` : "";
 			process.stdout.write(
-				`${icon[g.severity]} [${g.category}] ×${g.count}  (${g.source})${staleTag}\n  ${g.message}\n` +
+				`${icon[g.severity]} [${g.category}] ×${g.count}  (${g.source})${staleTag}${resolvedTag}\n  ${g.message}\n` +
 					(g.sampleStackTop ? `  ${g.sampleStackTop}\n` : "") +
 					(g.lastSeen ? `  last: ${g.lastSeen}\n` : "") +
 					"\n",

@@ -4,14 +4,19 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	applyResolved,
 	applyStaleFlags,
 	classifyLogEntry,
 	extractSessionSignals,
 	fingerprint,
 	type GroupedCandidate,
 	isNoise,
+	loadResolved,
 	mergeGroups,
 	redact,
+	redactValue,
+	type ResolvedEntry,
+	resolvedRef,
 	scanLogFile,
 } from "../bin/collect";
 
@@ -169,5 +174,125 @@ describe("gjc-bugwatch gzip + stale", () => {
 		const g: GroupedCandidate = { fingerprint: "n", category: "warn", severity: "low", message: "x", source: "log", count: 1, sample: {} };
 		applyStaleFlags([g], Date.now(), 2);
 		expect(g.stale).toBeUndefined();
+	});
+});
+
+describe("gjc-bugwatch resolved ledger", () => {
+	const mk = (fingerprint: string, over: Partial<GroupedCandidate> = {}): GroupedCandidate => ({
+		fingerprint,
+		category: "gjc-internal",
+		severity: "high",
+		message: "x",
+		source: "log",
+		count: 1,
+		sample: {},
+		...over,
+	});
+
+	it("resolvedRef prefers explicit ref, else builds from issue/pr", () => {
+		expect(resolvedRef({ fingerprint: "a", ref: "#1462 / PR #1465" })).toBe("#1462 / PR #1465");
+		expect(resolvedRef({ fingerprint: "a", issue: 1462, pr: 1465 })).toBe("#1462 / PR #1465");
+		expect(resolvedRef({ fingerprint: "a", issue: 1470 })).toBe("#1470");
+		expect(resolvedRef({ fingerprint: "a" })).toBe("");
+	});
+
+	it("applyResolved tags only matching fingerprints and sets the ref", () => {
+		const hit = mk("fp-fixed");
+		const miss = mk("fp-live");
+		const ledger = new Map<string, ResolvedEntry>([["fp-fixed", { fingerprint: "fp-fixed", issue: 1462, pr: 1465 }]]);
+		applyResolved([hit, miss], ledger);
+		expect(hit.resolved).toBe(true);
+		expect(hit.resolvedRef).toBe("#1462 / PR #1465");
+		expect(miss.resolved).toBeUndefined();
+		expect(miss.resolvedRef).toBeUndefined();
+	});
+
+	it("applyResolved is a no-op on an empty ledger", () => {
+		const g = mk("fp");
+		applyResolved([g], new Map());
+		expect(g.resolved).toBeUndefined();
+	});
+
+	it("loadResolved parses a jsonl ledger and skips blank/corrupt lines", () => {
+		const dir = mkdtempSync(join(tmpdir(), "bw-resolved-"));
+		const path = join(dir, "resolved.jsonl");
+		writeFileSync(
+			path,
+			[
+				JSON.stringify({ fingerprint: "fp-1", issue: 1462, pr: 1465 }),
+				"",
+				"{ not valid json",
+				JSON.stringify({ noFingerprint: true }),
+				JSON.stringify({ fingerprint: "fp-2", ref: "#1470" }),
+			].join("\n") + "\n",
+		);
+		const map = loadResolved(path);
+		expect(map.size).toBe(2);
+		expect(map.get("fp-1")?.pr).toBe(1465);
+		expect(map.get("fp-2")?.ref).toBe("#1470");
+	});
+
+	it("loadResolved returns an empty map when the ledger file is missing", () => {
+		expect(loadResolved(join(tmpdir(), "bw-nope", "resolved.jsonl")).size).toBe(0);
+	});
+});
+
+describe("gjc-bugwatch redaction hardening (C-1/H-1/H-2)", () => {
+	it("redact scrubs additional credential shapes that used to leak", () => {
+		expect(redact("Authorization: Basic dXNlcjpwYXNzd29yZA==")).not.toContain("dXNlcjpwYXNzd29yZA");
+		expect(redact("api_key=AKfycb1234567890abcdef")).toContain("<redacted>");
+		expect(redact("password: hunter2")).toContain("<redacted>");
+		expect(redact("client_secret=abc123")).toContain("<redacted>");
+		expect(redact("jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.dozjgNryP4J3jVmNHl0w5N")).toContain("<jwt>");
+		expect(redact("key AKIAIOSFODNN7EXAMPLE here")).toContain("<aws-key>");
+		expect(redact("token ghp_ABCDEFabcdef0123456789ABCDEFabcdef here")).toContain("<gh-token>");
+		expect(redact("short token=abc123")).not.toContain("abc123");
+	});
+
+	it("redact still covers the original formats (no regression)", () => {
+		const r = redact("user devswha@gmail.com id 019f26c8-bfb6-7000-80e3-d1e1b5c68a6b Bearer abcdef1234567890");
+		expect(r).toContain("<email>");
+		expect(r).toContain("<uuid>");
+		expect(r).toContain("<redacted>");
+		expect(r).not.toContain("devswha@gmail.com");
+		expect(redact("https://user:s3cr3t@host.example/path")).toBe("<url-with-creds>");
+	});
+
+	it("redactValue scrubs string values and drops secret-named keys in a nested object", () => {
+		const out = redactValue({
+			message: "login for devswha@gmail.com failed",
+			authorization: "Bearer abcdef1234567890",
+			nested: { password: "hunter2", note: "id 019f26c8-bfb6-7000-80e3-d1e1b5c68a6b" },
+			count: 3,
+		}) as Record<string, any>;
+		expect(out.message).not.toContain("devswha@gmail.com");
+		expect(out.authorization).toBe("<redacted>");
+		expect(out.nested.password).toBe("<redacted>");
+		expect(out.nested.note).toContain("<uuid>");
+		expect(out.count).toBe(3); // non-strings pass through untouched
+	});
+
+	it("scanLogFile stores a redacted sample — no raw secret reaches --json/spool (C-1)", () => {
+		const dir = mkdtempSync(join(tmpdir(), "bw-sample-"));
+		const path = join(dir, "gjc.2026-07-06.log");
+		writeFileSync(
+			path,
+			JSON.stringify({
+				level: "error",
+				pid: 1,
+				message: "request failed for devswha@gmail.com",
+				token: "sk-abcdef1234567890",
+				stack: "Error\n    at boom (/$bunfs/root/gjc-x:1:1)",
+			}) + "\n",
+		);
+		const [g] = scanLogFile(path);
+		const dumped = JSON.stringify(g.sample);
+		expect(dumped).not.toContain("devswha@gmail.com");
+		expect(dumped).not.toContain("sk-abcdef1234567890");
+	});
+
+	it("fingerprint no longer carries a raw email from the message (H-1)", () => {
+		const c = classifyLogEntry({ level: "error", message: "boom for devswha@gmail.com", pid: 1 });
+		expect(c?.fingerprint).not.toContain("devswha@gmail.com");
 	});
 });
