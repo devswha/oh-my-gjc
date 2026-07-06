@@ -46,6 +46,33 @@ model presets, and detects your environment to recommend the optional plugins be
 
 Details: [`plugins/oh-my-gjc/README.md`](./plugins/oh-my-gjc/README.md)
 
+### Skills, in detail
+
+#### `easy-answer` — plain-language final answers
+
+Turns gjc's **final answer to you** into something you can understand without any
+technical background — no matter how gnarly the work underneath was. It changes only
+the *wording, structure, and tone* of the last message; it never changes the actual
+work, tool use, technical accuracy, or the warnings/risks. Accuracy beats simplicity:
+if plain wording would distort the meaning, it keeps the exact term and glosses it in
+parentheses.
+
+- **Scope:** every final answer (general-purpose). This is the always-on voice — the
+  format you're reading right now.
+- **Format (fixed order):** ① one-line conclusion (no jargon) → ② plain-language
+  explanation (everyday words, one idea per sentence) → ③ *Details* (optional) —
+  commands, file paths, code, and technical specifics collected here so readers who
+  don't care can skip them.
+- **Isolation rule:** function/variable names, CLI flags, file paths, and git terms
+  (commit/staged/untracked…) never appear in ① or ②; they all go into *Details*.
+- **Terminal-only:** no HTML tags (`<details>`, `<br>`…) — the terminal can't render
+  them, so *Details* is a normal `### Details` markdown heading.
+- **Never dropped:** risks, cautions, and actions only you can take are always kept —
+  just said plainly.
+- **Turn it on:** `/oh-my-gjc:easy` (this session) or `/oh-my-gjc:easy-always on`
+  (every session — writes a marker block into `~/.gjc/agent/SYSTEM.md`).
+- Source: [`plugins/oh-my-gjc/skills/easy-answer/SKILL.md`](./plugins/oh-my-gjc/skills/easy-answer/SKILL.md)
+
 ## Optional plugins
 
 Install on demand — `/oh-my-gjc:setup` recommends the ones your environment supports.
