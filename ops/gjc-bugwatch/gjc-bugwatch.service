@@ -1,0 +1,22 @@
+# gjc-bugwatch live HIGH-signal daemon — user systemd unit.
+# Install:
+#   cp ops/gjc-bugwatch/gjc-bugwatch.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now gjc-bugwatch.service
+#   loginctl enable-linger "$USER"     # survive logout/boot
+# Operate: systemctl --user {status|restart|stop} gjc-bugwatch
+# (ops/gjc-bugwatch/install.sh does all of the above idempotently.)
+[Unit]
+Description=gjc-bugwatch live daemon (follow.ts HIGH signal -> tmux gjc-pr triage inject)
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /home/devswha/workspace/oh-my-gjc/ops/gjc-bugwatch/daemon.sh
+Restart=on-failure
+RestartSec=5
+Environment=GJC_BUGWATCH_SESSION=gjc-pr
+Environment=GJC_BUGWATCH_MIN=medium
+
+[Install]
+WantedBy=default.target
