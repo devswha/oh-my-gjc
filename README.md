@@ -45,90 +45,40 @@ model presets, and detects your environment to recommend the optional plugins be
 
 Details: [`plugins/oh-my-gjc/README.md`](./plugins/oh-my-gjc/README.md)
 
-### Skills, in detail
+### 스킬 하나씩 보기
 
-#### `easy-answer` — plain-language final answers
+#### `easy-answer` — 쉬운 말로 답하기
 
-Turns gjc's **final answer to you** into something you can understand without any
-technical background — no matter how gnarly the work underneath was. It changes only
-the *wording, structure, and tone* of the last message; it never changes the actual
-work, tool use, technical accuracy, or the warnings/risks. Accuracy beats simplicity:
-if plain wording would distort the meaning, it keeps the exact term and glosses it in
-parentheses.
+마지막에 사용자에게 하는 답을 전문용어 없이 쉬운 말로 풀어줘요. 지금 이 글처럼요.
+작업 내용이나 정확성은 그대로 두고 **말투만** 바꿔요. 쉽게 쓰다 뜻이 틀어질 것 같으면
+원래 용어를 그대로 쓰고 괄호로 뜻을 달아요.
 
-- **Scope:** every final answer (general-purpose). This is the always-on voice — the
-  format you're reading right now.
-- **Format (fixed order):** ① one-line conclusion (no jargon) → ② plain-language
-  explanation (everyday words, one idea per sentence) → ③ *Details* (optional) —
-  commands, file paths, code, and technical specifics collected here so readers who
-  don't care can skip them.
-- **Isolation rule:** function/variable names, CLI flags, file paths, and git terms
-  (commit/staged/untracked…) never appear in ① or ②; they all go into *Details*.
-- **Terminal-only:** no HTML tags (`<details>`, `<br>`…) — the terminal can't render
-  them, so *Details* is a normal `### Details` markdown heading.
-- **Never dropped:** risks, cautions, and actions only you can take are always kept —
-  just said plainly.
-- **Turn it on:** `/oh-my-gjc:easy` (this session) or `/oh-my-gjc:easy-always on`
-  (every session — writes a marker block into `~/.gjc/agent/SYSTEM.md`).
-- Source: [`plugins/oh-my-gjc/skills/easy-answer/SKILL.md`](./plugins/oh-my-gjc/skills/easy-answer/SKILL.md)
+- 형식: ① 한 줄 결론 → ② 쉬운 설명 → ③ (필요할 때만) 자세히 — 명령어·경로 같은 건 여기로.
+- 위험·주의는 절대 빼지 않아요. 쉬운 말로 꼭 알려줘요.
+- 켜기: `/oh-my-gjc:easy` (이번만) / `/oh-my-gjc:easy-always on` (항상)
+- 원문: [`plugins/oh-my-gjc/skills/easy-answer/SKILL.md`](./plugins/oh-my-gjc/skills/easy-answer/SKILL.md)
 
-#### `multivendor-presets` — evidence-based model profiles
+#### `multivendor-presets` — 역할별 모델 묶음 프리셋
 
-Installs ready-made **multi-vendor model profiles** into your
-`~/.gjc/agent/models.yml` — one profile spreads gjc's five roles
-(default/executor/planner/architect/critic) across different vendors on purpose
-(e.g. one vendor writes code, another reviews it, a third is the independent gate).
-gjc plugin manifests can't inject profiles, so this skill merges them in for you,
-by name, without touching your other profiles.
+여러 회사의 AI 모델을 역할별로 섞어 쓰도록 미리 짜둔 묶음을 설정 파일에 넣어줘요.
+(예: 한 모델이 코드 짜고, 다른 모델이 검토하고, 또 다른 모델이 최종 점검.)
 
-- **The three presets:**
-  - `ideal` (daily default) — default=Opus:xhigh, executor=Opus:max,
-    planner/architect=GPT-5.5:xhigh (cross-vendor code-lane review), critic=Grok
-    4.3:high (third-vendor independent gate).
-  - `escalate-surgical` (relief pitcher, not always-on) — executor=Fable 5:xhigh
-    only, for high-exploration hard debugging; return to `ideal` when done. ⚠ must
-    be `:xhigh`, not `:max` (Fable silently clamps `:max`).
-  - `monorepo` (huge codebases) — every role ≥1M context (excludes gpt-5.5's 272K);
-    critic=glm-5.2 (see the distillation-correlation caveat).
-- **Merge safety (never weakened):** name-scoped merge only — replace the same-named
-  block, else append under `profiles:`; never delete/modify other profiles or
-  top-level keys; back up to `.bak-<ts>` first; result must be valid YAML with the
-  target present or it rolls back (no partial save); preserves 2/6-space indentation,
-  `required_providers`/`model_mapping` structure, and original comments. Legacy
-  `ultimate`/`ultimate-f5` removal is the sole exception and needs your consent.
-- **Canonical source of truth:** the presets are defined in
-  [`plugins/oh-my-gjc/references/presets.yml`](./plugins/oh-my-gjc/references/presets.yml).
-- **Use it:** `/oh-my-gjc:presets` to merge, then activate a profile with
-  `gjc --mpreset ideal` (add `--default` to pin it). Each preset needs the matching
-  vendor logins — gjc hard-blocks activation if credentials are missing.
-- Source: [`plugins/oh-my-gjc/skills/multivendor-presets/SKILL.md`](./plugins/oh-my-gjc/skills/multivendor-presets/SKILL.md)
+- `ideal` — 평소 기본. 균형 잡힌 조합.
+- `escalate-surgical` — 어려운 문제 하나 풀 때만 잠깐. 끝나면 `ideal`로 복귀.
+- `monorepo` — 아주 큰 코드베이스용(모든 역할이 넓은 문맥 처리).
+- 기존 설정은 안 건드리고 해당 프리셋만 넣어요(넣기 전 백업).
+- 쓰기: `/oh-my-gjc:presets`로 넣고 → `gjc --mpreset ideal`로 켜요. 각 프리셋은 해당 회사 로그인이 필요해요.
+- 원문: [`plugins/oh-my-gjc/skills/multivendor-presets/SKILL.md`](./plugins/oh-my-gjc/skills/multivendor-presets/SKILL.md)
 
-#### `branch-flow` — per-repo git branch discipline
+#### `branch-flow` — 저장소 브랜치 규칙
 
-A **dev-integration / main-release** branch policy for a repo (patina's model). It
-doesn't tell gjc to commit — it defines *which branch and how* when you do commit,
-merge, or release. Work happens on short-lived branches off `dev`, merges into `dev`
-via PR, and only an explicit release moves `dev` → `main`. Unlike the other toggles
-(which live in your user-global `SYSTEM.md`), this one is **per-repo and committed**,
-so the policy ships with the repo.
+작업은 `dev`에서 하고, 다 되면 릴리스할 때만 `main`으로 넘기는 규칙이에요.
+`main`은 직접 건드리지 않아요. 이 규칙은 저장소 안에 저장돼서 같이 따라다녀요.
 
-- **The model:** `feat|fix|chore|docs/<slug>` → PR into `dev` → explicit release PR
-  `dev` → `main`. `main` is release history (**never committed directly**); `dev` is
-  always at or ahead of `main`.
-- **Absolute rules:** never commit/push/merge without your say-so; no direct `main`
-  commit/push; releases (`dev`→`main`) only on your explicit instruction (no
-  auto-release); shared-branch pushes are fast-forward-only after `git fetch` (no
-  force-push, no touching others' changes).
-- **Parallel work:** two sessions never share a folder+branch — use `git worktree`
-  (one worktree + one branch per session), resolve conflicts once at the `dev` merge.
-- **Ships with the repo:** `/oh-my-gjc:branchflow-always on` writes a marker block
-  into the repo's own `AGENTS.md` and copies the full guide to the repo's
-  `docs/WORKFLOW.md` (with a "Repo specifics" box for default/integration branch and
-  version files). Enforcement is soft (agent-followed) by default; optional GitHub
-  server-side branch protection on request (no local git hooks).
-- **Turn it on:** `/oh-my-gjc:branchflow-always on` (per-repo, committed) — `off` /
-  `status` to check.
-- Source: [`plugins/oh-my-gjc/skills/branch-flow/SKILL.md`](./plugins/oh-my-gjc/skills/branch-flow/SKILL.md)
+- 흐름: 작업 브랜치 → `dev`에 합치기 → (명시적 지시가 있을 때만) `dev`를 `main`으로 릴리스.
+- 사용자 허락 없이 저장·합치기·릴리스 안 해요. 남의 작업은 안 건드려요.
+- 켜기: `/oh-my-gjc:branchflow-always on` (`off` / `status`로 확인)
+- 원문: [`plugins/oh-my-gjc/skills/branch-flow/SKILL.md`](./plugins/oh-my-gjc/skills/branch-flow/SKILL.md)
 
 ## Optional plugins
 
