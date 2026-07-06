@@ -40,7 +40,7 @@ model presets, and detects your environment to recommend the optional plugins be
 | `gate-briefing` skill | Domain-blind approval-gate briefings for pending-approval moments: layman translation → approval boundary → evidence-backed checklist → verdict |
 | `multivendor-presets` skill | Evidence-based model presets merged into `~/.gjc/agent/models.yml`: `ideal` (daily default), `escalate-surgical` (Fable 5 relief pitcher), `monorepo` (every role ≥1M ctx) |
 | `branch-flow` skill | Per-repo git branch discipline (patina's dev-integration / main-release model): work branches off `dev` → PR into `dev` → explicit release `dev`→`main`; parallel via worktrees; ships as the repo's committed `AGENTS.md` block + `docs/WORKFLOW.md` |
-| Toggles | `/oh-my-gjc:easy`·`gate` (this session) / `easy-always`·`gate-always [on\|off\|status]` (every session, user-global) / `branchflow-always [on\|off\|status]` (per-repo, committed) — AGENTS.md marker-block semaphores |
+| Toggles | `/oh-my-gjc:easy`·`gate` (this session) / `easy-always`·`gate-always [on\|off\|status]` (every session — user-global `~/.gjc/agent/SYSTEM.md` marker block, the only injected user-global surface on gjc 0.8.2) / `branchflow-always [on\|off\|status]` (per-repo — committed repo `AGENTS.md` block) |
 | `/oh-my-gjc:fable` | **Fable 5 adversarial safety audit** of money/data-critical code — invariant-breaking, read-only, severity-rated findings with spot-check verification. Proven to catch CRITICALs a 3-vendor consensus plan missed |
 | `/oh-my-gjc:setup` | Idempotent setup + environment detection → recommends optional plugins |
 
