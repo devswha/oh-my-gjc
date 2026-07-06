@@ -2,6 +2,8 @@
 
 [가재코드(`gjc`)](https://github.com/Yeachan-Heo/gajae-code)용 플러그인 모음이다.
 
+📖 **실전 가이드: https://devswha.github.io/oh-my-gjc/**
+
 ## 설치 방법
 
 ```
