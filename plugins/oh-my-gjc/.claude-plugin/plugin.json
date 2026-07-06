@@ -1,7 +1,7 @@
 {
   "name": "oh-my-gjc",
-  "version": "0.1.0",
-  "description": "The oh-my core plugin for Gajae Code (gjc). One install gets you: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings for pending-approval moments), multivendor model presets (ideal / escalate-surgical / monorepo), session toggles + always-on semaphores (AGENTS.md marker blocks), and /oh-my-gjc:setup which detects your environment and recommends optional plugins (codex suite, insane-review, bugwatch).",
+  "version": "0.2.0",
+  "description": "The oh-my core plugin for Gajae Code (gjc). One install gets you: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings for pending-approval moments), multivendor model presets (ideal / escalate-surgical / monorepo), session toggles + always-on semaphores (AGENTS.md marker blocks), /oh-my-gjc:audit (Fable 5 adversarial safety audits of money/data-critical code — read-only, severity-rated, spot-check verified), and /oh-my-gjc:setup which detects your environment and recommends optional plugins (codex suite, insane-review, bugwatch).",
   "author": {
     "name": "devswha",
     "email": "devswha@gmail.com",

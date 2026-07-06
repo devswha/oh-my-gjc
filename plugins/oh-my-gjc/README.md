@@ -33,6 +33,7 @@
 | `/oh-my-gjc:gate [on\|off]` | 게이트 브리핑 — 이번 세션 토글 |
 | `/oh-my-gjc:gate-always [on\|off\|status]` | 게이트 브리핑 — 전 세션 상시 |
 | `/oh-my-gjc:presets [이름\|all]` | 모델 프리셋 병합 (`ideal` / `escalate-surgical` / `monorepo`) |
+| `/oh-my-gjc:audit [대상 힌트]` | **Fable 5 적대적 안전 감사** — 돈·데이터가 걸린 코드의 불변식 깨기 (읽기 전용, 심각도+파일:라인, 스팟체크 검증, gate-briefing 브리핑). 실증: 3벤더 합의가 놓친 CRITICAL 발견 |
 
 ### 모델 프리셋 3종 (2026-07 증거 리서치 기반)
 
