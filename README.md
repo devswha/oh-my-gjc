@@ -117,6 +117,18 @@ gjc 쓰다가 로그에 남은 gjc 자체 버그를 긁어모은다. `~/.gjc/log
 - 초안은 프로젝트의 `.gjc/bugwatch/drafts/`에 저장한다.
 - 원문: [`plugins/gjc-bugwatch/skills/gjc-bugwatch/SKILL.md`](./plugins/gjc-bugwatch/skills/gjc-bugwatch/SKILL.md)
 
+### `tower` — 관제탑 (별도 플러그인)
+
+TUI 에이전트(gjc) 세션 여러 개를 관제탑 하나로 감시·전파·중재한다. 감시기가 각 세션의
+완료(작업 중→입력 대기)·블록을 잡고, 사람에겐 결정이 필요한 것만 큐로 모아 보고한다.
+관측은 기계가, 판정은 사람이.
+
+- 별도 플러그인이다: `/plugin install tower@oh-my-gjc` 후 네이티브 설치 필요.
+- 세션에 메시지를 tmux로 주입할 때 TUI 함정 3종(물결·괄호대문자·실존 경로 토큰)을 방어한다.
+- 감시·순찰은 세션 귀속 — 관제탑 세션 재개 시 재등록한다. 빈 순찰은 무보고.
+- gjc `team`(작업 워커 조율)과 다르다 — team은 일 분배, tower는 상주 관측 + 사람 결정 큐.
+- 원문: [`plugins/tower/skills/tower/SKILL.md`](./plugins/tower/skills/tower/SKILL.md)
+
 ## 전체 스킬 목록
 
 **코어 (`oh-my-gjc`)**
