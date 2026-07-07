@@ -40,7 +40,7 @@ ideal에 흡수(architect gemini가 툴체인 신뢰성 실측으로 탈락), ul
 - 병합 결과가 유효 YAML이 아니거나 대상 프리셋이 없으면 **부분 저장 금지**, 백업 복구.
 - 들여쓰기(2/6칸)·`required_providers`·`model_mapping` 구조와 원본 주석을 그대로 유지.
 - 자격증명 검증은 활성화(gjc --mpreset) 시 gjc가 하드블록한다 — 병합 자체는 막지 않는다.
-- 실호출 검증(`gjc -p ... --model <selector>`)은 해당 벤더 로그인이 있을 때만.
+- 실호출 검증(`GJC_NOTIFICATIONS=0 gjc -p ... --model <selector>`)은 해당 벤더 로그인이 있을 때만. (ephemeral 검증 세션이 텔레그램에 붙어 유령 토픽 만들지 않게 알림 끄고 실행.)
 
 ## 활성화 안내 (사용자에게 전달)
 

@@ -1,6 +1,6 @@
 {
   "name": "oh-my-gjc",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "The oh-my core plugin for Gajae Code (gjc). One install gets you: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings for pending-approval moments), multivendor model presets (ideal / escalate-surgical / monorepo), branch-flow (per-repo dev-integration/main-release git branch discipline embedded in the repo's committed AGENTS.md + docs/WORKFLOW.md), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md marker blocks — the only user-global every-turn injection surface, live-verified on gjc 0.8.2), /oh-my-gjc:fable (Fable 5 adversarial safety audits of money/data-critical code — read-only, severity-rated, spot-check verified), and /oh-my-gjc:setup which detects your environment and recommends optional plugins (codex suite, insane-review, bugwatch).",
   "author": {
     "name": "devswha",

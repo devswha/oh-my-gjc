@@ -61,7 +61,7 @@ echo "OMG=$OMG"
 - 파일이 YAML로 파싱되는지, 대상 프리셋이 `profiles:` 아래에 존재하는지 확인한다
   (예: `read`로 다시 열어 블록 존재 확인).
 - 해당 벤더가 로그인돼 있으면 실호출 검증을 제안할 수 있다(선택):
-  `gjc -p --no-session --no-tools --model anthropic/claude-opus-4-8:high "Reply OK"`
+  `GJC_NOTIFICATIONS=0 gjc -p --no-session --no-tools --model anthropic/claude-opus-4-8:high "Reply OK"`
   등 개별 셀렉터로. **로그인이 없으면 실행하지 말고** 아래 안내만 한다.
 
 ## Step 4 — 사용자 안내 (현재 대화 언어로)

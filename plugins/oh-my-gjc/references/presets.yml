@@ -22,7 +22,7 @@
 # required_providers 중 하나라도 자격증명이 없으면 활성화가 하드블록된다.
 #
 # ⚠ 셀렉터/벤치 근거는 카탈로그·시점 민감(2026-07-03 리서치 기준). 실호출 검증:
-#   gjc -p --no-session --no-tools --model <selector> "Reply OK"
+#   GJC_NOTIFICATIONS=0 gjc -p --no-session --no-tools --model <selector> "Reply OK"
 
 profiles:
 
