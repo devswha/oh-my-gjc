@@ -60,6 +60,13 @@
       "category": "automation"
     },
     {
+      "name": "tower",
+      "source": "./plugins/tower",
+      "description": "Control-tower orchestration for a standing fleet of TUI-agent (gjc) sessions from one supervisor session: a busy→idle watcher (bin/session_watch.py) streams completion events, the supervisor classifies each and enqueues human decisions in an idempotent operator queue (bin/queue_store.py + tower CLI), and relays direction into live sessions via tmux with built-in TUI-injection-trap defenses (bin/tower-notify.sh). The tower SKILL codifies the loop: boot re-registration, on-event classify/enqueue/report, no-report empty patrols, single notification channel. Distinct from gjc's team (work-worker coordination) — tower is a standing fleet + human decision queue.",
+      "version": "0.1.0",
+      "category": "orchestration"
+    },
+    {
       "name": "example-plugin",
       "source": "./plugins/example-plugin",
       "description": "Starter template plugin: ships one slash command and one skill. Copy it to build your own plugin.",

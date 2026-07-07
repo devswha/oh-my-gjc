@@ -1,0 +1,22 @@
+{
+  "name": "tower",
+  "version": "0.1.0",
+  "description": "Control-tower pattern for orchestrating a standing fleet of TUI-agent (gjc) sessions from one supervisor session. A busy→idle watcher (bin/session_watch.py) streams completion events; the supervisor classifies each, enqueues human decisions in an idempotent operator queue (bin/queue_store.py + tower CLI), and relays direction into live sessions via tmux with built-in TUI-injection-trap defenses (bin/tower-notify.sh). The tower SKILL codifies the operational loop: boot re-registration, on-event classify/enqueue/report, no-report empty patrols, single notification channel. Distinct from gjc's team (work-worker coordination) — tower is a standing fleet + human decision queue.",
+  "author": {
+    "name": "devswha",
+    "email": "devswha@gmail.com",
+    "url": "https://github.com/devswha"
+  },
+  "homepage": "https://github.com/devswha/oh-my-gjc",
+  "repository": "https://github.com/devswha/oh-my-gjc",
+  "license": "MIT",
+  "keywords": [
+    "gjc",
+    "control-tower",
+    "orchestration",
+    "tmux",
+    "session-monitor",
+    "operator-queue",
+    "supervisor"
+  ]
+}
