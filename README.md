@@ -6,41 +6,31 @@
 
 ## 1. 설치
 
-```
-gjc plugin marketplace add devswha/oh-my-gjc
-gjc plugin install oh-my-gjc@oh-my-gjc
-```
-
-gjc는 플러그인 속 스킬·명령을 세션에 안 불러온다. 그러니 아래 한 줄을
-**터미널에서 딱 한 번** 박아서 직접 깔아야 한다.
-
-```
-bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
-```
-
-그다음 gjc 세션 새로 열고(또는 `/move .`) 이거 실행하면 설정 마무리된다.
-
-```
-/omg:setup
-```
-
-플러그인 업그레이드할 때마다 위 설치 한 줄 다시 박아라.
-
-커맨드는 `/omg:<name>` (예: `/omg:setup`), 카탈로그는 `/omg` 한 방. 구 `/oh-my-gjc:<name>`는
-당분간 **별칭으로 유지되나 폐기 예정**이다.
-
-### 원샷 설치 (한 줄)
-
-위 과정을 한 줄로. 마켓플레이스 추가 + 본체 설치 + 네이티브 설치까지 셸에서 전부:
+한 줄이면 끝 — **원샷(정본).** 마켓플레이스 추가 + 본체 설치 + 네이티브 설치까지 셸에서 전부:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 # 옵션 플러그인도 같이: … | bash -s -- tower insane-review
 ```
 
-에이전트한테 시키려면 — 아무 코딩 에이전트에 아래 한 문장만 붙여넣으면 알아서 깐다:
+**에이전트한테 시키려면** — 아무 코딩 에이전트에 아래 한 문장만 붙여넣으면 알아서 깐다:
 
 > Install oh-my-gjc by following https://raw.githubusercontent.com/devswha/oh-my-gjc/main/INSTALLATION.md — run the steps, verify, and report.
+
+설치되면 gjc 세션 새로 열고(또는 `/move .`) `/omg`로 카탈로그, `/omg:setup`으로 마무리.
+커맨드는 `/omg:<name>` (구 `/oh-my-gjc:<name>`는 폐기 예정 별칭). 업그레이드 때마다 원샷 한 줄 다시.
+
+### 수동 설치 (폴백 — 원샷이 막힐 때 / 무슨 일이 일어나는지)
+
+gjc는 플러그인 속 스킬·명령을 세션에 안 불러온다. 그래서 원샷이 대신 해주는 일은 이 셋:
+
+```
+gjc plugin marketplace add devswha/oh-my-gjc
+gjc plugin install oh-my-gjc@oh-my-gjc
+bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
+```
+
+그다음 새 세션 + `/omg:setup`.
 
 ### 옵션 플러그인 설치 (tower 등) — 각자 따로
 
