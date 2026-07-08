@@ -49,7 +49,7 @@ say "marketplace add: $MARKET"
 gjc plugin marketplace add "$MARKET" 2>&1 | tail -1 || warn "marketplace add non-zero (already added?) — continuing"
 
 say "install $ENTRY@$ENTRY"
-gjc plugin install "$ENTRY@$ENTRY"
+gjc plugin install "$ENTRY@$ENTRY" 2>&1 | tail -1 || warn "install non-zero (already installed?) — continuing"
 
 # NATIVE install — newest cached version, plugin-scoped glob (cache is <market>___<entry>___<ver>;
 # marketplace name == entry name, so anchor to oh-my-gjc___oh-my-gjc___* — a bare *oh-my-gjc* glob
