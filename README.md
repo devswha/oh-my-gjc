@@ -1,8 +1,8 @@
-# oh-my-gjc
+# oh-my-gajaecode
 
-[가재코드(`gjc`)](https://github.com/Yeachan-Heo/gajae-code)용 플러그인 모음이다.
+가재코드 철학을 거스르는 플러그인입니다
 
-📖 **공식 문서: https://gajae-code-docs.vercel.app** (시작하기·가이드·워크플로·레퍼런스)
+[가재코드 가이드](https://gjc.vibetip.help/ko/docs)
 
 ## 1. 설치
 
@@ -17,8 +17,6 @@ curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh |
 ```
 Install oh-my-gjc by following https://raw.githubusercontent.com/devswha/oh-my-gjc/main/INSTALLATION.md — run the steps, verify, and report.
 ```
-
-새 gjc 세션 열면 끝(또는 `/move .`).
 
 <details>
 <summary>설치가 안되요</summary>
