@@ -6,24 +6,31 @@
 
 ## 1. 설치
 
-한 줄이면 끝 — **원샷(정본).** 본체 + 옵션 플러그인 **전부**를 네이티브 설치까지 한 방에 (oh-my-zsh처럼 다 깔아줌, 고민 불필요):
+**① 터미널에서:**
 
 ```
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
-# 미니멀(본체만): … | bash -s -- --core   ·   특정 옵션만: … | bash -s -- tower insane-review
 ```
 
-**에이전트한테 시키려면** — 아무 코딩 에이전트에 아래 한 문장만 붙여넣으면 알아서 깐다:
+**② gjc 세션에서:**
 
 > Install oh-my-gjc by following https://raw.githubusercontent.com/devswha/oh-my-gjc/main/INSTALLATION.md — run the steps, verify, and report.
 
-설치되면 **gjc 세션 새로 열면 끝**(또는 `/move .`). `/omg`로 뭐가 깔렸는지 본다.
-(모델 프리셋 병합·상시 모드는 원할 때만 `/omg:setup` — 필수 아님.)
-커맨드는 `/omg:<name>` (구 `/oh-my-gjc:<name>`는 폐기 예정 별칭). 업그레이드 때마다 원샷 한 줄 다시.
+새 gjc 세션 열면 끝(또는 `/move .`).
 
-### 수동 설치 (폴백 — 원샷이 막힐 때 / 무슨 일이 일어나는지)
+<details>
+<summary>설치가 안되요</summary>
 
-gjc는 플러그인 속 스킬·명령을 세션에 안 불러온다. 그래서 원샷이 대신 해주는 일은 이 셋:
+원샷은 본체 + 옵션 플러그인 **전부**를 네이티브 설치까지 한 방에 깐다(oh-my-zsh처럼). 변형:
+
+```
+curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash -s -- --core
+curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash -s -- tower insane-review
+```
+
+첫 줄은 본체만(미니멀), 둘째 줄은 본체 + 특정 옵션만.
+
+**수동 설치 (원샷이 막힐 때).** gjc는 플러그인 속 스킬·명령을 세션에 안 불러온다 — 그래서 원샷이 대신 해주는 일은 이 셋:
 
 ```
 gjc plugin marketplace add devswha/oh-my-gjc
@@ -31,18 +38,18 @@ gjc plugin install oh-my-gjc@oh-my-gjc
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
 
-그다음 새 세션 + `/omg:setup`.
-
-### 옵션 플러그인 설치 (tower 등) — 각자 따로
-
-원샷이 이미 전부 깔지만, **나중에 하나만 더** 추가하려면 플러그인마다 ① 설치 ② 네이티브 한 줄이면 된다(마켓플레이스 추가는 한 번 했으면 생략). 예: tower.
+**옵션 플러그인 나중에 하나만 더.** 플러그인마다 ① 설치 ② 네이티브 한 줄(마켓플레이스 추가는 한 번 했으면 생략):
 
 ```
 gjc plugin install tower@oh-my-gjc
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
 
-다른 플러그인은 `tower` 자리에 그 플러그인 이름만 바꾸면 된다(`oh-my-gjc___<플러그인>___*`). 본체와 옵션을 같이 깔 때 **순서는 무관**하다 — 각 네이티브 한 줄이 자기 플러그인 폴더만 정확히 집으므로(마켓플레이스명이 곧 플러그인명이라 `*oh-my-gjc*` 같은 막연한 글롭을 쓰면 안 된다).
+`tower` 자리에 플러그인 이름만 바꾸면 된다(`oh-my-gjc___<플러그인>___*`). 본체·옵션 같이 깔 때 순서 무관 — 각 네이티브 한 줄이 자기 폴더만 정확히 집는다(`*oh-my-gjc*` 같은 막연한 글롭 금지).
+
+**확인·마무리.** `/omg`로 뭐가 깔렸는지 본다. 모델 프리셋 병합·상시 모드는 원할 때만 `/omg:setup`(필수 아님). 커맨드는 `/omg:<name>`(구 `/oh-my-gjc:<name>`는 폐기 예정 별칭). 업그레이드 때마다 원샷 한 줄 다시.
+
+</details>
 
 ## 2. 있는것
 
