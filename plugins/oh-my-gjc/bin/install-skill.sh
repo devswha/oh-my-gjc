@@ -10,8 +10,8 @@
 #   deprecated stubs   : tombstones/<old>.md → ~/.gjc/agent/commands/<old>.md      (points at /omg:*)
 #   skills             : skills/<name>/SKILL.md → ~/.gjc/agent/skills/<name>/SKILL.md
 #
-# The old per-plugin commands (/tower:*, /insane-review:*, /oh-my-gjc:*, …) are NOT
-# reinstalled with their real bodies — only one-release tombstone stubs that redirect
+# The old per-plugin commands are NOT reinstalled with their real bodies — only
+# one-release tombstone stubs that redirect
 # to the new /omg:* name (removed next release). No feature-body duplication.
 #
 # Installation is driven by the EXPECTED_* manifests below (not a directory scan), so a

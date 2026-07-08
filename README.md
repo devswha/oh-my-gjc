@@ -21,14 +21,7 @@ Install oh-my-gjc by following https://raw.githubusercontent.com/devswha/oh-my-g
 <details>
 <summary>설치가 안되요</summary>
 
-본체만 깔거나 특정 옵션만 고르려면:
-
-```
-curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash -s -- --core
-curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash -s -- tower insane-review
-```
-
-원샷이 막히면 이 셋을 수동으로 — 원샷이 대신 해주던 것:
+원샷이 막히면 아래 세 줄을 수동으로 — 원샷이 대신 해주던 것:
 
 ```
 gjc plugin marketplace add devswha/oh-my-gjc
@@ -36,14 +29,8 @@ gjc plugin install oh-my-gjc@oh-my-gjc
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
 
-옵션 하나만 더 추가하려면 `tower` 자리에 이름만 바꿔 ① 설치 ② 네이티브:
-
-```
-gjc plugin install tower@oh-my-gjc
-bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
-```
-
-업그레이드 땐 원샷 한 줄 다시. 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
+한 번 설치로 13개 기능이 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
 
@@ -132,7 +119,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-ski
 - 쓰기: `/omg:fable "주문 경로와 손절 로직"`
 - 원문: [`plugins/oh-my-gjc/commands/fable.md`](./plugins/oh-my-gjc/commands/fable.md)
 
-### `codex-cli-control` — 로컬 Codex CLI에 읽기 전용 질문 (별도 플러그인)
+### `codex-cli-control` — 로컬 Codex CLI에 읽기 전용 질문
 
 로컬에 깔린 Codex CLI(`codex exec`)에 gjc가 프롬프트 하나를 비대화형으로 던지고 Codex의
 최종 답변만 받아온다. 데스크톱 앱이나 CDP 없이 된다. 기본은 읽기 전용 샌드박스라 파일을
@@ -141,10 +128,10 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-ski
 - 전제: Codex CLI 설치 + 로그인(`codex --version`, `codex login status`). 없으면 친절히 안내하고 멈춘다.
 - 프롬프트는 stdin으로만 넘긴다(argv 노출 금지). 샌드박스·모델·타임아웃 값 검증.
 - 읽기 전용 질의응답 전용이다. 파일 쓰는 자동 작업은 `codex-deepwork`.
-- 쓰기: `/codex-cli-control:ask prompt=<질문>`
-- 원문: [`plugins/codex-cli-control/skills/codex-cli-ask/SKILL.md`](./plugins/codex-cli-control/skills/codex-cli-ask/SKILL.md)
+- 쓰기: `/omg:codex-ask prompt=<질문>`
+- 원문: [`plugins/oh-my-gjc/skills/codex-cli-ask/SKILL.md`](./plugins/oh-my-gjc/skills/codex-cli-ask/SKILL.md)
 
-### `codex-deepwork` — Codex에 파일 쓰는 자동 작업 위임 (별도 플러그인)
+### `codex-deepwork` — Codex에 파일 쓰는 자동 작업 위임
 
 Codex에게 자율 코딩 작업을 통째로 맡긴다. 기본 샌드박스가 workspace-write라 **파일을
 실제로 바꾼다**. 끝나면 최종 메시지 + "`git diff`로 검토하라" 안내를 함께 준다.
@@ -152,10 +139,10 @@ Codex에게 자율 코딩 작업을 통째로 맡긴다. 기본 샌드박스가 
 - 전제: Codex CLI 설치 + 로그인. git 저장소에서 돌려라. 자동 커밋·푸시 안 한다.
 - LazyCodex 하네스가 깔려 있으면 deep-work 스킬(계획→구현→검증)이 자동으로 붙는다. 없어도 동작.
 - 작업은 stdin으로 넘기고 샌드박스·타임아웃(≤3600s) 검증. 위험 플래그 자동 파생 금지.
-- 쓰기: `/codex-deepwork:run` 에 작업 지시
-- 원문: [`plugins/codex-deepwork/skills/codex-deepwork/SKILL.md`](./plugins/codex-deepwork/skills/codex-deepwork/SKILL.md)
+- 쓰기: `/omg:codex-run` 에 작업 지시
+- 원문: [`plugins/oh-my-gjc/skills/codex-deepwork/SKILL.md`](./plugins/oh-my-gjc/skills/codex-deepwork/SKILL.md)
 
-### `lazycodex` — LazyCodex 하네스 설치·관리 + ultrawork (별도 플러그인)
+### `lazycodex` — LazyCodex 하네스 설치·관리 + ultrawork
 
 Codex용 deep-work 하네스(OmO Codex Light)를 `~/.codex`에 설치·점검·업데이트하고, 그걸로
 plan→work→verify(ultrawork) 코딩 작업을 Codex에 돌린다.
@@ -163,54 +150,54 @@ plan→work→verify(ultrawork) 코딩 작업을 Codex에 돌린다.
 - 전제: Codex CLI + Node/npx. 셋업은 `~/.codex`(스킬·훅·config)를 건드리므로 `doctor`로 먼저 점검한다.
 - 이미 정상 설치면 재설치 안 한다. codex/lazycodex 자동 로그인 안 한다.
 - `:work`는 파일을 바꾼다(기본 workspace-write) — `codex-deepwork`와 같은 주입-안전 계약.
-- 쓰기: `/lazycodex:setup [doctor|install|update|uninstall]` · `/lazycodex:work` 에 작업 지시
-- 원문: [`plugins/lazycodex/skills/lazycodex/SKILL.md`](./plugins/lazycodex/skills/lazycodex/SKILL.md)
+- 쓰기: `/omg:lazycodex-setup [doctor|install|update|uninstall]` · `/omg:lazycodex-work` 에 작업 지시
+- 원문: [`plugins/oh-my-gjc/skills/lazycodex/SKILL.md`](./plugins/oh-my-gjc/skills/lazycodex/SKILL.md)
 
-### `codex-app-control` — Codex 데스크톱 앱 GUI 제어 (별도 플러그인)
+### `codex-app-control` — Codex 데스크톱 앱 GUI 제어
 
 이미 빌드된 Codex 데스크톱 앱을 헤드리스로 띄우고(CDP 디버그포트 켜서), gjc의 browser
 도구를 붙여 프롬프트 하나 보내고 최신 응답을 읽어온다.
 
 - 전제: 빌드된 Codex 앱 + 명시적 `cdp_url`. v1은 DMG에서 앱을 빌드하진 않는다.
 - 스킬 2개: `launch`(헤드리스 기동·상태·중지) + `ask`(붙어서 질문·응답 회수).
-- 켜기·쓰기: `/codex-app-control:launch` 로 띄우고 → `/codex-app-control:ask` 로 질문
-- 원문: [`plugins/codex-app-control/skills/codex-app-cdp/SKILL.md`](./plugins/codex-app-control/skills/codex-app-cdp/SKILL.md)
+- 켜기·쓰기: `/omg:codex-app-launch` 로 띄우고 → `/omg:codex-app-ask` 로 질문
+- 원문: [`plugins/oh-my-gjc/skills/codex-app-cdp/SKILL.md`](./plugins/oh-my-gjc/skills/codex-app-cdp/SKILL.md)
 
-### `insane-review` — GPT-5.5 Pro 웹 리뷰 (별도 플러그인)
+### `insane-review` — GPT-5.5 Pro 웹 리뷰
 
 GPT-5.5 Pro는 웹 구독에서만 되고 API가 없다. 이 스킬이 구독 ChatGPT 웹을 CDP로
 자동화해서 Pro를 gjc 안으로 끌어온다. API 비용 0. 코드를 통째로 넣는 게 아니라
 관련 타겟만 골라 repomix로 묶어 넣고 리뷰를 회수한다.
 
-- 별도 플러그인이다: `gjc plugin install insane-review@oh-my-gjc` (셸에서) 후 네이티브 설치 필요.
+- 전제: ChatGPT 구독 + 크로미움 로그인(설치는 원샷에 포함, 로그인은 자동 안 됨).
 - 크로미움 브라우저를 전용 프로필로 디버그포트(9222)에 띄우고, chatgpt.com 로그인 + GPT-5.5 Pro 선택해야 한다. 로그인은 자동 안 된다.
 - 결과는 프로젝트의 `.insane-review/`에 저장한다.
-- 원문: [`plugins/insane-review/skills/insane-review/SKILL.md`](./plugins/insane-review/skills/insane-review/SKILL.md)
+- 원문: [`plugins/oh-my-gjc/skills/insane-review/SKILL.md`](./plugins/oh-my-gjc/skills/insane-review/SKILL.md)
 
-### `gjc-bugwatch` — gjc 버그 수집 (별도 플러그인)
+### `gjc-bugwatch` — gjc 버그 수집
 
 gjc 쓰다가 로그에 남은 gjc 자체 버그를 긁어모은다. `~/.gjc/logs`를 훑어 런타임
 에러·크래시를 뽑고, 중복 묶고, 개인정보 지우고, gajae-code clone에서 재현·근거
 확인한 뒤 초안만 만든다. 자동 PR 없다 — 제출은 사람이 한다.
 
-- 별도 플러그인이다.
+- 전제 없음 — 설치 후 바로 동작.
 - 라이브 모니터(뜨는 즉시 알림) + 배치 스캐너(쌓인 로그 몰아 읽기) 두 축이다.
 - 이미 고쳐진 버그는 resolved 원장으로 걸러서 다시 안 쫓는다.
 - 초안은 프로젝트의 `.gjc/bugwatch/drafts/`에 저장한다.
-- 원문: [`plugins/gjc-bugwatch/skills/gjc-bugwatch/SKILL.md`](./plugins/gjc-bugwatch/skills/gjc-bugwatch/SKILL.md)
+- 원문: [`plugins/oh-my-gjc/skills/gjc-bugwatch/SKILL.md`](./plugins/oh-my-gjc/skills/gjc-bugwatch/SKILL.md)
 
-### `tower` — 관제탑 (별도 플러그인)
+### `tower` — 관제탑
 
 세션 여러 개 띄우는 건 쉽다. 어려운 건 사람 쪽이다 — 주의는 싱글스레드라 N개를
 동시에 지켜보려는 순간 컨텍스트 스위칭으로 무너진다. `tower`가 그 관측을 대신한다:
 감시기가 각 세션의 완료(작업 중→입력 대기)·블록을 잡고, 사람에겐 **결정이 필요한 것만**
 큐로 모아 온다. 관측은 기계가, 판정은 사람이. (하루 7세션 굴리다 나온 도구.)
 
-- 별도 플러그인이다: `gjc plugin install tower@oh-my-gjc` (셸에서) 후 네이티브 설치 필요.
+- 전제: tmux(설치는 원샷에 포함).
 - 세션에 메시지를 tmux로 주입할 때 TUI 함정 3종(물결·괄호대문자·실존 경로 토큰)을 방어한다.
 - 감시·순찰은 세션 귀속 — 관제탑 세션 재개 시 재등록한다. 빈 순찰은 무보고.
 - gjc `team`(작업 워커 조율)과 다르다 — team은 일 분배, tower는 상주 관측 + 사람 결정 큐.
-- 원문: [`plugins/tower/skills/tower/SKILL.md`](./plugins/tower/skills/tower/SKILL.md)
+- 원문: [`plugins/oh-my-gjc/skills/tower/SKILL.md`](./plugins/oh-my-gjc/skills/tower/SKILL.md)
 
 ## 라이선스
 
