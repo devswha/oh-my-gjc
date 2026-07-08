@@ -30,7 +30,7 @@ gjc does not load plugin skills/commands into a session, so do a one-time NATIVE
 install from the shell, then open a new session:
 
 ```
-bash ~/.gjc/plugins/cache/plugins/*tower*/bin/install-skill.sh all
+bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 # then in a new gjc session:
 /tower:setup
 ```

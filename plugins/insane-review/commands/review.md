@@ -17,8 +17,8 @@ argument-hint: "<리뷰 대상/질문>  예) review the auth flow in src/auth"
 
 `${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않으므로 실제 경로를 잡아 `$IR`에 담는다:
 ```bash
-IR="$(ls -1 ~/.gjc/plugins/cache/plugins/*insane-review*/bin/pack_and_ask.py 2>/dev/null | head -1)"
-[ -z "$IR" ] && IR="$(ls -1 ./.gjc/plugins/cache/plugins/*insane-review*/bin/pack_and_ask.py 2>/dev/null | head -1)"
+IR="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___insane-review___*/bin/pack_and_ask.py 2>/dev/null | sort -V | tail -1)"
+[ -z "$IR" ] && IR="$(ls -d ./.gjc/plugins/cache/plugins/oh-my-gjc___insane-review___*/bin/pack_and_ask.py 2>/dev/null | sort -V | tail -1)"
 [ -z "$IR" ] && [ -f plugins/insane-review/bin/pack_and_ask.py ] && IR="plugins/insane-review/bin/pack_and_ask.py"
 echo "IR=$IR"
 ```

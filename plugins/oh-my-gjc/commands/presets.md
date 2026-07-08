@@ -31,8 +31,8 @@ gjc를 시켜 직접 병합한다.
 
 `${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않으므로 실제 경로를 잡는다:
 ```bash
-OMG="$(ls -1 ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/references/presets.yml 2>/dev/null | head -1)"
-[ -z "$OMG" ] && OMG="$(ls -1 ./.gjc/plugins/cache/plugins/*oh-my-gjc*/references/presets.yml 2>/dev/null | head -1)"
+OMG="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/presets.yml 2>/dev/null | sort -V | tail -1)"
+[ -z "$OMG" ] && OMG="$(ls -d ./.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/presets.yml 2>/dev/null | sort -V | tail -1)"
 [ -z "$OMG" ] && [ -f plugins/oh-my-gjc/references/presets.yml ] && OMG="plugins/oh-my-gjc/references/presets.yml"
 echo "OMG=$OMG"
 ```

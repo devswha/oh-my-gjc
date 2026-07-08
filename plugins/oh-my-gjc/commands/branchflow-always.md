@@ -19,7 +19,7 @@ argument-hint: "[on|off|status]  (기본: on)"
 REPO="$(git rev-parse --show-toplevel 2>/dev/null)"
 [ -z "$REPO" ] && { echo "git 레포가 아니다 — 레포 루트에서 실행해라."; exit 1; }
 # WORKFLOW.md 원본(플러그인 references) 해석 — 코어 고유 파일로 anchor
-P="$(ls -1 ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/references/WORKFLOW.md 2>/dev/null | head -1)"
+P="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/WORKFLOW.md 2>/dev/null | sort -V | tail -1)"
 [ -z "$P" ] && [ -f plugins/oh-my-gjc/references/WORKFLOW.md ] && P="plugins/oh-my-gjc/references/WORKFLOW.md"
 echo "REPO=$REPO  WORKFLOW_SRC=$P"
 ```
