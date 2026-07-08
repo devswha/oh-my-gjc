@@ -47,6 +47,17 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 
 플러그인 업그레이드할 때마다 위 설치 한 줄 다시 박아라.
 
+### 옵션 플러그인 설치 (tower 등) — 각자 따로
+
+옵션 플러그인은 **플러그인마다** ① 설치 ② 네이티브 한 줄이 따로 필요하다(gjc는 플러그인별로 스킬·명령을 안 불러오므로). 마켓플레이스 추가는 위에서 한 번 했으면 생략. 예: tower.
+
+```
+/plugin install tower@oh-my-gjc
+bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
+```
+
+다른 플러그인은 `tower` 자리에 그 플러그인 이름만 바꾸면 된다(`oh-my-gjc___<플러그인>___*`). 본체와 옵션을 같이 깔 때 **순서는 무관**하다 — 각 네이티브 한 줄이 자기 플러그인 폴더만 정확히 집으므로(마켓플레이스명이 곧 플러그인명이라 `*oh-my-gjc*` 같은 막연한 글롭을 쓰면 안 된다).
+
 ## 스킬 하나씩 보기
 
 ### `easy-answer` — 쉬운 말로 답한다
