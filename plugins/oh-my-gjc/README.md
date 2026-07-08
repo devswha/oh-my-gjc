@@ -13,7 +13,7 @@
 
 # ⚠ gjc는 마켓플레이스 플러그인의 커맨드·스킬을 세션에 로드하지 않는다.
 #    네이티브 설치 1회 (셸에서 — setup 커맨드 자체가 아직 안 뜨므로):
-bash ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/bin/install-skill.sh all
+bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 
 # 새 gjc 세션을 연 뒤 (또는 /move .):
 /oh-my-gjc:setup

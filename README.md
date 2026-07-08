@@ -36,7 +36,7 @@ gjc는 플러그인 속 스킬·명령을 세션에 안 불러온다. 그러니 
 **터미널에서 딱 한 번** 박아서 직접 깔아야 한다.
 
 ```
-bash ~/.gjc/plugins/cache/plugins/*oh-my-gjc*/bin/install-skill.sh all
+bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
 
 그다음 gjc 세션 새로 열고(또는 `/move .`) 이거 실행하면 설정 마무리된다.

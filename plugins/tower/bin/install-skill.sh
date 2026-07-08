@@ -19,6 +19,19 @@
 # session's slash-command palette is rebuilt.
 set -euo pipefail
 
+# Guard: a path-like arg means a glob matched the wrong/multiple plugin folders
+# (cache is <marketplace>___<plugin>___<ver>, so a bare *marketplace* glob hits
+# every plugin). Abort with the correct, plugin-scoped invocation.
+for _a in "$@"; do
+  case "$_a" in
+    */*|*install-skill.sh)
+      echo "❌ '$_a' looks like a path, not an argument — a glob likely matched the wrong plugin folder." >&2
+      echo "   Use a plugin-scoped, newest-version path:" >&2
+      echo "   bash \"\$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)\" all" >&2
+      exit 2 ;;
+  esac
+done
+
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLUGIN_NAME="tower"
 

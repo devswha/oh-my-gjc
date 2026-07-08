@@ -43,7 +43,7 @@ be automated); everything else is handled for you.
 To get the auto-activating **skill** surface, install the SKILL.md as a native gjc skill:
 
 ```sh
-IR="$(ls ~/.gjc/plugins/cache/plugins/*insane-review*/bin/pack_and_ask.py)"
+IR="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___insane-review___*/bin/pack_and_ask.py 2>/dev/null | sort -V | tail -1)"
 bash "$(dirname "$IR")/install-skill.sh"            # user scope → ~/.gjc/agent/skills/insane-review/
 # or: bash "$(dirname "$IR")/install-skill.sh" project   # this repo only → <cwd>/.gjc/skills/
 ```

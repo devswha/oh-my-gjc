@@ -60,7 +60,7 @@ gjc 세션에서:
 ```
 자연어 트리거(스킬)까지 원하면 1회:
 ```sh
-bash ~/.gjc/plugins/cache/plugins/*gjc-bugwatch*/bin/install-skill.sh
+bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___gjc-bugwatch___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)"
 ```
 
 ## 산출물

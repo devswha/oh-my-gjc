@@ -10,7 +10,7 @@ argument-hint: "(인자 없음)"
 ## Step 0 — 플러그인 루트 해석 (`$TOWER_ROOT`)
 
 ```bash
-P="$(ls -1 ~/.gjc/plugins/cache/plugins/*tower*/bin/session_watch.py 2>/dev/null | head -1)"
+P="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/session_watch.py 2>/dev/null | sort -V | tail -1)"
 TOWER_ROOT="${P:+$(dirname "$(dirname "$P")")/}"
 [ -z "$TOWER_ROOT" ] && [ -d plugins/tower ] && TOWER_ROOT="plugins/tower/"
 echo "TOWER_ROOT=$TOWER_ROOT"
@@ -27,7 +27,7 @@ bash "${TOWER_ROOT}bin/install-skill.sh" all
 - 스킬 `tower` → `~/.gjc/agent/skills/tower/SKILL.md` (트리거 자동활성화)
 - 커맨드 → `~/.gjc/agent/commands/tower:<name>.md` → `/tower:<name>`
 
-⚠ **최초 부트스트랩은 셸에서**(닭-달걀): `bash ~/.gjc/plugins/cache/plugins/*tower*/bin/install-skill.sh all`. 설치 후 **새 세션**을 열거나 `/move .`로 팔레트 재빌드. 플러그인 업그레이드 후 재실행.
+⚠ **최초 부트스트랩은 셸에서**(닭-달걀): `bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all`. 설치 후 **새 세션**을 열거나 `/move .`로 팔레트 재빌드. 플러그인 업그레이드 후 재실행.
 
 ## Step 2 — 설정 확인 (관제탑 세션 이름·창 접두어)
 
