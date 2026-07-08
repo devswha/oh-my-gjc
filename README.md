@@ -54,6 +54,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-ski
 - `multivendor-presets` — 역할별 모델 프리셋
 - `branch-flow` — dev 통합 / main 릴리스 브랜치 규칙 · 상시 온·오프 가능(`/omg:branchflow-always`)
 - `extragoal` — 외부 최종 리뷰 게이트(무공유·교차패밀리 리뷰 후 머지)
+- `/omg:fable` — 안전-크리티컬 코드 적대적 감사(돈·데이터·보안 코드) · **Fable 5 모델 필요**
 - `codex-cli-control` — 로컬 Codex CLI에 읽기 전용 질문 위임 · **Codex CLI 보유자용**
 - `codex-deepwork` — Codex에 파일 쓰는 자동 작업 위임 · **Codex CLI 보유자용**
 - `lazycodex` — LazyCodex 하네스 설치·관리 + ultrawork 실행 · **Codex CLI + Node/npx 필요**
@@ -74,6 +75,17 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-ski
 - 위험·주의는 절대 안 뺀다. 쉬운 말로 꼭 알려준다.
 - 켜기: `/omg:easy` (이번만) / `/omg:easy-always on` (항상)
 - 원문: [`plugins/oh-my-gjc/skills/easy-answer/SKILL.md`](./plugins/oh-my-gjc/skills/easy-answer/SKILL.md)
+
+### `gate-briefing` — 승인 게이트 비전문가 브리핑
+
+승인/거절을 눌러야 하는 순간, 뭘 승인하는 건지 비전문가도 알게 풀어준다. 전문용어를
+일상어로 옮기고 → 이 승인이 허용하는 범위 → 근거 붙은 체크리스트 → 판정까지 낸다.
+대신 눌러주진 않는다 — 판단은 사람 몫이다.
+
+- "명시 없음" 항목이 2개 이상이면 자동으로 **보류**로 민다(모르는 채 승인 방지).
+- 도메인 안 가린다. 코드든 인프라든 계약이든 같은 틀로 브리핑한다.
+- 켜기: `/omg:gate` (이번만) / `/omg:gate-always on` (항상)
+- 원문: [`plugins/oh-my-gjc/skills/gate-briefing/SKILL.md`](./plugins/oh-my-gjc/skills/gate-briefing/SKILL.md)
 
 ### `multivendor-presets` — 역할별 모델 묶음 프리셋
 
@@ -119,6 +131,50 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___tower___*/bin/install-ski
 - `:max` 금지 — Fable은 조용히 `xhigh`로 깎인다. Fable이 거부하면 `opus-4-8`로 대체한다.
 - 쓰기: `/omg:fable "주문 경로와 손절 로직"`
 - 원문: [`plugins/oh-my-gjc/commands/fable.md`](./plugins/oh-my-gjc/commands/fable.md)
+
+### `codex-cli-control` — 로컬 Codex CLI에 읽기 전용 질문 (별도 플러그인)
+
+로컬에 깔린 Codex CLI(`codex exec`)에 gjc가 프롬프트 하나를 비대화형으로 던지고 Codex의
+최종 답변만 받아온다. 데스크톱 앱이나 CDP 없이 된다. 기본은 읽기 전용 샌드박스라 파일을
+안 건드린다.
+
+- 전제: Codex CLI 설치 + 로그인(`codex --version`, `codex login status`). 없으면 친절히 안내하고 멈춘다.
+- 프롬프트는 stdin으로만 넘긴다(argv 노출 금지). 샌드박스·모델·타임아웃 값 검증.
+- 읽기 전용 질의응답 전용이다. 파일 쓰는 자동 작업은 `codex-deepwork`.
+- 쓰기: `/codex-cli-control:ask prompt=<질문>`
+- 원문: [`plugins/codex-cli-control/skills/codex-cli-ask/SKILL.md`](./plugins/codex-cli-control/skills/codex-cli-ask/SKILL.md)
+
+### `codex-deepwork` — Codex에 파일 쓰는 자동 작업 위임 (별도 플러그인)
+
+Codex에게 자율 코딩 작업을 통째로 맡긴다. 기본 샌드박스가 workspace-write라 **파일을
+실제로 바꾼다**. 끝나면 최종 메시지 + "`git diff`로 검토하라" 안내를 함께 준다.
+
+- 전제: Codex CLI 설치 + 로그인. git 저장소에서 돌려라. 자동 커밋·푸시 안 한다.
+- LazyCodex 하네스가 깔려 있으면 deep-work 스킬(계획→구현→검증)이 자동으로 붙는다. 없어도 동작.
+- 작업은 stdin으로 넘기고 샌드박스·타임아웃(≤3600s) 검증. 위험 플래그 자동 파생 금지.
+- 쓰기: `/codex-deepwork:run` 에 작업 지시
+- 원문: [`plugins/codex-deepwork/skills/codex-deepwork/SKILL.md`](./plugins/codex-deepwork/skills/codex-deepwork/SKILL.md)
+
+### `lazycodex` — LazyCodex 하네스 설치·관리 + ultrawork (별도 플러그인)
+
+Codex용 deep-work 하네스(OmO Codex Light)를 `~/.codex`에 설치·점검·업데이트하고, 그걸로
+plan→work→verify(ultrawork) 코딩 작업을 Codex에 돌린다.
+
+- 전제: Codex CLI + Node/npx. 셋업은 `~/.codex`(스킬·훅·config)를 건드리므로 `doctor`로 먼저 점검한다.
+- 이미 정상 설치면 재설치 안 한다. codex/lazycodex 자동 로그인 안 한다.
+- `:work`는 파일을 바꾼다(기본 workspace-write) — `codex-deepwork`와 같은 주입-안전 계약.
+- 쓰기: `/lazycodex:setup [doctor|install|update|uninstall]` · `/lazycodex:work` 에 작업 지시
+- 원문: [`plugins/lazycodex/skills/lazycodex/SKILL.md`](./plugins/lazycodex/skills/lazycodex/SKILL.md)
+
+### `codex-app-control` — Codex 데스크톱 앱 GUI 제어 (별도 플러그인)
+
+이미 빌드된 Codex 데스크톱 앱을 헤드리스로 띄우고(CDP 디버그포트 켜서), gjc의 browser
+도구를 붙여 프롬프트 하나 보내고 최신 응답을 읽어온다.
+
+- 전제: 빌드된 Codex 앱 + 명시적 `cdp_url`. v1은 DMG에서 앱을 빌드하진 않는다.
+- 스킬 2개: `launch`(헤드리스 기동·상태·중지) + `ask`(붙어서 질문·응답 회수).
+- 켜기·쓰기: `/codex-app-control:launch` 로 띄우고 → `/codex-app-control:ask` 로 질문
+- 원문: [`plugins/codex-app-control/skills/codex-app-cdp/SKILL.md`](./plugins/codex-app-control/skills/codex-app-cdp/SKILL.md)
 
 ### `insane-review` — GPT-5.5 Pro 웹 리뷰 (별도 플러그인)
 
