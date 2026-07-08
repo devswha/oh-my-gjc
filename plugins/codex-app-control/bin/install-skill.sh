@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Install the gjc-bugwatch SKILL *and* slash COMMANDs as NATIVE gjc capabilities, so they
+# Install the codex-app-control SKILL *and* slash COMMANDs as NATIVE gjc capabilities, so they
 # actually load in a session. (Same rationale as oh-my-gjc's installer: gjc only
 # surfaces native `.gjc` skills, and never registers the marketplace slash-command
 # provider — so a plugin's skills/commands are dead until copied natively.)
 #
 # Native locations:
-#   user:    ~/.gjc/agent/skills/<name>/SKILL.md    ~/.gjc/agent/commands/gjc-bugwatch:<name>.md
-#   project: ./.gjc/skills/<name>/SKILL.md          ./.gjc/commands/gjc-bugwatch:<name>.md
+#   user:    ~/.gjc/agent/skills/<name>/SKILL.md    ~/.gjc/agent/commands/codex-app-control:<name>.md
+#   project: ./.gjc/skills/<name>/SKILL.md          ./.gjc/commands/codex-app-control:<name>.md
 #
 # Usage:
 #   install-skill.sh all                        # every bundled skill + command, user scope
@@ -27,13 +27,13 @@ for _a in "$@"; do
     */*|*install-skill.sh)
       echo "❌ '$_a' looks like a path, not an argument — a glob likely matched the wrong plugin folder." >&2
       echo "   Use a plugin-scoped, newest-version path:" >&2
-      echo "   bash \"\$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___gjc-bugwatch___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)\" all" >&2
+      echo "   bash \"\$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___codex-app-control___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)\" all" >&2
       exit 2 ;;
   esac
 done
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PLUGIN_NAME="gjc-bugwatch"
+PLUGIN_NAME="codex-app-control"
 
 all_skills()   { ls -1 "$PLUGIN_ROOT/skills"   2>/dev/null || true; }
 all_commands() { ls -1 "$PLUGIN_ROOT/commands" 2>/dev/null | sed 's/\.md$//' || true; }
