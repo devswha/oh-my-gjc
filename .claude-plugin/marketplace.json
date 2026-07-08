@@ -6,72 +6,16 @@
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gjc — the oh-my suite for Gajae Code (gjc): one core plugin + optional power plugins.",
+    "description": "oh-my-gajaecode — the oh-my single-plugin suite for Gajae Code (gjc). One install, one native surface: 13 capabilities under /omg:*.",
     "version": "0.7.0"
   },
   "plugins": [
     {
       "name": "oh-my-gjc",
       "source": "./plugins/oh-my-gjc",
-      "description": "The core plugin — install this first. easy-answer (plain-language answers), gate-briefing (domain-blind approval-gate briefings), multivendor model presets (ideal / escalate-surgical / monorepo), branch-flow (per-repo dev/main branch discipline in the repo's AGENTS.md + docs/WORKFLOW.md), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md marker blocks — the only user-global every-turn injection surface on gjc 0.8.2), /oh-my-gjc:fable (Fable 5 adversarial safety audit, proven to catch consensus-missed CRITICALs), and /oh-my-gjc:setup which detects your environment and recommends the optional plugins below. Absorbs the former my-workflows and multivendor-presets plugins.",
+      "description": "oh-my-gajaecode — one plugin, everything. A single install brings 13 capabilities, all surfaced natively as /omg:* commands and trigger-word skills: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings), multivendor model presets (ideal / escalate-surgical / monorepo / reviewer), extragoal (external fresh-context cross-family final review gate), branch-flow (per-repo dev/main git discipline), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md), /omg:fable (Fable 5 adversarial safety audit), /omg:codex-ask + /omg:codex-run (local Codex CLI read-only ask / file-writing deepwork), /omg:lazycodex-setup + /omg:lazycodex-work (LazyCodex harness + ultrawork), /omg:codex-app-launch + /omg:codex-app-ask (Codex desktop App over CDP), /omg:insane-review (GPT-5.5 Pro web review), /omg:bugwatch-scan (gjc bug collector), /omg:tower-setup (control-tower fleet orchestration), and /omg:setup for optional model-preset merge + always-on toggles. Prerequisite-gated capabilities (Codex CLI, ChatGPT subscription + Chromium, built Codex App) install with the suite and self-diagnose at first run — install stays light, features guide you.",
       "version": "0.3.2",
       "category": "core"
-    },
-    {
-      "name": "codex-cli-control",
-      "source": "./plugins/codex-cli-control",
-      "description": "Skill-first plugin that runs the local Codex CLI ('codex exec') non-interactively with a sandbox policy, sends one prompt, and returns Codex's final message. No desktop App/CDP required.",
-      "version": "0.1.0",
-      "category": "automation"
-    },
-    {
-      "name": "codex-deepwork",
-      "source": "./plugins/codex-deepwork",
-      "description": "Skill-first plugin that delegates an autonomous, file-writing coding task to Codex ('codex exec' with a write sandbox), automatically leveraging the LazyCodex harness (deep-work skills, specialist agents, verification) when installed.",
-      "version": "0.1.0",
-      "category": "automation"
-    },
-    {
-      "name": "lazycodex",
-      "source": "./plugins/lazycodex",
-      "description": "Set up and drive the LazyCodex (OmO Codex Light) deep-work harness: install/update/check it in ~/.codex via npx, then run plan->work->verify (ultrawork) coding tasks through Codex with its skills/hooks/verification engaged.",
-      "version": "0.1.0",
-      "category": "automation"
-    },
-    {
-      "name": "codex-app-control",
-      "source": "./plugins/codex-app-control",
-      "description": "Control the Codex desktop App GUI: codex-app-launch starts an already-built Linux wrapper headlessly (xvfb) with remote debugging (CDP) and waits until ready; codex-app-cdp attaches gjc's browser via an explicit cdp_url, sends one prompt, and returns the latest completed response.",
-      "version": "0.2.0",
-      "category": "automation"
-    },
-    {
-      "name": "insane-review",
-      "source": "./plugins/insane-review",
-      "description": "Use GPT-5.5 Pro (web-only, no API) from inside gjc: gjc scopes the complete relevant file set, repomix-packs it (full code, line numbers, secretlint), drives your logged-in ChatGPT web session over CDP, verifies the model fail-closed, and harvests the review to .insane-review/. Zero API cost. Also works as a web-only agent-council member. Faithful port of fivetaku/insane-review with the engine kept intact.",
-      "version": "0.5.3",
-      "category": "automation"
-    },
-    {
-      "name": "gjc-bugwatch",
-      "source": "./plugins/gjc-bugwatch",
-      "description": "Dogfooding bug collector for gjc: a batch scanner reads ~/.gjc/logs (+ optional session transcripts), extracts/dedupes/redacts runtime errors and crashes, then /gjc-bugwatch:scan triages each candidate, reproduces it against a gajae-code clone, and collects upstream issue/PR drafts under .gjc/bugwatch/drafts/. Drafts only (no auto PR), read-only.",
-      "version": "0.1.0",
-      "category": "automation"
-    },
-    {
-      "name": "tower",
-      "source": "./plugins/tower",
-      "description": "Control-tower orchestration for a standing fleet of TUI-agent (gjc) sessions from one supervisor session: a busy→idle watcher (bin/session_watch.py) streams completion events, the supervisor classifies each and enqueues human decisions in an idempotent operator queue (bin/queue_store.py + tower CLI), and relays direction into live sessions via tmux with built-in TUI-injection-trap defenses (bin/tower-notify.sh). The tower SKILL codifies the loop: boot re-registration, on-event classify/enqueue/report, no-report empty patrols, single notification channel. Distinct from gjc's team (work-worker coordination) — tower is a standing fleet + human decision queue.",
-      "version": "0.1.0",
-      "category": "orchestration"
-    },
-    {
-      "name": "example-plugin",
-      "source": "./plugins/example-plugin",
-      "description": "Starter template plugin: ships one slash command and one skill. Copy it to build your own plugin.",
-      "version": "0.1.0",
-      "category": "examples"
     }
   ]
 }
