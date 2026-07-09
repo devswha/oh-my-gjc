@@ -11,7 +11,7 @@ ChatGPT 구독+크로미움, 빌드된 Codex 앱)도 함께 설치되며, 없으
 gjc plugin marketplace add devswha/oh-my-gjc     # 최초 1회
 gjc plugin install oh-my-gjc@oh-my-gjc
 
-# ⚠ gjc는 마켓플레이스 플러그인의 커맨드·스킬을 세션에 로드하지 않는다.
+# ⚠ gjc는 플러그인 스킬을 세션에 로드하지 않고, 커맨드의 canonical 표면은 네이티브 /omg:*다.
 #    네이티브 설치 1회 (셸에서 — setup 커맨드 자체가 아직 안 뜨므로):
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 

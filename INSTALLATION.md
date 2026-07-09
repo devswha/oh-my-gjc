@@ -21,7 +21,8 @@ One install brings the whole suite (13 capabilities). There are no separate/opti
 ```sh
 gjc plugin marketplace add devswha/oh-my-gjc
 gjc plugin install oh-my-gjc@oh-my-gjc
-# NATIVE install — gjc does NOT load plugin skills/commands into a session, so copy them in.
+# NATIVE install — gjc never loads plugin SKILLs into a session, and plugin commands would
+# only auto-expose under a wrong namespace; copy both in natively as /omg:*.
 # Plugin-scoped glob (cache is <marketplace>___<plugin>___<ver>; a bare *oh-my-gjc* glob hits every plugin), newest version:
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```

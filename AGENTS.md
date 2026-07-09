@@ -44,7 +44,7 @@ oh-my-gjc/
 ├── plugins/
 │   └── <plugin>/
 │       ├── .claude-plugin/plugin.json   # manifest
-│       ├── commands/<file>.md           # slash commands → /<plugin>:<file>
+│       ├── commands/<file>.md           # slash commands → /<plugin>:<file>  (generic convention — see note)
 │       ├── agents/<file>.md             # sub-agents
 │       ├── skills/<name>/SKILL.md       # skills
 │       ├── hooks/hooks.json             # hooks
@@ -54,13 +54,17 @@ oh-my-gjc/
 └── AGENTS.md                     # this file
 ```
 
+> ⚠ `commands/` is the *generic* Claude-Code convention. In THIS repo the `oh-my-gjc` suite keeps its
+> command bodies in `templates/` (a non-convention dir) so gjc 0.9.x cannot auto-expose a duplicate
+> wrongly-namespaced `oh-my-gjc:*` surface; `bin/install-skill.sh` installs them natively as `/omg:*`.
+
 Content is discovered by **convention directories** above; explicit paths in
 `plugin.json` are optional overrides.
 
 ## Add a plugin (procedure)
 
 1. Create `plugins/<plugin>/.claude-plugin/plugin.json`.
-2. Add content in convention dirs (`commands/`, `skills/<name>/SKILL.md`, `agents/`, `hooks/`, `.mcp.json`).
+2. Add content in convention dirs (`skills/<name>/SKILL.md`, `agents/`, `hooks/`, `.mcp.json`). Command bodies for the `oh-my-gjc` suite go in `templates/<name>.md` (NOT `commands/` — see the Layout note); a standalone plugin may use `commands/` but then gets the `<plugin>:<name>` namespace.
 3. Register it in `.claude-plugin/marketplace.json` under `plugins`:
    ```json
    { "name": "<plugin>", "source": "./plugins/<plugin>", "version": "0.1.0", "description": "…", "category": "…" }
@@ -73,7 +77,7 @@ Content is discovered by **convention directories** above; explicit paths in
 
 - **Match the existing shape.** New manifests/commands/skills must mirror the
   existing `oh-my-gjc` / `example-plugin` structure (same `plugin.json` fields,
-  YAML frontmatter on `commands/*.md` and `SKILL.md`). No parallel conventions.
+  YAML frontmatter on command bodies — `templates/*.md` in the suite — and `SKILL.md`). No parallel conventions.
 - **Name parity.** `marketplace.json` entry `name` == `plugin.json` `name` == the
   `plugins/<name>/` directory. `source` must be `./plugins/<name>`.
 - **Lowercase-hyphen names** for plugins and skills.

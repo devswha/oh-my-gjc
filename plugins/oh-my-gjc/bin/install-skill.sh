@@ -48,9 +48,30 @@ EXPECTED_SKILLS=(easy-answer gate-briefing multivendor-presets branch-flow extra
 EXPECTED_COMMANDS=(omg setup easy easy-always gate gate-always presets fable branchflow-always \
                    codex-ask codex-run lazycodex-setup lazycodex-work codex-app-launch codex-app-ask \
                    insane-review bugwatch-scan tower-setup)
+# Pre-0.8.1 native files that upgrades must sweep away: the 17 one-release deprecation
+# tombstones shipped by 0.8.0 (removed in 0.8.1). Old `oh-my-gjc:<name>.md` aliases are
+# covered separately by looping EXPECTED_COMMANDS in cleanup_legacy_commands.
+LEGACY_COMMANDS=('codex-app-control:ask' 'codex-app-control:launch' 'codex-cli-control:ask' \
+                 'codex-deepwork:run' 'gjc-bugwatch:scan' 'insane-review:review' \
+                 'lazycodex:setup' 'lazycodex:work' 'oh-my-gjc:branchflow-always' \
+                 'oh-my-gjc:easy-always' 'oh-my-gjc:easy' 'oh-my-gjc:fable' \
+                 'oh-my-gjc:gate-always' 'oh-my-gjc:gate' 'oh-my-gjc:presets' \
+                 'oh-my-gjc:setup' 'tower:setup')
 
 skills_dir()   { if [ "$1" = project ]; then echo "$PWD/.gjc/skills";   else echo "$HOME/.gjc/agent/skills";   fi; }
 commands_dir() { if [ "$1" = project ]; then echo "$PWD/.gjc/commands"; else echo "$HOME/.gjc/agent/commands"; fi; }
+
+cleanup_legacy_commands() { # $1=scope — drop pre-0.8.1 leftovers (0.8.0 tombstones + old oh-my-gjc:* aliases)
+  local d n removed=0
+  d="$(commands_dir "$1")"
+  for n in "${LEGACY_COMMANDS[@]}"; do
+    if [ -f "$d/$n.md" ]; then rm -f "$d/$n.md"; removed=$((removed+1)); fi
+  done
+  for n in "${EXPECTED_COMMANDS[@]}"; do
+    if [ -f "$d/oh-my-gjc:$n.md" ]; then rm -f "$d/oh-my-gjc:$n.md"; removed=$((removed+1)); fi
+  done
+  if [ "$removed" -gt 0 ]; then echo "✓ cleaned $removed legacy command file(s) (pre-0.8.1 tombstones/aliases)"; fi
+}
 
 MISSING=()
 
@@ -106,6 +127,7 @@ case "$mode" in
     if [ "$target" = "all" ]; then
       for s in "${EXPECTED_SKILLS[@]}";     do uninstall_skill     "$s" "$scope"; done
       for c in "${EXPECTED_COMMANDS[@]}";   do uninstall_command   "$c" "$scope"; done
+      cleanup_legacy_commands "$scope"
     else
       if [ -d "$PLUGIN_ROOT/skills/$target" ];       then uninstall_skill   "$target" "$scope"; fi
       if [ -f "$PLUGIN_ROOT/templates/$target.md" ]; then uninstall_command "$target" "$scope"; fi
@@ -116,6 +138,7 @@ case "$mode" in
       preflight_all
       for s in "${EXPECTED_SKILLS[@]}";     do install_skill     "$s" "$mode"; done
       for c in "${EXPECTED_COMMANDS[@]}";   do install_command   "$c" "$mode"; done
+      cleanup_legacy_commands "$mode"
       report_missing
     else
       if [ -d "$PLUGIN_ROOT/skills/$target" ];       then install_skill   "$target" "$mode"; fi
