@@ -32,7 +32,7 @@ council:
       color: "BLUE"
     # ── GPT-5.5 Pro (웹 전용, insane-review 경유) ──
     - name: gpt-pro
-      command: "python3 /ABS/PATH/insane-review/bin/pack_and_ask.py --council --model pro --require-model \"GPT-5.5\" --force-answer-after 120"
+      command: "python3 /ABS/PATH/oh-my-gjc/bin/pack_and_ask.py --council --model pro --require-model \"GPT-5.5\" --force-answer-after 120"
       emoji: "🌐"
       color: "MAGENTA"
   settings:
@@ -40,7 +40,7 @@ council:
     timeout: 600   # ⚠️ Pro 리즈닝이 길다 — 기본 120s로는 SIGTERM될 수 있어 늘린다
 ```
 
-- `/ABS/PATH/insane-review/bin/pack_and_ask.py`는 위에서 확인한 **절대경로** 그대로. (경로에 공백 없게.)
+- `/ABS/PATH/oh-my-gjc/bin/pack_and_ask.py`는 위에서 확인한 **절대경로** 그대로. (경로에 공백 없게.)
 - `--require-model "GPT-5.5"`: council 경로에서도 활성 모델명을 검증(불일치/미확정이면 fail-closed로 전송 중단). 빼면 effort만 검증되고 기반 모델은 무엇이든 통과한다.
 - `--force-answer-after 120`: 120초 후 "지금 답변 받기"로 리즈닝을 끊어 회수 시간을 bound. council `timeout`은 그보다 넉넉히(예: 600).
 - council은 멤버를 **병렬 detached**로 띄운다. gpt-pro는 자기 브라우저 탭을 새로 열므로 다른 멤버와 충돌하지 않지만, **동시에 두 개의 insane-review 잡이 같은 브라우저를 몰면 안 된다**(한 council 잡에 gpt-pro 멤버는 하나).

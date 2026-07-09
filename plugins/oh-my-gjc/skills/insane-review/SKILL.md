@@ -22,7 +22,7 @@ IR="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/pack_and_
 [ -z "$IR" ] && { echo "❌ pack_and_ask.py를 찾지 못함 — insane-review 설치 확인"; }
 echo "IR=$IR"
 ```
-(gjc `find` 도구로 `**/insane-review*/bin/pack_and_ask.py`를 찾아도 된다.)
+(gjc `find` 도구로 `oh-my-gjc/bin/pack_and_ask.py`를 찾아도 된다.)
 
 ## 선행 조건 — 선택지 기반 온보딩 (사용자에게 CLI 타이핑 금지)
 
