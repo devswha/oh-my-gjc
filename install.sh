@@ -46,7 +46,14 @@ fi
 
 # ── run ────────────────────────────────────────────────────────────────────────
 say "marketplace add: $MARKET"
-gjc plugin marketplace add "$MARKET" 2>&1 | tail -1 || warn "marketplace add non-zero (already added?) — continuing"
+if [ "$CAND_MODE" = 1 ]; then
+  # candidate/provenance mode is fail-closed end-to-end: a fresh HOME is expected, so a
+  # marketplace-add failure means the candidate source did NOT register — abort rather than
+  # fall through to a previously-registered (possibly stale) marketplace/cache.
+  gjc plugin marketplace add "$MARKET" || die "candidate marketplace add failed — aborting (run provenance installs in a fresh HOME)."
+else
+  gjc plugin marketplace add "$MARKET" 2>&1 | tail -1 || warn "marketplace add non-zero (already added?) — continuing"
+fi
 
 say "install $ENTRY@$ENTRY"
 if [ "$CAND_MODE" = 1 ]; then
