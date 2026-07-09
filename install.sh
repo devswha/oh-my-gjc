@@ -62,7 +62,11 @@ if [ "$CAND_MODE" = 1 ]; then
   # Fail closed — never fall through to install a possibly-stale cache as release evidence.
   gjc plugin install "$ENTRY@$ENTRY" --force || die "candidate install failed — refusing to proceed with a possibly-stale cache (provenance integrity)."
 else
-  gjc plugin install "$ENTRY@$ENTRY" 2>&1 | tail -1 || warn "install non-zero (already installed?) — continuing"
+  # non-candidate rerun = upgrade path: --force refreshes the cache even when the
+  # version string didn't change; fall back to a plain install for older gjc.
+  gjc plugin install "$ENTRY@$ENTRY" --force 2>&1 | tail -1 \
+    || gjc plugin install "$ENTRY@$ENTRY" 2>&1 | tail -1 \
+    || warn "install non-zero (already installed?) — continuing"
 fi
 
 # NATIVE install — newest cached version, plugin-scoped glob (cache is <market>___<entry>___<ver>;

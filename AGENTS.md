@@ -28,11 +28,12 @@ catalog; `gjc plugin list` shows installed). **Plugin management is shell-CLI on
   Credential precedence: live env → `~/.gjc/agent/.env` → `~/.gjc/.env` → `~/.env`.
 - **Web search:** `gjc config set providers.webSearch exa` (fallback: duckduckgo). Full key list (Exa/Tavily/Gemini/…) is in [`.env.example`](./.env.example).
 
-### Plugin prerequisites
-- `codex-cli-control` / `codex-deepwork`: Codex CLI installed + signed in (`codex --version`, `codex login status`). Plugins never auto-install or auto-login.
+### Capability prerequisites (single `oh-my-gjc` suite)
+- `codex-cli-ask` / `codex-deepwork` / `lazycodex`: Codex CLI installed + signed in (`codex --version`, `codex login status`). Never auto-installed or auto-logged-in.
 - `codex-deepwork` (recommended): LazyCodex harness — `npx lazycodex-ai install` — adds deep-work skills/agents/verification to Codex runs. Works without it (plain `codex exec`).
-- `codex-app-control`: a running, CDP-enabled Codex desktop App + an explicit `cdp_url`. v1 does not launch/build the app.
-- `oh-my-gjc` (core) / `example-plugin`: no external prerequisites.
+- `codex-app-launch` / `codex-app-cdp`: an already-**built** Codex desktop App — `/omg:codex-app-launch` starts it headlessly with CDP; `/omg:codex-app-ask` attaches via an explicit `cdp_url`. Neither builds the app from the DMG.
+- `insane-review`: ChatGPT subscription + a Chromium-family browser on CDP `:9222` logged into chatgpt.com.
+- Everything else (easy-answer, gate-briefing, presets, branch-flow, extragoal, fable, gjc-bugwatch, tower) + the `example-plugin` template: no external prerequisites (tower needs tmux; fable needs Fable 5 model access).
 
 ## Layout
 
@@ -78,6 +79,9 @@ Content is discovered by **convention directories** above; explicit paths in
 - **Lowercase-hyphen names** for plugins and skills.
 - **Register every new plugin** in `marketplace.json`, and keep the entry list
   formatting consistent with siblings.
+  **Exception (single-suite policy, 0.8.0+):** new gjc-facing capabilities merge into
+  `plugins/oh-my-gjc` (the one exposed marketplace entry) instead of adding a new entry;
+  `example-plugin` stays intentionally unregistered as a copy-me template (Gate A decision).
 - **Skill `description`** is the activation trigger — make it specific and include
   the phrases that should load the skill.
 - **Never commit secrets.** `.env`/`.env.*` are gitignored (`!.env.example` is the
@@ -86,6 +90,10 @@ Content is discovered by **convention directories** above; explicit paths in
 - **Document the real install paths** (verified): plugin management is the **shell CLI only** — `gjc plugin marketplace add <ref>` then `gjc plugin install <name>@<marketplace> …` (batch-capable), `gjc plugin list`. gjc has **no `/plugin` slash command** (Claude-Code syntax; a `/plugin …` line in a gjc session is just a chat message). Never write `/plugin …` in gjc install docs.
 
 ## Per-plugin notes
+
+> **Note (0.8.0 단일 스위트):** marketplace에 노출되는 plugin은 `oh-my-gjc` 하나뿐이다. 아래 절들은
+> 통합 전 plugin 이름을 유지한 **capability 단위 노트**다 — `codex-cli-control` = skill `codex-cli-ask`,
+> `codex-app-control` = skills `codex-app-launch`/`codex-app-cdp`. 파일은 전부 `plugins/oh-my-gjc/` 안에 있다.
 
 ### `codex-cli-control` (working)
 - Skill `codex-cli-ask` + command `/omg:codex-ask`. gjc runs
@@ -129,7 +137,7 @@ Content is discovered by **convention directories** above; explicit paths in
 
 ### `insane-review` (CLI pack pipeline verified; CDP path deferred)
 - Command `/omg:insane-review` + a native-installable skill (`skills/insane-review/SKILL.md`). Faithful port of `fivetaku/insane-review`. gjc scopes the complete relevant file set → repomix packs it (full code, line numbers, secretlint, packed-file audit) → drives the **logged-in ChatGPT web session over CDP** → selects+**verifies** GPT-5.5 Pro (fail-closed) → harvests the review to the current project's `.insane-review/response_*.md`. Zero API cost (runs on the user's ChatGPT subscription). Also a web-only `agent-council` member via `--council` (see `references/council-setup.md`).
-- **gjc surfaces NEITHER plugin skills NOR plugin commands as first-class** — two separate gaps, both verified on gjc 0.8.2 (`main` & `dev`): (1) the skill registry drops non-native skills (`skills.ts`: `if (provider !== "native") return false`); (2) the marketplace slash-command provider (`discovery/claude-plugins.ts`) is **never registered** because `discovery/index.ts` omits `import "./claude-plugins"` (only test files import it, and the provider self-registers only on import), so a plugin's `commands/*.md` are NOT advertised as `/<plugin>:<command>` in ANY session (proven via ACP `available_commands_update`: zero marketplace-plugin commands, only builtins + native `skill:*`). So after `gjc plugin install`, BOTH `/omg:insane-review` AND its `SKILL.md` auto-activation are dead until **natively installed**. `bin/install-skill.sh` copies SKILL.md into `~/.gjc/agent/skills/insane-review/` (user) or `<cwd>/.gjc/skills/` (project); the command surface needs the same treatment for `commands/*.md` → `~/.gjc/agent/commands/omg:<name>.md` (oh-my-gjc's `install-skill.sh` installs canonical commands as `omg:<name>.md` plus deprecation tombstones for old names; the filename IS the native command name). Applies to every marketplace plugin, not just this one.
+- **Native install required — WHY (history + current):** on gjc 0.8.2 (`main` & `dev`, verified then) gjc surfaced NEITHER plugin skills NOR plugin commands as first-class: (1) the skill registry dropped non-native skills (`skills.ts`: `if (provider !== "native") return false`); (2) the marketplace slash-command provider (`discovery/claude-plugins.ts`) was never registered because `discovery/index.ts` omitted `import "./claude-plugins"`, so a plugin's `commands/*.md` were not advertised as `/<plugin>:<command>` in ANY session (proven via ACP `available_commands_update`: zero marketplace-plugin commands, only builtins + native `skill:*`). **Current state (gjc 0.9.x): plugin `commands/*.md` ARE auto-exposed — but under the wrong `<plugin>:<name>` namespace — while plugin skills still don't surface** (see the `oh-my-gjc` core section below); native install stays REQUIRED either way. `bin/install-skill.sh` copies SKILL.md into `~/.gjc/agent/skills/insane-review/` (user) or `<cwd>/.gjc/skills/` (project) and installs canonical commands from `templates/` as `~/.gjc/agent/commands/omg:<name>.md` (the filename IS the native command name; the 0.8.0-era deprecation tombstones were dropped in 0.8.1). Applies to every marketplace plugin, not just this one.
 - **Engine kept byte-for-byte** (`bin/pack_and_ask.py`, Playwright-based, cross-platform). The gjc port only rewrote the shell: skill/command adapted to gjc terms + the `ask` tool onboarding, and the Claude-Code `setup/` (GitHub-star prompt + `~/.claude/settings.json` SessionStart update hook) was **dropped**. Do not reimplement the engine flow with gjc's `browser` tool — the hardened engine is more robust.
 - **Path resolution:** `${CLAUDE_PLUGIN_ROOT}` is NOT substituted in gjc command/skill bodies, so both docs resolve the engine into `$IR` via a glob (`~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/pack_and_ask.py`, with project-scope + repo-local fallbacks). Never invoke via `${CLAUDE_PLUGIN_ROOT}` in a gjc plugin.
 - **Security contract (do not weaken):** repomix secretlint forced on (a local repomix config disabling it aborts the run); fail-closed on unverified model / unattached pack / truncated prompt / timeout / empty response (no partial save); `--require-model` must accompany `--model`; output files `chmod 600`. Prompting Pro ships relevant code to an external web service — personal subscription use only (not OpenAI-endorsed).
