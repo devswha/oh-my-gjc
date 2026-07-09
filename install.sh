@@ -13,8 +13,9 @@
 # to print a migration note; they NEVER add extra plugin installs.
 #
 # Absorbs everything setup does that needs no user choice: marketplace add, the single
-# plugin install, and the NATIVE skill/command copy (gjc doesn't load plugin skills/
-# commands into a session). User-choice stuff — model presets (need your vendor + login)
+# plugin install, and the NATIVE skill/command copy. gjc 0.9.x auto-exposes plugin
+# commands as `oh-my-gjc:*` (wrong namespace), so command bodies ship in templates/ and
+# install natively as `omg:*`; skills install natively too. User-choice stuff — model presets
 # and always-on toggles — stays opt-in via /omg:setup. Idempotent. Shell CLI only.
 set -euo pipefail
 
@@ -61,7 +62,11 @@ if [ "$CAND_MODE" = 1 ]; then
   # Fail closed — never fall through to install a possibly-stale cache as release evidence.
   gjc plugin install "$ENTRY@$ENTRY" --force || die "candidate install failed — refusing to proceed with a possibly-stale cache (provenance integrity)."
 else
-  gjc plugin install "$ENTRY@$ENTRY" 2>&1 | tail -1 || warn "install non-zero (already installed?) — continuing"
+  # non-candidate rerun = upgrade path: --force refreshes the cache even when the
+  # version string didn't change; fall back to a plain install for older gjc.
+  gjc plugin install "$ENTRY@$ENTRY" --force 2>&1 | tail -1 \
+    || gjc plugin install "$ENTRY@$ENTRY" 2>&1 | tail -1 \
+    || warn "install non-zero (already installed?) — continuing"
 fi
 
 # NATIVE install — newest cached version, plugin-scoped glob (cache is <market>___<entry>___<ver>;

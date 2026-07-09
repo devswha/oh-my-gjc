@@ -42,10 +42,10 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 - `branch-flow` — dev 통합 / main 릴리스 브랜치 규칙 · 상시 온·오프 가능(`/omg:branchflow-always`)
 - `extragoal` — 외부 최종 리뷰 게이트(무공유·교차패밀리 리뷰 후 머지)
 - `/omg:fable` — 안전-크리티컬 코드 적대적 감사(돈·데이터·보안 코드) · **Fable 5 모델 필요**
-- `codex-cli-control` — 로컬 Codex CLI에 읽기 전용 질문 위임 · **Codex CLI 보유자용**
+- `codex-cli-ask` — 로컬 Codex CLI에 읽기 전용 질문 위임 · **Codex CLI 보유자용**
 - `codex-deepwork` — Codex에 파일 쓰는 자동 작업 위임 · **Codex CLI 보유자용**
 - `lazycodex` — LazyCodex 하네스 설치·관리 + ultrawork 실행 · **Codex CLI + Node/npx 필요**
-- `codex-app-control` — Codex 데스크톱 앱 GUI를 CDP로 제어 · **Codex 데스크톱 앱(CDP) 필요**
+- `codex-app-launch` · `codex-app-cdp` — Codex 데스크톱 앱 GUI를 CDP로 제어 · **Codex 데스크톱 앱(CDP) 필요**
 - `insane-review` — GPT-5.5 Pro 웹 코드 리뷰 · **ChatGPT 구독 + 크로미움 로그인 필요**
 - `gjc-bugwatch` — gjc 자체 버그 수집
 - `tower` — TUI 에이전트 세션 함대를 관제탑 하나로 감시·전파·결정 큐(gjc team과 다름) · **tmux 세션 함대 운영자용**
@@ -117,9 +117,9 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 - 보고서 상위 발견은 실코드랑 대조(스팟체크)한 뒤에만 브리핑한다. 억지 결함 안 만든다.
 - `:max` 금지 — Fable은 조용히 `xhigh`로 깎인다. Fable이 거부하면 `opus-4-8`로 대체한다.
 - 쓰기: `/omg:fable "주문 경로와 손절 로직"`
-- 원문: [`plugins/oh-my-gjc/commands/fable.md`](./plugins/oh-my-gjc/commands/fable.md)
+- 원문: [`plugins/oh-my-gjc/templates/fable.md`](./plugins/oh-my-gjc/templates/fable.md)
 
-### `codex-cli-control` — 로컬 Codex CLI에 읽기 전용 질문
+### `codex-cli-ask` — 로컬 Codex CLI에 읽기 전용 질문
 
 로컬에 깔린 Codex CLI(`codex exec`)에 gjc가 프롬프트 하나를 비대화형으로 던지고 Codex의
 최종 답변만 받아온다. 데스크톱 앱이나 CDP 없이 된다. 기본은 읽기 전용 샌드박스라 파일을
@@ -153,7 +153,7 @@ plan→work→verify(ultrawork) 코딩 작업을 Codex에 돌린다.
 - 쓰기: `/omg:lazycodex-setup [doctor|install|update|uninstall]` · `/omg:lazycodex-work` 에 작업 지시
 - 원문: [`plugins/oh-my-gjc/skills/lazycodex/SKILL.md`](./plugins/oh-my-gjc/skills/lazycodex/SKILL.md)
 
-### `codex-app-control` — Codex 데스크톱 앱 GUI 제어
+### `codex-app-launch` · `codex-app-cdp` — Codex 데스크톱 앱 GUI 제어
 
 이미 빌드된 Codex 데스크톱 앱을 헤드리스로 띄우고(CDP 디버그포트 켜서), gjc의 browser
 도구를 붙여 프롬프트 하나 보내고 최신 응답을 읽어온다.

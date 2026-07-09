@@ -19,7 +19,7 @@ echo "TOWER_ROOT=$TOWER_ROOT"
 
 ## Step 1 — 네이티브 스킬 + 커맨드 설치 (필수)
 
-gjc는 마켓플레이스 플러그인의 스킬·커맨드를 세션에 로드하지 않는다. 네이티브로 1회 복사:
+gjc는 플러그인 스킬을 세션에 로드하지 않고, 커맨드의 canonical 표면은 네이티브 `/omg:*`다. 네이티브로 1회 복사:
 
 ```bash
 bash "${TOWER_ROOT}bin/install-skill.sh" all

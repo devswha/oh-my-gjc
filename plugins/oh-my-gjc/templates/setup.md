@@ -25,8 +25,9 @@ echo "OMG_ROOT=$OMG_ROOT"
 
 ## Step 1 — 네이티브 스킬 + 커맨드 설치 (필수)
 
-gjc는 마켓플레이스 플러그인의 **스킬도 커맨드도 세션에 로드하지 않는다**(스킬 레지스트리는
-native `.gjc`만; 슬래시 커맨드 provider가 등록조차 안 됨). 따라서 스킬·커맨드를 네이티브로 1회 복사해야 한다:
+gjc는 마켓플레이스 플러그인의 **스킬**을 세션에 로드하지 않고, **커맨드**는 잘못된
+네임스페이스(`<plugin>:<name>`)로만 자동 노출될 수 있다 — 그래서 커맨드 본문은 자동 등록이
+안 되는 `templates/`에 있다. 스킬·커맨드를 네이티브 `/omg:*`로 1회 복사해야 한다:
 
 ```bash
 bash "${OMG_ROOT}bin/install-skill.sh" all
@@ -34,7 +35,6 @@ bash "${OMG_ROOT}bin/install-skill.sh" all
 
 - 스킬 → `~/.gjc/agent/skills/<name>/SKILL.md` (트리거로 자동활성화).
 - 커맨드 → `~/.gjc/agent/commands/omg:<name>.md` (파일명이 곧 커맨드명이라 `/omg:<name>` UX).
-- 폐기된 구 명령들은 안내 전용 묘비 스텁으로 함께 깔려 사용자를 새 `/omg:*`로 보낸다(다음 릴리스에 삭제).
 - 누락 파일이 있으면 설치는 "복사 가능한 것만"이 아니라 **전체 실패**로 보고한다.
 
 ⚠ **최초 부트스트랩은 셸에서** 돌려야 한다 — `/omg:setup` 자체가 설치 전엔 안 뜨는
@@ -48,7 +48,6 @@ bash "${OMG_ROOT}bin/install-skill.sh" all
   `~/.gjc/agent/SYSTEM.md`로 자동 마이그레이션한다.
 - 과거에 개별 플러그인을 따로 설치했던 사용자면, 단일 스위트로 통합됐으니 옛 개별 플러그인
   제거를 제안한다(동의 후에만, 셸): 예 `gjc plugin uninstall my-workflows@oh-my-gjc`.
-  구 개별 기능 명령들의 묘비 스텁은 Step 1에서 자동 설치되므로 익숙한 손버릇도 새 이름으로 안내된다.
 
 ## Step 3 — 프리셋 병합 제안
 

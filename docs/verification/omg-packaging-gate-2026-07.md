@@ -1,5 +1,11 @@
 # Gate A — omg 단일 플러그인 패키징 게이트 결과 (2026-07)
 
+> ⚠ **역사 기록 (frozen historical record)** — 이 문서는 Gate A 수행 시점(dev `871fcff`~`c8a8760`,
+> 당시 manifest 0.5.0/marketplace 0.7.0 payload)의 증거를 그대로 보존한다. 이후 릴리스에서 바뀐 것:
+> 묘비 스텁 17개·`EXPECTED_TOMBSTONES`는 **0.8.1에서 삭제**(native command 파일 35→18), 커맨드 본문은
+> `commands/` → `templates/`로 이동, `install-skill.sh`가 pre-0.8.1 잔존물을 자동 청소(`cleanup_legacy_commands`).
+> 현행 사실은 `AGENTS.md`의 `oh-my-gjc (core)` 절이 정본이다. 아래 수치·경로는 수정하지 않는다.
+
 Phase 0 독립 리뷰 단위. 계획: `/tmp/omg-plan/pending-approval.md` + `stage-05-revision.md`.
 **릴리스·main 머지·태그는 수행하지 않았다(하코 전용).** 이 게이트가 통과(교차리뷰 BLOCK 아님)해야 Gate B(13항목 기능 캠페인)로 넘어간다.
 
@@ -38,7 +44,7 @@ Phase 0 독립 리뷰 단위. 계획: `/tmp/omg-plan/pending-approval.md` + `sta
 - 대상: `README.md`, `INSTALLATION.md`, `plugins/oh-my-gjc/README.md`, canonical command bodies, skill bodies, native installer.
 - 금지 패턴(별도/옵션 플러그인·각자 셸·`/plugin`·`gjc plugin install <feat>@`·구 cache glob·구 슬래시 prefix) 전부 제거.
 - **예외(allowlist) 2종:**
-  1. `plugins/oh-my-gjc/tombstones/*.md` — 안내 스텁(본문은 새 `/omg:*`만, old 설치단위 안내 없음).
+  1. `plugins/oh-my-gjc/tombstones/*.md` — 안내 스텁(본문은 새 `/omg:*`만, old 설치단위 안내 없음). **[0.8.1 폐지: tombstones 17개 삭제 완료 — 이 예외 항목 불필요]**
   2. `bin/install-skill.sh` `uninstall_command` — 구 alias 파일(`oh-my-gjc:<name>.md`)도 제거하는 정리 코드(설치 단위 안내 아님).
 - frontmatter `description`/`argument-hint`/H1/사용예시/"켜기·쓰기" 문구까지 스캔. canonical 본문에 old prefix drift 없음. ✅
 

@@ -21,7 +21,8 @@ One install brings the whole suite (13 capabilities). There are no separate/opti
 ```sh
 gjc plugin marketplace add devswha/oh-my-gjc
 gjc plugin install oh-my-gjc@oh-my-gjc
-# NATIVE install — gjc does NOT load plugin skills/commands into a session, so copy them in.
+# NATIVE install — gjc never loads plugin SKILLs into a session, and plugin commands would
+# only auto-expose under a wrong namespace; copy both in natively as /omg:*.
 # Plugin-scoped glob (cache is <marketplace>___<plugin>___<ver>; a bare *oh-my-gjc* glob hits every plugin), newest version:
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
@@ -35,7 +36,7 @@ ls ~/.gjc/agent/commands/ | grep '^omg'            # omg.md + omg:<name>.md pres
 ```
 
 ## Finish
-Tell the human: open a **new** gjc session (or `/move .`) so the command palette rebuilds, then run `/omg` for the catalog and `/omg:setup` to finish (model-preset merge + always-on toggles — all optional). Commands are `/omg:<name>`. Old per-feature command names are deprecated and now install only as stubs that point at the new `/omg:*` name.
+Tell the human: open a **new** gjc session (or `/move .`) so the command palette rebuilds, then run `/omg` for the catalog and `/omg:setup` to finish (model-preset merge + always-on toggles — all optional). Commands are `/omg:<name>`.
 
 ## Safety
 Idempotent — re-running only re-copies. This installs a documented plugin suite; it does not send code anywhere or change model/provider credentials. Prerequisite-gated features (Codex CLI, ChatGPT subscription + Chromium, a built Codex App) install with the suite but only run when their tool is present — otherwise they self-diagnose and stop cleanly.
