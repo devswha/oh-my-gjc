@@ -14,5 +14,5 @@ REPO="${GJC_BUGWATCH_REPO:-/home/devswha/workspace/oh-my-gjc}"
 LOGDIR="${GJC_LOG_DIR:-${HOME}/.gjc/logs}"
 MIN="${GJC_BUGWATCH_MIN:-medium}"
 
-exec bun run "${REPO}/plugins/gjc-bugwatch/bin/follow.ts" --dir "${LOGDIR}" --min "${MIN}" \
+exec bun run "${REPO}/plugins/oh-my-gjc/bin/follow.ts" --dir "${LOGDIR}" --min "${MIN}" \
 	| bun run "${REPO}/ops/gjc-bugwatch/trigger.ts"
