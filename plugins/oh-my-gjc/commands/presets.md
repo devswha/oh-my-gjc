@@ -3,7 +3,7 @@ description: 멀티벤더 모델 프로파일 프리셋(ideal / escalate-surgica
 argument-hint: "[ideal|escalate-surgical|monorepo|all]  (기본: all)"
 ---
 
-# /oh-my-gjc:presets
+# /omg:presets
 
 멀티벤더(멀티 프로바이더) 모델 프로파일 프리셋을 사용자의 `~/.gjc/agent/models.yml`
 `profiles:` 아래로 **이름 단위로 병합**한다. gjc 플러그인은 models.yml 프로파일을

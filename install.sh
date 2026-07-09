@@ -1,23 +1,25 @@
 #!/usr/bin/env bash
-# oh-my-gjc — one-shot installer.
+# oh-my-gajaecode — one-shot installer (single plugin suite).
 #
 #   curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
+#       → installs the one oh-my-gjc plugin + native skill/command copy. Then open a new gjc session.
 #
-# Installs the oh-my-gjc CORE plugin end-to-end for a new user:
-#   1. register the marketplace   (gjc plugin marketplace add)
-#   2. install the core plugin     (gjc plugin install oh-my-gjc@oh-my-gjc)
-#   3. NATIVE install skills+commands (gjc doesn't load plugin skills/commands
-#      into a session, so this copies them into ~/.gjc/agent/…)
+#   --candidate-ref <path|ref>   marketplace SOURCE override (a local checkout path or an
+#                                explicit dev ref) for release-candidate provenance testing.
+#                                Default is the published marketplace (devswha/oh-my-gjc).
 #
-# Optional plugins (space-separated) are installed the same way when passed:
-#   curl -fsSL …/install.sh | bash -s -- tower insane-review
+# One install brings ALL 13 capabilities — there are no separate/optional plugins. Legacy
+# args (--core, tower, insane-review, codex-*, lazycodex, gjc-bugwatch) are accepted only
+# to print a migration note; they NEVER add extra plugin installs.
 #
-# Plugin management is gjc's SHELL CLI only — there is no /plugin slash command
-# in a gjc session. Idempotent: safe to re-run (e.g. after a plugin upgrade).
+# Absorbs everything setup does that needs no user choice: marketplace add, the single
+# plugin install, and the NATIVE skill/command copy (gjc doesn't load plugin skills/
+# commands into a session). User-choice stuff — model presets (need your vendor + login)
+# and always-on toggles — stays opt-in via /omg:setup. Idempotent. Shell CLI only.
 set -euo pipefail
 
-MARKET="devswha/oh-my-gjc"
-CORE="oh-my-gjc"
+MARKET_DEFAULT="devswha/oh-my-gjc"
+ENTRY="oh-my-gjc"            # marketplace entry name (kept for cache/compat)
 CACHE="$HOME/.gjc/plugins/cache/plugins"
 
 say()  { printf '\033[1;36m▸ %s\033[0m\n' "$*"; }
@@ -26,38 +28,53 @@ die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 command -v gjc >/dev/null 2>&1 || die "gjc not found on PATH. Install Gajae Code first, then re-run."
 
-# 1) marketplace (idempotent — ignore 'already added')
-say "marketplace add: $MARKET"
-gjc plugin marketplace add "$MARKET" 2>&1 | tail -1 || warn "marketplace add returned non-zero (already added?) — continuing"
-
-# native install for one installed plugin, newest cached version, plugin-scoped glob
-native() { # $1=plugin
-  local sh
-  sh="$(ls -d "$CACHE/${MARKET##*/}___$1___"*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)"
-  [ -n "$sh" ] || { warn "no install-skill.sh for '$1' (plugin without a native installer?) — skipping native step"; return 0; }
-  bash "$sh" all
-}
-
-# 2)+3) core: install + native
-say "install $CORE@$CORE"
-gjc plugin install "$CORE@$CORE"
-say "native install: $CORE"
-native "$CORE"
-
-# optional plugins passed as args
-for p in "$@"; do
-  [ -n "$p" ] || continue
-  say "install $p@$CORE"
-  gjc plugin install "$p@$CORE"
-  say "native install: $p"
-  native "$p"
+# ── parse args ────────────────────────────────────────────────────────────────
+MARKET="$MARKET_DEFAULT"; CAND_MODE=0; LEGACY=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --candidate-ref)   shift; [ $# -gt 0 ] || die "--candidate-ref needs a path or ref"; MARKET="$1"; CAND_MODE=1 ;;
+    --candidate-ref=*) MARKET="${1#*=}"; CAND_MODE=1 ;;
+    --*)               LEGACY+=("$1") ;;
+    *)                 LEGACY+=("$1") ;;
+  esac
+  shift
 done
+if [ "${#LEGACY[@]}" -gt 0 ]; then
+  warn "single-plugin suite now — these args are legacy and install nothing extra: ${LEGACY[*]}"
+  warn "  everything comes from the one plugin; use /omg:<name> after install."
+fi
 
-cat <<'DONE'
+# ── run ────────────────────────────────────────────────────────────────────────
+say "marketplace add: $MARKET"
+if [ "$CAND_MODE" = 1 ]; then
+  # candidate/provenance mode is fail-closed end-to-end: a fresh HOME is expected, so a
+  # marketplace-add failure means the candidate source did NOT register — abort rather than
+  # fall through to a previously-registered (possibly stale) marketplace/cache.
+  gjc plugin marketplace add "$MARKET" || die "candidate marketplace add failed — aborting (run provenance installs in a fresh HOME)."
+else
+  gjc plugin marketplace add "$MARKET" 2>&1 | tail -1 || warn "marketplace add non-zero (already added?) — continuing"
+fi
 
-✓ oh-my-gjc installed.
-  Open a NEW gjc session (or run /move .) so the command palette rebuilds, then:
-    /omg          → catalog
-    /omg:setup    → finish setup (presets + optional-plugin recommendations)
-  (Commands are /omg:<name>; /oh-my-gjc:<name> stays as a deprecated alias.)
+say "install $ENTRY@$ENTRY"
+if [ "$CAND_MODE" = 1 ]; then
+  # candidate/provenance mode: force reinstall so the cache is the candidate, not a stale copy.
+  # Fail closed — never fall through to install a possibly-stale cache as release evidence.
+  gjc plugin install "$ENTRY@$ENTRY" --force || die "candidate install failed — refusing to proceed with a possibly-stale cache (provenance integrity)."
+else
+  gjc plugin install "$ENTRY@$ENTRY" 2>&1 | tail -1 || warn "install non-zero (already installed?) — continuing"
+fi
+
+# NATIVE install — newest cached version, plugin-scoped glob (cache is <market>___<entry>___<ver>;
+# marketplace name == entry name, so anchor to oh-my-gjc___oh-my-gjc___* — a bare *oh-my-gjc* glob
+# would match nothing else now but the anchored form stays correct if more entries ever appear).
+NAT="$(ls -d "$CACHE/oh-my-gjc___${ENTRY}___"*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)"
+[ -n "$NAT" ] || die "native installer not found ($CACHE/oh-my-gjc___${ENTRY}___*/bin/install-skill.sh). Plugin install may have failed."
+bash "$NAT" all
+
+cat <<DONE
+
+✓ oh-my-gajaecode installed — one plugin, 13 capabilities, all native. No further required steps.
+  Just open a NEW gjc session (or run /move .). That's it.
+    /omg   → catalog of everything you got
+  (Optional: /omg:setup merges model presets / turns on always-on modes.)
 DONE

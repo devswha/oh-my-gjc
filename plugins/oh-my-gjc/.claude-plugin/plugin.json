@@ -1,7 +1,7 @@
 {
   "name": "oh-my-gjc",
-  "version": "0.5.0",
-  "description": "The oh-my core plugin for Gajae Code (gjc). One install gets you: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings for pending-approval moments), multivendor model presets (ideal / escalate-surgical / monorepo / reviewer), extragoal (external final review gate — fresh-context cross-family reviewer re-reviews the finished diff, machine-parsable verdict, bounded re-sign loop; wired to the reviewer preset, /oh-my-gjc:fable, and insane-review), branch-flow (per-repo dev-integration/main-release git branch discipline embedded in the repo's committed AGENTS.md + docs/WORKFLOW.md), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md marker blocks — the only user-global every-turn injection surface, live-verified on gjc 0.8.2), /oh-my-gjc:fable (Fable 5 adversarial safety audits of money/data-critical code — read-only, severity-rated, spot-check verified), and /oh-my-gjc:setup which detects your environment and recommends optional plugins (codex suite, insane-review, bugwatch, tower).",
+  "version": "0.8.0",
+  "description": "oh-my-gajaecode — one plugin, everything. A single install brings 13 capabilities, all surfaced natively as /omg:* commands and trigger-word skills: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings), multivendor model presets (ideal / escalate-surgical / monorepo / reviewer), extragoal (external fresh-context cross-family final review gate), branch-flow (per-repo dev/main git discipline in the repo's AGENTS.md + docs/WORKFLOW.md), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md marker blocks), /omg:fable (Fable 5 adversarial safety audit), /omg:codex-ask + /omg:codex-run (local Codex CLI read-only ask / file-writing deepwork), /omg:lazycodex-setup + /omg:lazycodex-work (LazyCodex harness + ultrawork), /omg:codex-app-launch + /omg:codex-app-ask (Codex desktop App over CDP), /omg:insane-review (GPT-5.5 Pro web review), /omg:bugwatch-scan (gjc bug collector), /omg:tower-setup (control-tower fleet orchestration), and /omg:setup for optional model-preset merge + always-on toggles. Prerequisite-gated capabilities self-diagnose at first run; install stays light.",
   "author": {
     "name": "devswha",
     "email": "devswha@gmail.com",
@@ -18,6 +18,9 @@
     "model-profiles",
     "mpreset",
     "approval-gate",
-    "multi-vendor"
+    "multi-vendor",
+    "codex",
+    "code-review",
+    "orchestration"
   ]
 }

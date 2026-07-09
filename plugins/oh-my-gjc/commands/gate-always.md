@@ -3,9 +3,9 @@ description: gate-briefing(승인 게이트 브리핑)을 "매번 자동"으로 
 argument-hint: "[on|off|status]  (기본: on)"
 ---
 
-# /oh-my-gjc:gate-always
+# /omg:gate-always
 
-`/oh-my-gjc:gate`는 **이번 세션만** 적용되지만, 이 커맨드는 gjc가 매 턴 시스템
+`/omg:gate`는 **이번 세션만** 적용되지만, 이 커맨드는 gjc가 매 턴 시스템
 프롬프트에 주입하는 **사용자 전역 커스터마이징 파일** `~/.gjc/agent/SYSTEM.md`에
 규칙 블록을 심어 **모든 세션의 모든 승인 게이트**에 상시 gate-briefing을 적용한다.
 마커 블록의 존재 여부가 on/off 세마포어다.
@@ -54,7 +54,7 @@ argument-hint: "[on|off|status]  (기본: on)"
 
 정확성 > 쉬움. 승인/반려 실행은 절대 대행하지 않는다 — 결정은 사용자의 몫이다.
 
-끄기: `/oh-my-gjc:gate-always off`
+끄기: `/omg:gate-always off`
 <!-- END oh-my-gjc:gate-always -->
 ```
 
@@ -77,7 +77,7 @@ argument-hint: "[on|off|status]  (기본: on)"
 5. `~/.gjc/agent/AGENTS.md`에 신/구 gate-always 마커 잔재가 있으면
    백업(`.bak-$(date +%s)`) 후 그 블록만 제거한다(주변 빈 줄 정리).
 6. `게이트 브리핑 상시: 켜짐 (~/.gjc/agent/SYSTEM.md, 새 세션부터 적용)` 한 줄로 확인한다.
-   이번 세션에도 바로 적용하려면 `/oh-my-gjc:gate on`을 함께 안내한다.
+   이번 세션에도 바로 적용하려면 `/omg:gate on`을 함께 안내한다.
 7. **주의:** 현재 레포에 프로젝트 `.gjc/SYSTEM.md`가 존재하면 프로젝트 파일이
    사용자 파일을 **통째로 대체**하므로 이 규칙이 그 레포에선 적용되지 않는다 —
    이 경우 프로젝트 SYSTEM.md에도 블록을 심을지 사용자에게 물어본다.
@@ -90,4 +90,4 @@ argument-hint: "[on|off|status]  (기본: on)"
 3. `게이트 브리핑 상시: 꺼짐` 한 줄로 확인한다.
 
 ### 그 외 인자
-사용법 한 줄만 안내: `/oh-my-gjc:gate-always [on|off|status]`.
+사용법 한 줄만 안내: `/omg:gate-always [on|off|status]`.

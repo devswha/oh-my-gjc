@@ -25,7 +25,7 @@ ideal에 흡수(architect gemini가 툴체인 신뢰성 실측으로 탈락), ul
 
 ## 실행
 
-세부 절차·병합 안전 계약은 `/oh-my-gjc:presets` 커맨드 본문과 동일하다. 핵심만:
+세부 절차·병합 안전 계약은 `/omg:presets` 커맨드 본문과 동일하다. 핵심만:
 
 1. `references/presets.yml` 경로를 잡는다(`~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/presets.yml` glob → `sort -V | tail -1`로 최신 → 없으면 프로젝트/레포 폴백). ⚠ `*oh-my-gjc*`는 마켓플레이스명이라 모든 플러그인 폴더에 걸리니 쓰지 말 것.
 2. 대상 `~/.gjc/agent/models.yml`을 백업(`.bak-<ts>`) 후 읽는다. 없으면 `profiles:` 한 줄로 생성.

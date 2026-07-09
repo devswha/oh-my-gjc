@@ -8,7 +8,7 @@ description: 이 레포의 git 브랜치·머지·릴리즈를 dev 통합 / main
 이 레포의 브랜치·머지·릴리즈를 **dev 통합 / main 릴리즈** 모델로 수행한다.
 정본 가이드는 레포의 **`docs/WORKFLOW.md`** — 있으면 먼저 읽고 그 "Repo specifics"
 박스(기본 브랜치·통합 브랜치·버전 파일)를 따른다. 없으면 아래 기본값으로 진행하되
-`/oh-my-gjc:branchflow-always on`으로 문서를 심을 것을 권한다.
+`/omg:branchflow-always on`으로 문서를 심을 것을 권한다.
 
 ## 브랜치 모델
 

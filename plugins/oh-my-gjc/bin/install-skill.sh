@@ -1,44 +1,34 @@
 #!/usr/bin/env bash
-# Install oh-my-gjc SKILLs *and* slash COMMANDs as NATIVE gjc capabilities,
-# so they actually load in a session. (Script name kept for compatibility;
-# it now installs both.)
+# Install oh-my-gajaecode SKILLs, slash COMMANDs, and deprecation tombstones as
+# NATIVE gjc capabilities. WHY: gjc does not load a marketplace plugin's skills or
+# commands into a session (skill registry takes native `.gjc` only; the claude-plugins
+# slash-command provider is never registered) — verified. A native capability's name
+# IS its filename, so we copy them into the native dirs.
 #
-# WHY THIS EXISTS — two separate, verified gjc facts:
+#   canonical commands : commands/<name>.md  → ~/.gjc/agent/commands/omg:<name>.md → /omg:<name>
+#   catalog            : commands/omg.md     → ~/.gjc/agent/commands/omg.md        → /omg
+#   deprecated stubs   : tombstones/<old>.md → ~/.gjc/agent/commands/<old>.md      (points at /omg:*)
+#   skills             : skills/<name>/SKILL.md → ~/.gjc/agent/skills/<name>/SKILL.md
 #
-#   1. Skills:  gjc only surfaces *native* `.gjc` skills. A marketplace plugin's
-#      skills/<name>/SKILL.md is ignored by the skill registry
-#      (`if (provider !== "native") return false`).
+# The old per-plugin commands are NOT reinstalled with their real bodies — only
+# one-release tombstone stubs that redirect
+# to the new /omg:* name (removed next release). No feature-body duplication.
 #
-#   2. Commands: gjc's capability discovery NEVER registers the marketplace
-#      ("claude-plugins") slash-command provider — `discovery/index.ts` does not
-#      `import "./claude-plugins"` (only test files do), and that provider only
-#      self-registers on import. So a plugin's commands/*.md are NOT advertised
-#      as `/<plugin>:<command>` in ANY session. Verified on gjc 0.8.2 (main & dev)
-#      via ACP `available_commands_update`: zero marketplace-plugin commands.
-#
-# Therefore the /oh-my-gjc:* commands ONLY work when copied into a NATIVE
-# commands dir. A native command's name IS its filename, so we install each as
-# `oh-my-gjc:<name>.md` — preserving the documented `/oh-my-gjc:<name>` UX.
-#
-# Native locations:
-#   user:    ~/.gjc/agent/skills/<name>/SKILL.md    ~/.gjc/agent/commands/oh-my-gjc:<name>.md
-#   project: ./.gjc/skills/<name>/SKILL.md          ./.gjc/commands/oh-my-gjc:<name>.md
+# Installation is driven by the EXPECTED_* manifests below (not a directory scan), so a
+# missing expected file fails the WHOLE install with a missing list — never "copy what's there".
 #
 # Usage:
-#   install-skill.sh all                        # every bundled skill + command, user scope
-#   install-skill.sh all project                # ... project scope
-#   install-skill.sh <name>                     # one skill and/or command, user scope
-#   install-skill.sh <name> project
-#   install-skill.sh <name> uninstall [project]
-#   install-skill.sh uninstall [project]        # uninstall ALL bundled skills + commands
+#   install-skill.sh all [user|project]
+#   install-skill.sh all uninstall [user|project]
+#   install-skill.sh <name> [user|project|uninstall [user|project]]
+#   install-skill.sh uninstall [user|project]        # uninstall everything
 #
-# After installing commands, open a NEW gjc session (or run `/move .`) so the
-# session's slash-command palette is rebuilt.
+# After installing, open a NEW gjc session (or run `/move .`) to rebuild the palette.
 set -euo pipefail
 
 # Guard: a path-like arg means a glob matched the wrong/multiple plugin folders
-# (cache is <marketplace>___<plugin>___<ver>, so a bare *marketplace* glob hits
-# every plugin). Abort with the correct, plugin-scoped invocation.
+# (cache is <marketplace>___<plugin>___<ver>; a bare *marketplace* glob hits every
+# plugin). Abort with the correct, plugin-scoped invocation.
 for _a in "$@"; do
   case "$_a" in
     */*|*install-skill.sh)
@@ -50,53 +40,66 @@ for _a in "$@"; do
 done
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PLUGIN_NAME="oh-my-gjc"
 
-all_skills()   { ls -1 "$PLUGIN_ROOT/skills"   2>/dev/null || true; }
-all_commands() { ls -1 "$PLUGIN_ROOT/commands" 2>/dev/null | sed 's/\.md$//' || true; }
+# ── EXPECTED manifest (the single source of truth for a complete install) ────────────
+EXPECTED_SKILLS=(easy-answer gate-briefing multivendor-presets branch-flow extragoal \
+                 codex-cli-ask codex-deepwork lazycodex codex-app-launch codex-app-cdp \
+                 insane-review gjc-bugwatch tower)
+EXPECTED_COMMANDS=(omg setup easy easy-always gate gate-always presets fable branchflow-always \
+                   codex-ask codex-run lazycodex-setup lazycodex-work codex-app-launch codex-app-ask \
+                   insane-review bugwatch-scan tower-setup)
+EXPECTED_TOMBSTONES=(tower:setup insane-review:review gjc-bugwatch:scan \
+                     codex-cli-control:ask codex-deepwork:run lazycodex:setup lazycodex:work \
+                     codex-app-control:launch codex-app-control:ask \
+                     oh-my-gjc:setup oh-my-gjc:easy oh-my-gjc:easy-always oh-my-gjc:gate \
+                     oh-my-gjc:gate-always oh-my-gjc:presets oh-my-gjc:branchflow-always oh-my-gjc:fable)
 
 skills_dir()   { if [ "$1" = project ]; then echo "$PWD/.gjc/skills";   else echo "$HOME/.gjc/agent/skills";   fi; }
 commands_dir() { if [ "$1" = project ]; then echo "$PWD/.gjc/commands"; else echo "$HOME/.gjc/agent/commands"; fi; }
 
+MISSING=()
+
 install_skill() { # $1=name $2=scope
   local src dir
   src="$PLUGIN_ROOT/skills/$1/SKILL.md"
-  [ -f "$src" ] || { echo "❌ SKILL.md not found: $src"; return 1; }
-  dir="$(skills_dir "$2")/$1"
-  mkdir -p "$dir"
-  cp -f "$src" "$dir/SKILL.md"
+  [ -f "$src" ] || { MISSING+=("skills/$1/SKILL.md"); return 0; }
+  dir="$(skills_dir "$2")/$1"; mkdir -p "$dir"; cp -f "$src" "$dir/SKILL.md"
   echo "✓ skill   ($2): $dir/SKILL.md"
 }
-uninstall_skill() { # $1=name $2=scope
-  local dir
-  dir="$(skills_dir "$2")/$1"
-  rm -rf "$dir"
-  echo "✓ removed skill: $dir"
-}
-
 install_command() { # $1=name $2=scope
   local src dir
   src="$PLUGIN_ROOT/commands/$1.md"
-  [ -f "$src" ] || { echo "❌ command not found: $src"; return 1; }
-  dir="$(commands_dir "$2")"
-  mkdir -p "$dir"
-  if [ "$1" = "omg" ]; then
-    # catalog command → bare /omg (omz-style single entrypoint)
-    cp -f "$src" "$dir/omg.md"
-    echo "✓ command ($2): $dir/omg.md  → /omg"
-    return 0
-  fi
-  # primary: omg:<name>  ·  deprecated alias: oh-my-gjc:<name> (kept during migration)
+  [ -f "$src" ] || { MISSING+=("commands/$1.md"); return 0; }
+  dir="$(commands_dir "$2")"; mkdir -p "$dir"
+  if [ "$1" = "omg" ]; then cp -f "$src" "$dir/omg.md"; echo "✓ command ($2): $dir/omg.md  → /omg"; return 0; fi
   cp -f "$src" "$dir/omg:$1.md"
-  cp -f "$src" "$dir/${PLUGIN_NAME}:$1.md"
-  echo "✓ command ($2): $dir/omg:$1.md  → /omg:$1  (alias /${PLUGIN_NAME}:$1)"
+  echo "✓ command ($2): $dir/omg:$1.md  → /omg:$1"
 }
-uninstall_command() { # $1=name $2=scope
-  local dir
-  dir="$(commands_dir "$2")"
-  if [ "$1" = "omg" ]; then rm -f "$dir/omg.md"; echo "✓ removed command: $dir/omg.md"; return 0; fi
-  rm -f "$dir/omg:$1.md" "$dir/${PLUGIN_NAME}:$1.md"
-  echo "✓ removed command: $dir/omg:$1.md (+ alias)"
+install_tombstone() { # $1=old-name(no .md) $2=scope
+  local src dir
+  src="$PLUGIN_ROOT/tombstones/$1.md"
+  [ -f "$src" ] || { MISSING+=("tombstones/$1.md"); return 0; }
+  dir="$(commands_dir "$2")"; mkdir -p "$dir"; cp -f "$src" "$dir/$1.md"
+  echo "✓ stub    ($2): $dir/$1.md  (deprecated → /omg:*)"
+}
+uninstall_skill()     { rm -rf "$(skills_dir "$2")/$1"; echo "✓ removed skill: $1"; }
+uninstall_command()   { local d; d="$(commands_dir "$2")"; if [ "$1" = "omg" ]; then rm -f "$d/omg.md"; else rm -f "$d/omg:$1.md" "$d/oh-my-gjc:$1.md"; fi; echo "✓ removed command: $1"; }
+uninstall_tombstone() { rm -f "$(commands_dir "$2")/$1.md"; echo "✓ removed stub: $1"; }
+
+report_missing() {
+  if [ "${#MISSING[@]}" -gt 0 ]; then
+    echo "❌ install FAILED — expected files missing (nothing partial is accepted):" >&2
+    for m in "${MISSING[@]}"; do echo "   - $m" >&2; done
+    exit 1
+  fi
+}
+
+preflight_all() {  # verify ALL expected files exist BEFORE copying anything (never a partial install)
+  MISSING=()
+  for s in "${EXPECTED_SKILLS[@]}";     do [ -f "$PLUGIN_ROOT/skills/$s/SKILL.md" ]  || MISSING+=("skills/$s/SKILL.md"); done
+  for c in "${EXPECTED_COMMANDS[@]}";   do [ -f "$PLUGIN_ROOT/commands/$c.md" ]       || MISSING+=("commands/$c.md"); done
+  for t in "${EXPECTED_TOMBSTONES[@]}"; do [ -f "$PLUGIN_ROOT/tombstones/$t.md" ]     || MISSING+=("tombstones/$t.md"); done
+  report_missing
 }
 
 # First arg may be "all", a skill/command name, or a mode.
@@ -115,8 +118,9 @@ case "$mode" in
   uninstall)
     scope="${2:-user}"
     if [ "$target" = "all" ]; then
-      for s in $(all_skills);   do uninstall_skill   "$s" "$scope"; done
-      for c in $(all_commands); do uninstall_command "$c" "$scope"; done
+      for s in "${EXPECTED_SKILLS[@]}";     do uninstall_skill     "$s" "$scope"; done
+      for c in "${EXPECTED_COMMANDS[@]}";   do uninstall_command   "$c" "$scope"; done
+      for t in "${EXPECTED_TOMBSTONES[@]}"; do uninstall_tombstone "$t" "$scope"; done
     else
       if [ -d "$PLUGIN_ROOT/skills/$target" ];      then uninstall_skill   "$target" "$scope"; fi
       if [ -f "$PLUGIN_ROOT/commands/$target.md" ]; then uninstall_command "$target" "$scope"; fi
@@ -124,15 +128,20 @@ case "$mode" in
     ;;
   user|project)
     if [ "$target" = "all" ]; then
-      for s in $(all_skills);   do install_skill   "$s" "$mode"; done
-      for c in $(all_commands); do install_command "$c" "$mode"; done
+      preflight_all
+      for s in "${EXPECTED_SKILLS[@]}";     do install_skill     "$s" "$mode"; done
+      for c in "${EXPECTED_COMMANDS[@]}";   do install_command   "$c" "$mode"; done
+      for t in "${EXPECTED_TOMBSTONES[@]}"; do install_tombstone "$t" "$mode"; done
+      report_missing
     else
       if [ -d "$PLUGIN_ROOT/skills/$target" ];      then install_skill   "$target" "$mode"; fi
       if [ -f "$PLUGIN_ROOT/commands/$target.md" ]; then install_command "$target" "$mode"; fi
+      report_missing
     fi
     if [ "$mode" = "user" ]; then
-      echo "  → skills auto-activate by trigger words; commands are /omg:<name> (alias /${PLUGIN_NAME}:<name>). Type /omg for the catalog."
-      echo "  → open a NEW gjc session (or run /move .) to load newly installed commands. Re-run after plugin upgrades."
+      echo "  → skills auto-activate by trigger words; commands are /omg:<name>. Type /omg for the catalog."
+      echo "  → deprecated old command names install as stubs that point you at the new /omg:* name."
+      echo "  → open a NEW gjc session (or run /move .) to load newly installed commands. Re-run after upgrades."
     else
       echo "  → installed for this repo. A new gjc session in this dir will pick them up."
     fi
