@@ -200,6 +200,19 @@ gjc 쓰다가 로그에 남은 gjc 자체 버그를 긁어모은다. `~/.gjc/log
 - gjc `team`(작업 워커 조율)과 다르다 — team은 일 분배, tower는 상주 관측 + 사람 결정 큐.
 - 원문: [`plugins/oh-my-gjc/skills/tower/SKILL.md`](./plugins/oh-my-gjc/skills/tower/SKILL.md)
 
+### `gajae-app` — 가재코드 앱 (브라우저에서 세션 보기)
+
+터미널에 붙어 있지 않아도 폰·브라우저에서 gjc 세션을 본다. tmux에서 도는 gjc
+세션을 자동으로 찾아 열람하고(관제탑 경유로 지시도 보냄), claude/codex 세션은
+터미널 그대로 붙어서 보고, 지정 폴더 파일도 브라우저에서 열어본다. 이 기능은
+그 앱을 **설치·업데이트·운영**해주는 관리자다 — 앱 소스 자체는 별도 레포
+([devswha/claudecodeui](https://github.com/devswha/claudecodeui))에 산다.
+
+- 전제: Node 22 + git. `/omg:gajae-app install` 한 번이면 systemd 서비스로 뜬다.
+- 원격 접속은 tailscale serve 경유만 — 서버는 루프백에만 열린다(직노출 금지).
+- tmux 세션 종료/메시지 주입은 서버가 "gjc가 진짜 그 안에서 도는지" 재검증한다.
+- 원문: [`plugins/oh-my-gjc/skills/gajae-app/SKILL.md`](./plugins/oh-my-gjc/skills/gajae-app/SKILL.md)
+
 ## 라이선스
 
 MIT. [LICENSE](./LICENSE) 봐라.

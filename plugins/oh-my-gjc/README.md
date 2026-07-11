@@ -1,6 +1,6 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 13가지 기능이 전부 들어오고,
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 14가지 기능이 전부 들어오고,
 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다. 전제조건이 있는 기능(Codex CLI,
 ChatGPT 구독+크로미움, 빌드된 Codex 앱)도 함께 설치되며, 없으면 실행 시 자기진단해
 친절히 멈춘다 — 설치는 가볍고 기능이 스스로 안내한다.
@@ -19,12 +19,12 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 /omg
 ```
 
-## 들어있는 것 (13)
+## 들어있는 것 (14)
 
 ### 스킬 (자연어 트리거 자동활성화)
 `easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `extragoal`
 · `codex-cli-ask` · `codex-deepwork` · `lazycodex` · `codex-app-launch` · `codex-app-cdp`
-· `insane-review` · `gjc-bugwatch` · `tower`
+· `insane-review` · `gjc-bugwatch` · `tower` · `gajae-app`
 
 ### 커맨드
 
@@ -44,6 +44,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 | `/omg:insane-review` | GPT-5.5 Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
 | `/omg:bugwatch-scan` | gjc 자체 버그 수집 (초안만) | — |
 | `/omg:tower-setup` | 관제탑 세션 함대 감시·전파·결정 큐 | tmux |
+| `/omg:gajae-app [install\|update\|status]` | 가재코드 앱(셀프호스트 웹 UI) 설치·업데이트·상태 | Node 22 + git |
 
 > 전제가 붙은 커맨드는 설치는 이미 됐고, 그 도구가 있어야 실제 동작한다. 없으면 실행 시
 > 안내하고 멈춘다. 예전 개별 명령들은 폐기됐다 — 구 이름은 더는 설치되지 않는다(0.8.0의 한-릴리스 안내 스텁은 0.8.1에서 삭제).
