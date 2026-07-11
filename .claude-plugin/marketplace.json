@@ -7,14 +7,14 @@
   },
   "metadata": {
     "description": "oh-my-gajaecode — the oh-my single-plugin suite for Gajae Code (gjc). One install, one native surface: 13 capabilities under /omg:*.",
-    "version": "0.8.1"
+    "version": "0.9.0"
   },
   "plugins": [
     {
       "name": "oh-my-gjc",
       "source": "./plugins/oh-my-gjc",
       "description": "oh-my-gajaecode — one plugin, everything. A single install brings 13 capabilities, all surfaced natively as /omg:* commands and trigger-word skills: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings), multivendor model presets (ideal / escalate-surgical / monorepo / reviewer), extragoal (external fresh-context cross-family final review gate), branch-flow (per-repo dev/main git discipline), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md), /omg:fable (Fable 5 adversarial safety audit), /omg:codex-ask + /omg:codex-run (local Codex CLI read-only ask / file-writing deepwork), /omg:lazycodex-setup + /omg:lazycodex-work (LazyCodex harness + ultrawork), /omg:codex-app-launch + /omg:codex-app-ask (Codex desktop App over CDP), /omg:insane-review (GPT-5.5 Pro web review), /omg:bugwatch-scan (gjc bug collector), /omg:tower-setup (control-tower fleet orchestration), and /omg:setup for optional model-preset merge + always-on toggles. Prerequisite-gated capabilities (Codex CLI, ChatGPT subscription + Chromium, built Codex App) install with the suite and self-diagnose at first run — install stays light, features guide you.",
-      "version": "0.8.1",
+      "version": "0.9.0",
       "category": "core"
     }
   ]
