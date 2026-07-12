@@ -1,6 +1,6 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 14가지 기능이 전부 들어오고,
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 15가지 기능이 전부 들어오고,
 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다. 전제조건이 있는 기능(Codex CLI,
 ChatGPT 구독+크로미움, 빌드된 Codex 앱)도 함께 설치되며, 없으면 실행 시 자기진단해
 친절히 멈춘다 — 설치는 가볍고 기능이 스스로 안내한다.
@@ -19,10 +19,10 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 /omg
 ```
 
-## 들어있는 것 (14)
+## 들어있는 것 (15)
 
 ### 스킬 (자연어 트리거 자동활성화)
-`easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `extragoal`
+`easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `worktree` · `extragoal`
 · `codex-cli-ask` · `codex-deepwork` · `lazycodex` · `codex-app-launch` · `codex-app-cdp`
 · `insane-review` · `gjc-bugwatch` · `tower` · `gajae-app`
 
@@ -32,6 +32,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 |---|---|---|
 | `/omg` | 카탈로그 — 설치된 omg 스킬·커맨드 한눈에 | — |
 | `/omg:setup` | 셋업 + 프리셋 병합 제안 + 상시 토글 안내 (멱등) | — |
+| `/omg:worktree [new <slug> [type]\|list\|clean]` | git worktree 병렬 작업 폴더 생성·목록·정리 (branch-flow 규약) | git |
 | `/omg:easy [on\|off]` · `/omg:easy-always [on\|off\|status]` | 쉬운 답변 (이번 세션 / 상시) | — |
 | `/omg:gate [on\|off]` · `/omg:gate-always [on\|off\|status]` | 게이트 브리핑 (이번 세션 / 상시) | — |
 | `/omg:presets [이름\|all]` | 모델 프리셋 병합 (ideal / escalate-surgical / monorepo / reviewer) | — |

@@ -44,10 +44,10 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # ── EXPECTED manifest (the single source of truth for a complete install) ────────────
 EXPECTED_SKILLS=(easy-answer gate-briefing multivendor-presets branch-flow extragoal \
                  codex-cli-ask codex-deepwork lazycodex codex-app-launch codex-app-cdp \
-                 insane-review gjc-bugwatch tower gajae-app)
+                 insane-review gjc-bugwatch tower gajae-app worktree)
 EXPECTED_COMMANDS=(omg setup easy easy-always gate gate-always presets fable branchflow-always \
                    codex-ask codex-run lazycodex-setup lazycodex-work codex-app-launch codex-app-ask \
-                   insane-review bugwatch-scan tower-setup gajae-app)
+                   insane-review bugwatch-scan tower-setup gajae-app worktree)
 # Pre-0.8.1 native files that upgrades must sweep away: the 17 one-release deprecation
 # tombstones shipped by 0.8.0 (removed in 0.8.1). Old `oh-my-gjc:<name>.md` aliases are
 # covered separately by looping EXPECTED_COMMANDS in cleanup_legacy_commands.

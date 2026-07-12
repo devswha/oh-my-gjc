@@ -56,10 +56,12 @@ gh pr create --base dev
 
 ## 병렬 작업 (동시 세션)
 
-같은 폴더·같은 브랜치에서 두 세션 금지. **git worktree**로 분리:
+같은 폴더·같은 브랜치에서 두 세션 금지. **git worktree**로 분리 — 절차는
+**worktree 스킬 / `/omg:worktree`**가 정본(폴더 `../<repo>-<slug>-wt`, 분기점
+`origin/dev`, 정리는 머지 완료+클린만):
 ```bash
-git worktree add ../<repo>-x -b feat/x dev   # 별도 폴더+브랜치, dev에서 분기
-git worktree remove ../<repo>-x              # 완료 후(커밋/푸시 먼저)
+git worktree add ../<repo>-<slug>-wt -b feat/<slug> origin/dev   # 생성
+git worktree remove ../<repo>-<slug>-wt                          # 완료 후(커밋/푸시 먼저)
 ```
 - 세션당 worktree 1개 + 브랜치 1개. 충돌은 dev 머지 지점에서 한 번에 해소.
 

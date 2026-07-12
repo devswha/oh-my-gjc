@@ -15,7 +15,7 @@ Do exactly the following in a terminal. Do not improvise other steps.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
-One install brings the whole suite (14 capabilities). There are no separate/optional plugins to add.
+One install brings the whole suite (15 capabilities). There are no separate/optional plugins to add.
 
 ## Manual path (equivalent, if curl|bash is disallowed)
 ```sh
@@ -31,7 +31,7 @@ The native installer copies every bundled skill + command in one shot and fails 
 ## Verify (report these)
 ```sh
 gjc plugin list                                   # oh-my-gjc@oh-my-gjc listed
-ls ~/.gjc/agent/skills/                            # 14 skills (easy-answer, gate-briefing, …, tower, gajae-app)
+ls ~/.gjc/agent/skills/                            # 15 skills (easy-answer, gate-briefing, …, gajae-app, worktree)
 ls ~/.gjc/agent/commands/ | grep '^omg'            # omg.md + omg:<name>.md present
 ```
 
