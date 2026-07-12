@@ -62,9 +62,8 @@ bash "${OMG_ROOT}bin/install-skill.sh" all
 
 | 감지 | 확인 | 바로 쓸 수 있는 커맨드 |
 |---|---|---|
-| Codex CLI | `command -v codex` | `/omg:codex-ask`, `/omg:codex-run` |
+| Codex CLI | `command -v codex` | `/omg:codex-ask` |
 | LazyCodex 하네스 | `ls ~/.codex 2>/dev/null` | `/omg:lazycodex-setup`, `/omg:lazycodex-work` |
-| Codex 데스크톱 앱 | 앱 바이너리/설치 흔적 | `/omg:codex-app-launch`, `/omg:codex-app-ask` |
 | Chrome + ChatGPT | 크롬 프로필 존재 | `/omg:insane-review` |
 | tmux | `command -v tmux` | `/omg:tower-setup` |
 
