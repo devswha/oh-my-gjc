@@ -31,7 +31,7 @@ entry (~08:20) if not already present.
 
 1. **Live** — the daemon tails the newest gjc log. On a HIGH(`gjc-internal`) signal it
    dedupes (30 min cooldown per signature) and injects a triage prompt into the
-   `omg` tmux session (env `GJC_BUGWATCH_SESSION`). The agent then runs the normal scan pipeline (reproduce,
+   tmux session set by env `GJC_BUGWATCH_SESSION` (현재 유닛 설정 `gjc-pr` — PR 전담 세션; 코드 기본값 `omg`). The agent then runs the normal scan pipeline (reproduce,
    source-verify against the `dev` clone) and drafts if it's a real, new bug.
 2. **Daily** — cron runs the batch scan; only when there are fresh (non-stale,
    non-resolved) candidates does it inject a digest triage prompt.
