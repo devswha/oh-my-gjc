@@ -1,3 +1,5 @@
+> ⚠ ARCHIVED (2026-07-12): 이 문서는 통합 캠페인 당시의 검증 기록이다. codex-deepwork·codex-app-launch·codex-app-cdp는 **0.11.0에서 제거**됐다(관제탑 발주·하코 승인) — 해당 절은 히스토리로만 읽을 것.
+
 # Gate B — omg 13항목 기능 캠페인 결과 (2026-07)
 
 Gate A(단일 패키징) 리뷰 통과 후, **Gate A와 동일 provenance payload** 기준 기능 캠페인.
