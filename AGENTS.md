@@ -204,6 +204,14 @@ Corrects the 2026-07-08 incident where 4 releases self-merged to `main` + tagged
 
 **Frequency:** docs/patch-level changes are **bundled** — **max 1 release/day**. Only urgent **security** or **install-breakage** fixes are exempt (and even then, gates 1–2 still run; gate 3 is a fast notify). Between releases, keep merging to `dev`; `main` advances only at an approved release.
 
+**Rollback (명문화 2026-07-12, 하코 승인 릴리스 0.10.0에 동봉):** a bad release is
+rolled back **fix-forward on git**, never by deleting history: (1) `git revert` the
+offending commit(s) on `dev` (or revert the release merge on `main` for a broken-install
+emergency), (2) run gates 1–2 on the revert diff (fast lane: install repro + cross-review),
+(3) publish a new patch release (`vX.Y.Z+1`) through gate 3 as usual. Tags/Releases are
+never deleted or force-moved — a superseded release gets a "superseded by vX.Y.Z+1" note
+in its GitHub Release body. Installed users recover by re-running the one-shot installer.
+
 **In-flight:** work continues on `dev`/branches; a release stops at PR/`dev` state until the 3 gates + 하코 approval. (`v0.7.0` omg rebrand shipped ~minutes before this mandate under the old self-merge pattern; retro-review + approval request filed — no unilateral rollback without explicit instruction.)
 
 ## Verification expectations
