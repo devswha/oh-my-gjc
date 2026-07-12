@@ -7,7 +7,7 @@
 # Operate: systemctl --user {status|restart|stop} gjc-bugwatch
 # (ops/gjc-bugwatch/install.sh does all of the above idempotently.)
 [Unit]
-Description=gjc-bugwatch live daemon (follow.ts HIGH signal -> tmux gjc-pr triage inject)
+Description=gjc-bugwatch live daemon (follow.ts HIGH signal -> tmux omg triage inject)
 After=network-online.target
 
 [Service]
@@ -15,7 +15,7 @@ Type=simple
 ExecStart=/bin/bash /home/devswha/workspace/oh-my-gjc/ops/gjc-bugwatch/daemon.sh
 Restart=on-failure
 RestartSec=5
-Environment=GJC_BUGWATCH_SESSION=gjc-pr
+Environment=GJC_BUGWATCH_SESSION=omg
 Environment=GJC_BUGWATCH_MIN=medium
 
 [Install]

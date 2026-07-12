@@ -108,3 +108,13 @@ describe("injectTmux", () => {
 		expect(calls).toHaveLength(1);
 	});
 });
+
+import { SESSION } from "../trigger.ts";
+
+describe("SESSION default", () => {
+	it("defaults to omg when GJC_BUGWATCH_SESSION is unset (관제탑 재배선 2026-07-12)", () => {
+		if (!process.env.GJC_BUGWATCH_SESSION) {
+			expect(SESSION).toBe("omg");
+		}
+	});
+});
