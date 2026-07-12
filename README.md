@@ -45,7 +45,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 - `/omg:fable` — 안전-크리티컬 코드 적대적 감사(돈·데이터·보안 코드) · **Fable 5 모델 필요**
 - `codex-cli-ask` — 로컬 Codex CLI에 읽기 전용 질문 위임 · **Codex CLI 보유자용**
 - `lazycodex` — LazyCodex 하네스 설치·관리 + ultrawork 실행 · **Codex CLI + Node/npx 필요**
-- `insane-review` — GPT-5.5 Pro 웹 코드 리뷰 · **ChatGPT 구독 + 크로미움 로그인 필요**
+- `insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰 · **ChatGPT 구독 + 크로미움 로그인 필요**
 - `gjc-bugwatch` — gjc 자체 버그 수집
 - `tower` — TUI 에이전트 세션 함대를 관제탑 하나로 감시·전파·결정 큐(gjc team과 다름) · **tmux 세션 함대 운영자용**
 - `gajae-app` — 가재코드 앱(셀프호스트 웹 UI: 브라우저에서 gjc 세션 열람·릴레이 + claude/codex tmux 터미널 + 파일 패널) 설치·업데이트·운영 · **Node 22 + git 필요**
@@ -93,7 +93,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 검토하는 게 아니라, 실제 PR 리뷰처럼 무공유·교차패밀리로 판정 → 승인/변경요청 verdict → 발견 정리 →
 (최대 2라운드) 고치고 재서명 → 기계적 머지.
 
-- 리뷰어 레인: 네이티브 교차세션 gjc(기본) / `/omg:fable` / `insane-review`(GPT-5.5 Pro 웹) — AND 게이트로 합침.
+- 리뷰어 레인: 네이티브 교차세션 gjc(기본) / `/omg:fable` / `insane-review`(GPT-5.6 Sol Pro 웹) — AND 게이트로 합침.
 - fail-closed: verdict 누락·malformed·timeout은 절대 승인으로 안 친다. 시크릿 스캔은 번들이 기기 밖 나가는 레인에서 비타협.
 - 켜기: `reviewer` 프리셋 흡수(`/omg:presets`) 후 스킬 트리거로 활성. 원문: [`plugins/oh-my-gjc/skills/extragoal/SKILL.md`](./plugins/oh-my-gjc/skills/extragoal/SKILL.md)
 
@@ -142,14 +142,14 @@ plan→work→verify(ultrawork) 코딩 작업을 Codex에 돌린다.
 - 쓰기: `/omg:lazycodex-setup [doctor|install|update|uninstall]` · `/omg:lazycodex-work` 에 작업 지시
 - 원문: [`plugins/oh-my-gjc/skills/lazycodex/SKILL.md`](./plugins/oh-my-gjc/skills/lazycodex/SKILL.md)
 
-### `insane-review` — GPT-5.5 Pro 웹 리뷰
+### `insane-review` — GPT-5.6 Sol Pro 웹 리뷰
 
-GPT-5.5 Pro는 웹 구독에서만 되고 API가 없다. 이 스킬이 구독 ChatGPT 웹을 CDP로
+GPT-5.6 Sol Pro는 웹 구독에서만 되고 API가 없다. 이 스킬이 구독 ChatGPT 웹을 CDP로
 자동화해서 Pro를 gjc 안으로 끌어온다. API 비용 0. 코드를 통째로 넣는 게 아니라
 관련 타겟만 골라 repomix로 묶어 넣고 리뷰를 회수한다.
 
 - 전제: ChatGPT 구독 + 크로미움 로그인(설치는 원샷에 포함, 로그인은 자동 안 됨).
-- 크로미움 브라우저를 전용 프로필로 디버그포트(9222)에 띄우고, chatgpt.com 로그인 + GPT-5.5 Pro 선택해야 한다. 로그인은 자동 안 된다.
+- 크로미움 브라우저를 전용 프로필로 디버그포트(9222)에 띄우고, chatgpt.com 로그인 + GPT-5.6 Sol Pro 선택해야 한다. 로그인은 자동 안 된다.
 - 결과는 프로젝트의 `.insane-review/`에 저장한다.
 - 원문: [`plugins/oh-my-gjc/skills/insane-review/SKILL.md`](./plugins/oh-my-gjc/skills/insane-review/SKILL.md)
 

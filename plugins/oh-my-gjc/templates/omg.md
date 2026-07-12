@@ -19,7 +19,7 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 - `/omg:fable "<대상>"` — Fable 5 안전-크리티컬 적대적 감사. · 전제: Fable 5 모델 접근
 - `/omg:codex-ask` — 로컬 Codex CLI에 읽기 전용 질문 위임. · 전제: Codex CLI
 - `/omg:lazycodex-setup` · `/omg:lazycodex-work` — LazyCodex 하네스 관리 + ultrawork. · 전제: Codex CLI + Node/npx
-- `/omg:insane-review` — GPT-5.5 Pro 웹 코드 리뷰. · 전제: ChatGPT 구독 + 크로미움 로그인
+- `/omg:insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰. · 전제: ChatGPT 구독 + 크로미움 로그인
 - `/omg:bugwatch-scan` — gjc 자체 버그 수집(초안만).
 - `/omg:tower-setup` — 관제탑 세션 함대 감시·전파·결정 큐. · 전제: tmux
 - `/omg:gajae-app [install|update|status]` — 가재코드 앱(셀프호스트 웹 UI) 설치·업데이트·상태. · 전제: Node 22 + git

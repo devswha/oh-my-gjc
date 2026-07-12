@@ -40,7 +40,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 | `/omg:branchflow-always [on\|off\|status]` | 레포 dev/main 브랜치 규율 (레포 AGENTS.md + docs/WORKFLOW.md) | — |
 | `/omg:codex-ask` | 로컬 Codex CLI에 읽기전용 질문 위임 | Codex CLI |
 | `/omg:lazycodex-setup` · `/omg:lazycodex-work` | LazyCodex 하네스 관리 + ultrawork | Codex CLI + Node/npx |
-| `/omg:insane-review` | GPT-5.5 Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
+| `/omg:insane-review` | GPT-5.6 Sol Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
 | `/omg:bugwatch-scan` | gjc 자체 버그 수집 (초안만) | — |
 | `/omg:tower-setup` | 관제탑 세션 함대 감시·전파·결정 큐 | tmux |
 | `/omg:gajae-app [install\|update\|status]` | 가재코드 앱(셀프호스트 웹 UI) 설치·업데이트·상태 | Node 22 + git |
