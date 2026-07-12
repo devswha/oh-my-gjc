@@ -204,7 +204,8 @@ Before considering a plugin change done:
   files exist at expected paths; `marketplace` entry name/source match the manifest.
 - **Behavioral (when the surface is reachable):** exercise the actual surface. The
   CLI path (`codex exec`) is testable wherever the Codex CLI is installed/logged in;
-  the App/CDP path needs a running CDP-enabled Codex App and is otherwise deferred.
+  insane-review's CDP→ChatGPT harvest needs a logged-in Pro browser session and is
+  otherwise deferred-environment.
 - Never fake live evidence. If a surface cannot be exercised in the current
   environment, mark it pending-environment and say so explicitly.
 

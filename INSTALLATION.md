@@ -39,4 +39,4 @@ ls ~/.gjc/agent/commands/ | grep '^omg'            # omg.md + omg:<name>.md pres
 Tell the human: open a **new** gjc session (or `/move .`) so the command palette rebuilds, then run `/omg` for the catalog and `/omg:setup` to finish (model-preset merge + always-on toggles — all optional). Commands are `/omg:<name>`.
 
 ## Safety
-Idempotent — re-running only re-copies. This installs a documented plugin suite; it does not send code anywhere or change model/provider credentials. Prerequisite-gated features (Codex CLI, ChatGPT subscription + Chromium, a built Codex App) install with the suite but only run when their tool is present — otherwise they self-diagnose and stop cleanly.
+Idempotent — re-running only re-copies. This installs a documented plugin suite; it does not send code anywhere or change model/provider credentials. Prerequisite-gated features (Codex CLI, ChatGPT subscription + Chromium) install with the suite but only run when their tool is present — otherwise they self-diagnose and stop cleanly.
