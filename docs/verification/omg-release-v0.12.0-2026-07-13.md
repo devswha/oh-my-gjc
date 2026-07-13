@@ -22,7 +22,7 @@ Gate 2(extragoal 교차리뷰)·Gate 3(하코 승인) 통과 후에도 발행일
     `bin/queue_store.py`, `bin/tower`(CLI), `references/tower.config.example.json`
 - 매니페스트: `EXPECTED_SKILLS` 9 / `EXPECTED_COMMANDS` 13; `REMOVED_SKILLS`·`REMOVED_COMMANDS`에
   0.11.0+0.12.0 누적(업그레이드 스윕). 버전 0.12.0.
-- 문서 동수준 갱신: marketplace/plugin.json(9 capabilities), AGENTS(3절 REMOVED 묘비 + 카운트
+- 문서 동수준 갱신: marketplace/plugin.json(9 skills), AGENTS(3절 REMOVED 묘비 + 카운트
   12→9·17→13·현재 16→12 등), README×2, INSTALLATION, install.sh, templates/omg.md·setup.md.
 
 ## 1. Static

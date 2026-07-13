@@ -183,9 +183,9 @@ Before considering a plugin change done:
 - **Static (always):** `marketplace.json` and `plugin.json` parse as JSON; convention
   files exist at expected paths; `marketplace` entry name/source match the manifest.
 - **Behavioral (when the surface is reachable):** exercise the actual surface. The
-  CLI path (`codex exec`) is testable wherever the Codex CLI is installed/logged in;
-  insane-review's CDP→ChatGPT harvest needs a logged-in Pro browser session and is
-  otherwise deferred-environment.
+  installer path (`install-skill.sh` in an isolated HOME) and `bun test` (gjc-bugwatch
+  collect/trigger, discord bridge) run anywhere; insane-review's CDP→ChatGPT harvest
+  needs a logged-in Pro browser session and is otherwise deferred-environment.
 - Never fake live evidence. If a surface cannot be exercised in the current
   environment, mark it pending-environment and say so explicitly.
 
