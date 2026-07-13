@@ -1,6 +1,6 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 9가지 기능이 전부 들어오고,
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 스킬 9개 + /omg:* 커맨드가 전부 들어오고,
 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다. 전제조건이 있는 기능(ChatGPT 구독+
 크로미움 — insane-review)도 함께 설치되며, 없으면 실행 시 자기진단해
 친절히 멈춘다 — 설치는 가볍고 기능이 스스로 안내한다.
@@ -19,7 +19,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 /omg
 ```
 
-## 들어있는 것 (9)
+## 들어있는 것 (스킬 9 · 커맨드 13)
 
 ### 스킬 (자연어 트리거 자동활성화)
 `easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `worktree` · `extragoal`

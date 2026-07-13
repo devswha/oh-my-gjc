@@ -16,9 +16,9 @@ import argparse, hashlib, json, os, sys
 MARKERS = [
     "bin/install-skill.sh",
     ".claude-plugin/plugin.json",
-    "commands/omg.md",
-    "commands/codex-ask.md",
-    "commands/tower-setup.md",
+    "templates/omg.md",
+    "templates/setup.md",
+    "skills/insane-review/SKILL.md",
 ]
 
 def sha256(path):
