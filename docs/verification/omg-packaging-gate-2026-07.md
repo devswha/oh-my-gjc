@@ -1,3 +1,5 @@
+> ⚠ HISTORICAL (2026-07-12): 당시 카운트/구성 기준 기록. 0.11.0에서 codex-deepwork·codex-app 짝 제거로 현재 구성은 12 capabilities.
+
 # Gate A — omg 단일 플러그인 패키징 게이트 결과 (2026-07)
 
 > ⚠ **역사 기록 (frozen historical record)** — 이 문서는 Gate A 수행 시점(dev `871fcff`~`c8a8760`,

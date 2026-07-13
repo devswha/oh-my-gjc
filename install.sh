@@ -8,7 +8,7 @@
 #                                explicit dev ref) for release-candidate provenance testing.
 #                                Default is the published marketplace (devswha/oh-my-gjc).
 #
-# One install brings ALL 15 capabilities — there are no separate/optional plugins. Legacy
+# One install brings ALL 12 capabilities — there are no separate/optional plugins. Legacy
 # args (--core, tower, insane-review, codex-*, lazycodex, gjc-bugwatch) are accepted only
 # to print a migration note; they NEVER add extra plugin installs.
 #
@@ -78,7 +78,7 @@ bash "$NAT" all
 
 cat <<DONE
 
-✓ oh-my-gajaecode installed — one plugin, 15 capabilities, all native. No further required steps.
+✓ oh-my-gajaecode installed — one plugin, 12 capabilities, all native. No further required steps.
   Just open a NEW gjc session (or run /move .). That's it.
     /omg   → catalog of everything you got
   (Optional: /omg:setup merges model presets / turns on always-on modes.)

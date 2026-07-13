@@ -1,8 +1,8 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 15가지 기능이 전부 들어오고,
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 12가지 기능이 전부 들어오고,
 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다. 전제조건이 있는 기능(Codex CLI,
-ChatGPT 구독+크로미움, 빌드된 Codex 앱)도 함께 설치되며, 없으면 실행 시 자기진단해
+ChatGPT 구독+크로미움)도 함께 설치되며, 없으면 실행 시 자기진단해
 친절히 멈춘다 — 설치는 가볍고 기능이 스스로 안내한다.
 
 ## Quick Start
@@ -19,11 +19,11 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 /omg
 ```
 
-## 들어있는 것 (15)
+## 들어있는 것 (12)
 
 ### 스킬 (자연어 트리거 자동활성화)
 `easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `worktree` · `extragoal`
-· `codex-cli-ask` · `codex-deepwork` · `lazycodex` · `codex-app-launch` · `codex-app-cdp`
+· `codex-cli-ask` · `lazycodex`
 · `insane-review` · `gjc-bugwatch` · `tower` · `gajae-app`
 
 ### 커맨드
@@ -39,9 +39,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 | `/omg:fable [대상]` | Fable 5 적대적 안전 감사 (읽기전용, 심각도+파일:라인, 스팟체크) | Fable 5 모델 |
 | `/omg:branchflow-always [on\|off\|status]` | 레포 dev/main 브랜치 규율 (레포 AGENTS.md + docs/WORKFLOW.md) | — |
 | `/omg:codex-ask` | 로컬 Codex CLI에 읽기전용 질문 위임 | Codex CLI |
-| `/omg:codex-run` | Codex에 파일 쓰는 자동 작업 위임 | Codex CLI |
 | `/omg:lazycodex-setup` · `/omg:lazycodex-work` | LazyCodex 하네스 관리 + ultrawork | Codex CLI + Node/npx |
-| `/omg:codex-app-launch` · `/omg:codex-app-ask` | Codex 데스크톱 앱 CDP 제어 | 빌드된 Codex 앱 |
 | `/omg:insane-review` | GPT-5.5 Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
 | `/omg:bugwatch-scan` | gjc 자체 버그 수집 (초안만) | — |
 | `/omg:tower-setup` | 관제탑 세션 함대 감시·전파·결정 큐 | tmux |

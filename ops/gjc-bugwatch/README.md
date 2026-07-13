@@ -14,7 +14,7 @@ tmux session so the agent picks up the work; a human still approves every upstre
 | `daemon.sh` | `follow.ts --dir ~/.gjc/logs \| trigger.ts` — long-running live tail |
 | `gjc-bugwatch.service` | systemd **user** unit for `daemon.sh` (enable + linger) |
 | `daily-scan.sh` | cron job: `collect --fresh-only --hide-resolved --json \| trigger.ts --daily` |
-| `enqueue-pr.sh` | submission loop: `horcrux queue add gjc-pr "<summary> \| draft: <path>"` |
+| `enqueue-pr.sh` | submission loop: `POST $TOWER_URL/queue/add` (source=gjc-bugwatch, kind=decision) — CLI 직접 쓰기 금지(타워 load-save 경합, 07-10 사고) |
 | `install.sh` | idempotent: install/enable unit + register cron |
 | `test/trigger.test.ts` | `bun test` (same convention as the plugin's `test/`) |
 
@@ -31,7 +31,7 @@ entry (~08:20) if not already present.
 
 1. **Live** — the daemon tails the newest gjc log. On a HIGH(`gjc-internal`) signal it
    dedupes (30 min cooldown per signature) and injects a triage prompt into the
-   `gjc-pr` tmux session. The agent then runs the normal scan pipeline (reproduce,
+   tmux session set by env `GJC_BUGWATCH_SESSION` (현재 유닛 설정 `gjc-pr` — PR 전담 세션; 코드 기본값 `omg`). The agent then runs the normal scan pipeline (reproduce,
    source-verify against the `dev` clone) and drafts if it's a real, new bug.
 2. **Daily** — cron runs the batch scan; only when there are fresh (non-stale,
    non-resolved) candidates does it inject a digest triage prompt.
@@ -52,7 +52,7 @@ entry (~08:20) if not already present.
 
 | var | default | used by |
 |---|---|---|
-| `GJC_BUGWATCH_SESSION` | `gjc-pr` | trigger.ts (tmux target) |
+| `GJC_BUGWATCH_SESSION` | `omg` | trigger.ts (tmux target) |
 | `GJC_BUGWATCH_MIN` | `medium` | daemon.sh (follow.ts `--min`) |
 | `GJC_BUGWATCH_COOLDOWN_MS` | `1800000` | trigger.ts dedup window |
 | `GJC_BUGWATCH_DRYRUN` | _(unset)_ | trigger.ts — log the tmux command instead of running it |

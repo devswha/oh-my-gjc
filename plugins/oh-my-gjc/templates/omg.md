@@ -18,9 +18,7 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 - `/omg:presets` — 멀티벤더 모델 프리셋 병합(ideal/escalate-surgical/monorepo/reviewer).
 - `/omg:fable "<대상>"` — Fable 5 안전-크리티컬 적대적 감사. · 전제: Fable 5 모델 접근
 - `/omg:codex-ask` — 로컬 Codex CLI에 읽기 전용 질문 위임. · 전제: Codex CLI
-- `/omg:codex-run` — Codex에 파일 쓰는 자동 작업 위임. · 전제: Codex CLI
 - `/omg:lazycodex-setup` · `/omg:lazycodex-work` — LazyCodex 하네스 관리 + ultrawork. · 전제: Codex CLI + Node/npx
-- `/omg:codex-app-launch` · `/omg:codex-app-ask` — Codex 데스크톱 앱 CDP 제어. · 전제: 빌드된 Codex 앱
 - `/omg:insane-review` — GPT-5.5 Pro 웹 코드 리뷰. · 전제: ChatGPT 구독 + 크로미움 로그인
 - `/omg:bugwatch-scan` — gjc 자체 버그 수집(초안만).
 - `/omg:tower-setup` — 관제탑 세션 함대 감시·전파·결정 큐. · 전제: tmux
@@ -32,7 +30,7 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 
 ## 스킬 (트리거로 자동 활성)
 - `easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `worktree` · `extragoal`(외부 최종 리뷰 게이트)
-- `codex-cli-ask` · `codex-deepwork` · `lazycodex` · `codex-app-launch` · `codex-app-cdp` · `insane-review` · `gjc-bugwatch` · `tower` · `gajae-app`
+- `codex-cli-ask` · `lazycodex` · `insane-review` · `gjc-bugwatch` · `tower` · `gajae-app`
 
 ## 문서
 - 설치·자세히: 저장소 README. 원샷 설치: `install.sh`(curl 한 줄) / 에이전트용 `INSTALLATION.md`.

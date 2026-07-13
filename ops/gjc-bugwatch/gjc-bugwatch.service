@@ -7,7 +7,7 @@
 # Operate: systemctl --user {status|restart|stop} gjc-bugwatch
 # (ops/gjc-bugwatch/install.sh does all of the above idempotently.)
 [Unit]
-Description=gjc-bugwatch live daemon (follow.ts HIGH signal -> tmux gjc-pr triage inject)
+Description=gjc-bugwatch live daemon (follow.ts HIGH signal -> tmux $GJC_BUGWATCH_SESSION triage inject)
 After=network-online.target
 
 [Service]

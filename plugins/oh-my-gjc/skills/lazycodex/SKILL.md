@@ -11,8 +11,8 @@ description: LazyCodex(=OmO Codex Light) deep-work 하니스를 설치/업데이
 전문 에이전트(executor/code-reviewer/qa-executor/gate-reviewer), 검증 게이트가 추가된다. 이후 모든
 `codex`/`codex exec` 실행이 자동으로 이 역량을 받는다.
 
-> 차이: `/omg:codex-ask`=읽기전용 단발 질의 · `/omg:codex-run`=일반 자율 작업(lazycodex 있으면 묻어감) ·
-> **이 스킬**=lazycodex 자체를 *설치/관리*하고 *ultrawork(plan→work→verify)*를 명시적으로 구동.
+> 차이: `/omg:codex-ask`=읽기전용 단발 질의 · **이 스킬**=lazycodex 자체를 *설치/관리*하고
+> *ultrawork(plan→work→verify)* 파일-쓰기 자율 작업을 명시적으로 구동.
 
 ## 전제
 
@@ -39,7 +39,7 @@ description: LazyCodex(=OmO Codex Light) deep-work 하니스를 설치/업데이
 설치돼 있으면 `codex exec`가 ulw/omo 스킬을 자동 활성화한다(예: 코드 작업 시 `omo:programming` 로드 →
 계획 추적 → 구현 → unittest/타입체커/LOC 검증 게이트). 절차:
 
-1. **입력 검증(injection 방지, codex-deepwork와 동일 계약)**: `task`는 env(`CODEX_TASK`)→**stdin 전용**(argv 금지);
+1. **입력 검증(injection 방지)**: `task`는 env(`CODEX_TASK`)→**stdin 전용**(argv 금지);
    `sandbox` enum(기본 `workspace-write`); `timeout_s` 양의 정수≤3600; `cwd` 존재 디렉터리; `model` `^[A-Za-z0-9._/-]+$`;
    알 수 없는 인자 거부; `--dangerously-bypass-*`/`danger-full-access` 자동 파생 금지.
 2. **codex 존재 확인** → 없으면 안내 후 종료(자동 설치 금지; 설치는 `/omg:lazycodex-setup`).
@@ -57,7 +57,7 @@ if ! command -v lazycodex >/dev/null || ! lazycodex doctor >/dev/null 2>&1; then
 fi
 lazycodex doctor    # System OK 확인
 
-# work (injection-safe; 위 codex-deepwork 계약)
+# work (injection-safe; 위 입력 검증 계약)
 command -v codex >/dev/null || { echo "codex CLI not found. /omg:lazycodex-setup 또는 codex 설치+login 먼저."; exit 1; }
 OUT="$(mktemp -t lazycodex-XXXX.txt)"
 CODEX_TASK="<task 원문>"
@@ -67,4 +67,4 @@ printf '%s' "$CODEX_TASK" | timeout "${TIMEOUT_S:-600}" codex exec --sandbox "${
 ## 범위
 
 **한다:** LazyCodex 설치/업데이트/점검/제거, Codex 통한 ultrawork(plan→work→verify) 작업 위임(파일 수정).
-**Non-Goal:** codex/lazycodex 자동 로그인, App/CDP GUI 제어(→ `/omg:codex-app-launch`·`/omg:codex-app-ask`), 읽기전용 단발 질의(→ `/omg:codex-ask`), 자동 커밋/푸시, opencode(Ultimate) 에디션 관리.
+**Non-Goal:** codex/lazycodex 자동 로그인, 읽기전용 단발 질의(→ `/omg:codex-ask`), 자동 커밋/푸시, opencode(Ultimate) 에디션 관리.

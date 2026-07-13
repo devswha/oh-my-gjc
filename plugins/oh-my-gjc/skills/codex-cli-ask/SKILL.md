@@ -111,4 +111,4 @@ rc=$?
 ## 범위
 
 **한다 (v1):** 설치된 Codex CLI로 `codex exec` 단일 프롬프트 → 최종 메시지 1개 반환, sandbox 정책 통제(기본 read-only).
-**안 한다 (Non-Goal):** 데스크톱 App/CDP GUI 제어(→ `/omg:codex-app-launch`·`/omg:codex-app-ask`), 다중 턴 대화 세션 관리/resume, MCP 서버, Codex 자동 로그인/설치, `app-server` JSON-RPC 직접 구현. (후속.)
+**안 한다 (Non-Goal):** 파일 쓰는 자율 작업(→ `/omg:lazycodex-work`), 다중 턴 대화 세션 관리/resume, MCP 서버, Codex 자동 로그인/설치, `app-server` JSON-RPC 직접 구현.

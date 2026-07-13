@@ -7,7 +7,7 @@ argument-hint: "(인자 없음)"
 
 oh-my-gajaecode를 이 머신에 셋업한다. **모든 단계는 멱등** — 이미 된 것은 건너뛰고, 파괴적 작업은 없다.
 설치는 가볍다: 번들 파일을 네이티브로 복사하고 안내만 한다. 전제조건 도구(Codex CLI, ChatGPT
-구독+크로미움, 빌드된 Codex 앱 등)는 설치 시 요구하지 않는다 — 각 기능 실행 시 자기진단한다.
+구독+크로미움 등)는 설치 시 요구하지 않는다 — 각 기능 실행 시 자기진단한다.
 
 ## Step 0 — 플러그인 루트 해석 (`$OMG_ROOT`)
 
@@ -62,9 +62,8 @@ bash "${OMG_ROOT}bin/install-skill.sh" all
 
 | 감지 | 확인 | 바로 쓸 수 있는 커맨드 |
 |---|---|---|
-| Codex CLI | `command -v codex` | `/omg:codex-ask`, `/omg:codex-run` |
+| Codex CLI | `command -v codex` | `/omg:codex-ask` |
 | LazyCodex 하네스 | `ls ~/.codex 2>/dev/null` | `/omg:lazycodex-setup`, `/omg:lazycodex-work` |
-| Codex 데스크톱 앱 | 앱 바이너리/설치 흔적 | `/omg:codex-app-launch`, `/omg:codex-app-ask` |
 | Chrome + ChatGPT | 크롬 프로필 존재 | `/omg:insane-review` |
 | tmux | `command -v tmux` | `/omg:tower-setup` |
 

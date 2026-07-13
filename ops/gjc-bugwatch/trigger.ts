@@ -20,7 +20,8 @@
 import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline";
 
-export const SESSION = process.env.GJC_BUGWATCH_SESSION || "gjc-pr";
+// 표적 세션: env로 설정, 기본 omg (관제탑 발주 2026-07-12 — 구 기본 gjc-pr 세션은 소멸).
+export const SESSION = process.env.GJC_BUGWATCH_SESSION || "omg";
 const COOLDOWN_MS = Number(process.env.GJC_BUGWATCH_COOLDOWN_MS || 30 * 60_000);
 const DRYRUN = !!process.env.GJC_BUGWATCH_DRYRUN;
 
