@@ -26,7 +26,7 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 > 예전 개별 명령들은 폐기·제거됐다(0.8.1에서 안내 스텁까지 삭제·설치 시 자동 청소) — 지금 있는 이름은 위의 `/omg:*`가 전부다.
 
 ## 스킬 (트리거로 자동 활성)
-- `easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `worktree` · `extragoal`(외부 최종 리뷰 게이트)
+- `easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `extragoal`(외부 최종 리뷰 게이트)
 - `insane-review` · `gjc-bugwatch` · `gajae-app`
 
 ## 문서
