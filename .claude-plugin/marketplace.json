@@ -6,15 +6,15 @@
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gajaecode — the oh-my single-plugin suite for Gajae Code (gjc). One install, one native surface: 12 capabilities under /omg:*.",
-    "version": "0.11.0"
+    "description": "oh-my-gajaecode — the oh-my single-plugin suite for Gajae Code (gjc). One install, one native surface: 9 capabilities under /omg:*.",
+    "version": "0.12.0"
   },
   "plugins": [
     {
       "name": "oh-my-gjc",
       "source": "./plugins/oh-my-gjc",
-      "description": "oh-my-gajaecode — one plugin, everything. A single install brings 12 capabilities, all surfaced natively as /omg:* commands and trigger-word skills: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings), multivendor model presets (ideal / escalate-surgical / monorepo / reviewer), extragoal (external fresh-context cross-family final review gate), branch-flow (per-repo dev/main git discipline), worktree (parallel-session git worktree new/list/clean via /omg:worktree), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md), /omg:fable (Fable 5 adversarial safety audit), /omg:codex-ask (local Codex CLI read-only ask), /omg:lazycodex-setup + /omg:lazycodex-work (LazyCodex harness + ultrawork file-writing delegation), /omg:insane-review (GPT-5.5 Pro web review), /omg:bugwatch-scan (gjc bug collector), /omg:tower-setup (control-tower fleet orchestration), and /omg:setup for optional model-preset merge + always-on toggles. Prerequisite-gated capabilities (Codex CLI, ChatGPT subscription + Chromium) install with the suite and self-diagnose at first run — install stays light, features guide you, and /omg:gajae-app (install/update/run the self-hosted Gajae Code web app — gjc session viewer + external CLI terminal; app source lives in devswha/claudecodeui).",
-      "version": "0.11.0",
+      "description": "oh-my-gajaecode — one plugin, everything. A single install brings 9 capabilities, all surfaced natively as /omg:* commands and trigger-word skills: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings), multivendor model presets (ideal / escalate-surgical / monorepo / reviewer), extragoal (external fresh-context cross-family final review gate), branch-flow (per-repo dev/main git discipline), worktree (parallel-session git worktree new/list/clean via /omg:worktree), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md), /omg:fable (Fable 5 adversarial safety audit), /omg:insane-review (GPT-5.5 Pro web review), /omg:bugwatch-scan (gjc bug collector), and /omg:setup for optional model-preset merge + always-on toggles. Prerequisite-gated capabilities (ChatGPT subscription + Chromium for insane-review) install with the suite and self-diagnose at first run — install stays light, features guide you, and /omg:gajae-app (install/update/run the self-hosted Gajae Code web app — gjc session viewer + external CLI terminal; app source lives in devswha/claudecodeui).",
+      "version": "0.12.0",
       "category": "core"
     }
   ]

@@ -62,10 +62,7 @@ bash "${OMG_ROOT}bin/install-skill.sh" all
 
 | 감지 | 확인 | 바로 쓸 수 있는 커맨드 |
 |---|---|---|
-| Codex CLI | `command -v codex` | `/omg:codex-ask` |
-| LazyCodex 하네스 | `ls ~/.codex 2>/dev/null` | `/omg:lazycodex-setup`, `/omg:lazycodex-work` |
 | Chrome + ChatGPT | 크롬 프로필 존재 | `/omg:insane-review` |
-| tmux | `command -v tmux` | `/omg:tower-setup` |
 
 ## Step 5 — 상시 모드 안내 (선택)
 

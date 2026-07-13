@@ -15,7 +15,7 @@ Do exactly the following in a terminal. Do not improvise other steps.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
-One install brings the whole suite (12 capabilities). There are no separate/optional plugins to add.
+One install brings the whole suite (9 capabilities). There are no separate/optional plugins to add.
 
 ## Manual path (equivalent, if curl|bash is disallowed)
 ```sh
@@ -31,7 +31,7 @@ The native installer copies every bundled skill + command in one shot and fails 
 ## Verify (report these)
 ```sh
 gjc plugin list                                   # oh-my-gjc@oh-my-gjc listed
-ls ~/.gjc/agent/skills/                            # 12 skills (easy-answer, gate-briefing, …, gajae-app, worktree)
+ls ~/.gjc/agent/skills/                            # 9 skills (easy-answer, gate-briefing, …, gajae-app, worktree)
 ls ~/.gjc/agent/commands/ | grep '^omg'            # omg.md + omg:<name>.md present
 ```
 
@@ -39,4 +39,4 @@ ls ~/.gjc/agent/commands/ | grep '^omg'            # omg.md + omg:<name>.md pres
 Tell the human: open a **new** gjc session (or `/move .`) so the command palette rebuilds, then run `/omg` for the catalog and `/omg:setup` to finish (model-preset merge + always-on toggles — all optional). Commands are `/omg:<name>`.
 
 ## Safety
-Idempotent — re-running only re-copies. This installs a documented plugin suite; it does not send code anywhere or change model/provider credentials. Prerequisite-gated features (Codex CLI, ChatGPT subscription + Chromium) install with the suite but only run when their tool is present — otherwise they self-diagnose and stop cleanly.
+Idempotent — re-running only re-copies. This installs a documented plugin suite; it does not send code anywhere or change model/provider credentials. Prerequisite-gated features (ChatGPT subscription + Chromium for insane-review) install with the suite but only run when their tool is present — otherwise they self-diagnose and stop cleanly.
