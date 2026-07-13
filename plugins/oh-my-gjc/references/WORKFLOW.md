@@ -84,6 +84,8 @@ Rules for parallel work:
    **not locked / not the main checkout**. Never self-run `git worktree remove --force`
    or `git branch -D` — only when the user explicitly names a worktree to force-delete.
    A dirty worktree is another session's in-flight work; leave it with a stated reason.
+   A stale entry whose folder was already deleted by hand is cleaned only by
+   `git worktree prune`.
 
 ---
 
