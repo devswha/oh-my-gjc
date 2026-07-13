@@ -9,7 +9,7 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 안내**다 — 아래 목록을 사용자에게 그대로 정리해 보여주고, 무엇을 쓸지 물어라. 아무것도
 설치·실행·변경하지 않는다. **한 번의 설치로 아래가 전부 들어온다.**
 
-## 커맨드
+## 커맨드 (13)
 - `/omg:setup` — 셋업(프리셋 병합 제안·상시 토글 안내). 멱등.
 - `/omg:easy` (이번 세션) · `/omg:easy-always [on|off|status]` (항상) — 쉬운 말 최종답변.
 - `/omg:gate` (이번 세션) · `/omg:gate-always [on|off|status]` (항상) — 승인 게이트 비전문가 브리핑.
@@ -25,7 +25,7 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 > 실행 시 친절히 안내하고 안전하게 멈춘다(설치를 깨뜨리지 않는다).
 > 예전 개별 명령들은 폐기·제거됐다(0.8.1에서 안내 스텁까지 삭제·설치 시 자동 청소) — 지금 있는 이름은 위의 `/omg:*`가 전부다.
 
-## 스킬 (트리거로 자동 활성)
+## 스킬 (8 · 트리거로 자동 활성)
 - `easy-answer` · `gate-briefing` · `multivendor-presets` · `branch-flow` · `extragoal`(외부 최종 리뷰 게이트)
 - `insane-review` · `gjc-bugwatch` · `gajae-app`
 
