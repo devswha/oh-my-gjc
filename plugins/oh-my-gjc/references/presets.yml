@@ -1,9 +1,14 @@
-# multivendor-presets v0.7 — 멀티벤더 모델 프로파일 프리셋 (canonical source)
+# multivendor-presets v0.8 — 멀티벤더 모델 프로파일 프리셋 (canonical source)
 #
 # 이 파일의 `profiles:` 하위 블록을 사용자의 ~/.gjc/agent/models.yml `profiles:`
 # 아래로 "이름 단위"로 병합한다(같은 이름이면 교체, 없으면 추가). 그 외의
 # 프로파일이나 최상위 키(default 등)는 절대 건드리지 않는다.
 #
+# v0.8 (2026-07-14): `fable-codex` 추가 = codex 골격에 대화 본체만 Fable 5.
+#   - default=anthropic/claude-fable-5:high (상류 built-in fable-opus-codex의 default와 동일),
+#     위임 좌석 4개는 `codex` 프리셋과 동일(executor terra:xhigh — 벤치 근거, planner sol:high,
+#     architect sol:xhigh, critic sol:max). 안전-크리티컬 작업 세션용: Fable이 본체에서
+#     적대적 관점을 유지하고, 실행·리뷰 좌석은 교차 패밀리(codex)로 분리.
 # v0.7 (2026-07-14): gpt-5.6 codex 프리셋 벤치마크(gajae-code docs/gpt-5.6-codex-preset-benchmark.md) 반영.
 #   - grok·sol executor를 terra:high → terra:xhigh로 승격: selected-task 샘플에서
 #     terra:high 6/11(54.5%) vs terra:xhigh 9/12(75%)+broad 8/8, luna:xhigh 동률이면서
@@ -26,9 +31,11 @@
 #   gjc --mpreset grok --default           # config.yml에 시작 기본값으로 고정
 #   gjc --mpreset sol                      # 빠른 대화·소형 작업
 #   gjc --mpreset codex                    # openai-codex 단일 로그인 전용
+#   gjc --mpreset fable-codex              # Fable 5 본체 + codex 위임 좌석
 #
 # 요구 로그인: grok = grok-build·openai-codex·anthropic, sol = openai-codex·anthropic,
-# codex = openai-codex 단독. required_providers 중 하나라도 자격증명이 없으면 활성화가 하드블록된다.
+# codex = openai-codex 단독, fable-codex = anthropic·openai-codex.
+# required_providers 중 하나라도 자격증명이 없으면 활성화가 하드블록된다.
 #
 # ⚠ 셀렉터/벤치 근거는 카탈로그·시점 민감(2026-07 리서치 기준). 실호출 검증:
 #   GJC_NOTIFICATIONS=0 gjc -p --no-session --no-tools --model <selector> "Reply OK"
@@ -72,6 +79,21 @@ profiles:
     required_providers: [openai-codex]
     model_mapping:
       default:   openai-codex/gpt-5.6-sol:medium
+      executor:  openai-codex/gpt-5.6-terra:xhigh
+      architect: openai-codex/gpt-5.6-sol:xhigh
+      planner:   openai-codex/gpt-5.6-sol:high
+      critic:    openai-codex/gpt-5.6-sol:max
+
+  # ── fable-codex: 안전-크리티컬 세션용 — 대화 본체가 Fable 5, 위임 좌석은 codex와 동일.
+  #   상류 built-in fable-opus-codex의 default(claude-fable-5:high)를 따르되, 위임 좌석은
+  #   본 스위트 codex 골격(벤치 근거 executor terra:xhigh 포함)으로 통일. 교차 패밀리 분리:
+  #   Fable(anthropic) 본체가 지시하고 codex(openai)가 실행·비평한다.
+  #   실호출 검증 2026-07-14: anthropic/claude-fable-5:high OK (codex 좌석 4종은 v0.7에서 검증済).
+  fable-codex:
+    display_name: fable-codex
+    required_providers: [anthropic, openai-codex]
+    model_mapping:
+      default:   anthropic/claude-fable-5:high                  # 적대적 감사 성향 본체
       executor:  openai-codex/gpt-5.6-terra:xhigh
       architect: openai-codex/gpt-5.6-sol:xhigh
       planner:   openai-codex/gpt-5.6-sol:high

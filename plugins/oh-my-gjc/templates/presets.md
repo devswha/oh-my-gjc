@@ -1,17 +1,17 @@
 ---
-description: 멀티벤더 모델 프로파일 프리셋 `grok`·`sol`·`codex`를 ~/.gjc/agent/models.yml에 안전하게 병합한다.
-argument-hint: "[grok|sol|codex|all]  (기본: grok)"
+description: 멀티벤더 모델 프로파일 프리셋 `grok`·`sol`·`codex`·`fable-codex`를 ~/.gjc/agent/models.yml에 안전하게 병합한다.
+argument-hint: "[grok|sol|codex|fable-codex|all]  (기본: grok)"
 ---
 
 # /omg:presets
 
-멀티벤더(멀티 프로바이더) 모델 프로파일 프리셋 `grok`·`sol`·`codex`를 사용자의 `~/.gjc/agent/models.yml`
+멀티벤더(멀티 프로바이더) 모델 프로파일 프리셋 `grok`·`sol`·`codex`·`fable-codex`를 사용자의 `~/.gjc/agent/models.yml`
 `profiles:` 아래로 **이름 단위로 병합**한다. gjc 플러그인은 models.yml 프로파일을
 자동 주입하지 못하므로(플러그인 매니페스트에 profiles 필드 없음), 이 커맨드가
 gjc를 시켜 직접 병합한다.
 
-입력 인자: `$ARGUMENTS` → 비었으면 `grok`, `grok`/`sol`/`codex`면 해당 프리셋,
-`all`이면 셋 다 병합한다. 그 외 이름은 현재 정본에 없으므로 안내하고 멈춘다.
+입력 인자: `$ARGUMENTS` → 비었으면 `grok`, `grok`/`sol`/`codex`/`fable-codex`면 해당 프리셋,
+`all`이면 넷 다 병합한다. 그 외 이름은 현재 정본에 없으므로 안내하고 멈춘다.
 
 구버전 정리: 대상 파일에 **은퇴 프리셋(닫힌 목록)** — `ultimate`/`ultimate-f5`/`daily`/`fast`/
 `ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main` — 이 있으면,
@@ -21,7 +21,7 @@ gjc를 시켜 직접 병합한다.
 
 ## 절대 규칙 (병합 안전 계약 — 약화 금지)
 
-- **이름 단위 병합만.** 선택한 `grok`/`sol`/`codex`가 이미 있으면 해당 블록만 교체,
+- **이름 단위 병합만.** 선택한 `grok`/`sol`/`codex`/`fable-codex`가 이미 있으면 해당 블록만 교체,
   없으면 `profiles:` 맨 아래에 추가한다.
 - **다른 프로파일·최상위 키(default, modelBindings 등)는 절대 삭제/수정하지 않는다.**
   (옛 프리셋 제거만 예외 — 반드시 사용자 동의 후.)
@@ -49,7 +49,7 @@ echo "OMG=$OMG"
 
 ## Step 2 — 병합 (gjc가 read/edit로 직접 수행)
 
-1. `read $OMG`로 원본에서 선택한 `grok`/`sol`/`codex` 블록을 읽는다.
+1. `read $OMG`로 원본에서 선택한 `grok`/`sol`/`codex`/`fable-codex` 블록을 읽는다.
 2. `read ~/.gjc/agent/models.yml`로 현재 상태를 읽는다.
 3. 선택한 각 프리셋에 대해:
    - `profiles:` 아래에 같은 이름(2칸 들여쓰기) 블록이 있으면
@@ -76,15 +76,18 @@ echo "OMG=$OMG"
   gjc --mpreset grok --default         # 시작 기본값으로 고정(config.yml)
   gjc --mpreset sol                    # 빠른 대화·소형 작업
   gjc --mpreset codex                  # openai-codex 단일 로그인 전용
+  gjc --mpreset fable-codex            # Fable 5 본체 + codex 위임 좌석 (안전-크리티컬)
 
 요구 로그인:
   grok               grok-build · openai-codex · anthropic
   sol                openai-codex · anthropic
   codex              openai-codex 단독
+  fable-codex        anthropic · openai-codex
   → required_providers 중 하나라도 없으면 활성화가 하드블록됩니다.
 
 프리셋 요약:
   grok               default=grok-4.5:high, 역할 좌석=terra/sol/opus (executor=terra:xhigh)
   sol                default=sol:low, 역할 위임 좌석은 grok과 동일
   codex              default=sol:medium, 전 좌석 openai-codex (executor=terra:xhigh, critic=sol:max)
+  fable-codex        default=claude-fable-5:high, 위임 좌석 4개는 codex와 동일
 ```

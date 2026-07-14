@@ -11,8 +11,8 @@ const parsed = Bun.YAML.parse(source) as {
   }>;
 };
 
-test("preset source defines grok, sol and codex", () => {
-  expect(Object.keys(parsed.profiles)).toEqual(["grok", "sol", "codex"]);
+test("preset source defines grok, sol, codex and fable-codex", () => {
+  expect(Object.keys(parsed.profiles)).toEqual(["grok", "sol", "codex", "fable-codex"]);
   expect(parsed.profiles.sol).toEqual({
     display_name: "sol",
     required_providers: ["openai-codex", "anthropic"],
@@ -35,6 +35,21 @@ test("preset source defines grok, sol and codex", () => {
       critic: "openai-codex/gpt-5.6-sol:max",
     },
   });
+  expect(parsed.profiles["fable-codex"]).toEqual({
+    display_name: "fable-codex",
+    required_providers: ["anthropic", "openai-codex"],
+    model_mapping: {
+      default: "anthropic/claude-fable-5:high",
+      executor: "openai-codex/gpt-5.6-terra:xhigh",
+      architect: "openai-codex/gpt-5.6-sol:xhigh",
+      planner: "openai-codex/gpt-5.6-sol:high",
+      critic: "openai-codex/gpt-5.6-sol:max",
+    },
+  });
+  // fable-codex = codex skeleton with only the default seat swapped to Fable 5
+  const { default: _c, ...codexSeats } = parsed.profiles.codex.model_mapping;
+  const { default: _f, ...fableSeats } = parsed.profiles["fable-codex"].model_mapping;
+  expect(fableSeats).toEqual(codexSeats);
 });
 
 test("benchmark-informed executor seat is terra:xhigh everywhere", () => {
@@ -55,9 +70,9 @@ test("every preset declares exactly the providers used by its seats", () => {
 });
 
 test("preset command exposes safe selection semantics", () => {
-  expect(command).toContain("[grok|sol|codex|all]");
+  expect(command).toContain("[grok|sol|codex|fable-codex|all]");
   expect(command).toContain("비었으면 `grok`");
-  expect(command).toContain("`all`이면 셋 다 병합");
+  expect(command).toContain("`all`이면 넷 다 병합");
   expect(command).toContain("이름 단위 병합만");
   expect(command).toContain("부분 저장 금지");
 });

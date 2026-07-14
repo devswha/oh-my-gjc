@@ -35,7 +35,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 | `/omg:easy [on\|off]` · `/omg:easy-always [on\|off\|status]` | 쉬운 답변 (이번 세션 / 상시) | — |
 | `/omg:gate [on\|off]` · `/omg:gate-always [on\|off\|status]` | 게이트 브리핑 (이번 세션 / 상시) | — |
 | `/omg:plain [<아이디어>\|off]` | 쉬운 기획 (선택지 설명·스펙 대화 다듬기·gate 위임, 세션 한정) | GJC ≥0.10.1 |
-| `/omg:presets [grok\|sol\|codex\|all]` | 모델 프리셋 병합 | — |
+| `/omg:presets [grok\|sol\|codex\|fable-codex\|all]` | 모델 프리셋 병합 | — |
 | `/omg:fable [대상]` | Fable 5 적대적 안전 감사 (읽기전용, 심각도+파일:라인, 스팟체크) | Fable 5 모델 |
 | `/omg:branchflow-always [on\|off\|status]` | 레포 dev/main 브랜치 규율 (레포 AGENTS.md + docs/WORKFLOW.md) | — |
 | `/omg:insane-review` | GPT-5.5 Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
@@ -50,8 +50,9 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 | `grok` | 세션 시작 기본 · 품질 중심 | default=grok-build/grok-4.5:high · executor=terra:xhigh · planner=sol:xhigh · architect/critic=opus |
 | `sol` | 빠른 대화·소형 작업 | default=sol:low · 역할 위임 좌석은 `grok`과 동일 |
 | `codex` | openai-codex 단일 로그인 전용 | default=sol:medium · executor=terra:xhigh · planner=sol:high · architect=sol:xhigh · critic=sol:max |
+| `fable-codex` | 안전-크리티컬 세션 | default=claude-fable-5:high(적대적 감사 성향 본체) · 위임 좌석 4개는 `codex`와 동일 |
 
-활성화: `gjc --mpreset grok --default` 또는 `gjc --mpreset sol` / `gjc --mpreset codex`. 정답지: [`references/presets.yml`](./references/presets.yml).
+활성화: `gjc --mpreset grok --default` 또는 `gjc --mpreset sol` / `gjc --mpreset codex` / `gjc --mpreset fable-codex`. 정답지: [`references/presets.yml`](./references/presets.yml).
 
 ## 세마포어 구조
 
