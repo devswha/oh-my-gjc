@@ -28,7 +28,7 @@ description: 멀티벤더 모델 프로파일 프리셋을 ~/.gjc/agent/models.y
 1. `references/presets.yml` 경로를 잡는다(`~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/presets.yml` glob → `sort -V | tail -1`로 최신 → 없으면 프로젝트/레포 폴백). ⚠ `*oh-my-gjc*`는 마켓플레이스명이라 모든 플러그인 폴더에 걸리니 쓰지 말 것.
 2. 대상 `~/.gjc/agent/models.yml`을 백업(`.bak-<ts>`) 후 읽는다. 없으면 `profiles:` 한 줄로 생성.
 3. 인자로 선택한 `grok`/`sol`/`codex`를 **이름 단위 병합**한다. 인자 없음은 `grok`, `all`은 셋 다다.
-4. 구버전 `ultimate`/`ultimate-f5` 또는 비활성 옛 프리셋 블록이 보이면 사용자 동의 후에만 제거.
+4. 은퇴 프리셋 블록(닫힌 목록 — `/omg:presets` 커맨드 본문의 구버전 정리 목록과 동일: `ultimate`/`ultimate-f5`/`daily`/`fast`/`ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main`)이 보이면 사용자 동의 후에만 제거. 목록 밖 프로파일은 절대 제거 금지.
 5. 병합 후 유효 YAML + 선택한 프리셋 존재를 확인. 실패 시 백업으로 복구하고 멈춘다.
 6. 활성화·요구 로그인을 안내한다. 세션 기본은 `gjc --mpreset grok --default`.
 

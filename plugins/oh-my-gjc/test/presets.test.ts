@@ -62,13 +62,34 @@ test("preset command exposes safe selection semantics", () => {
   expect(command).toContain("부분 저장 금지");
 });
 
-test("legacy cleanup is consent-gated and never names an active preset", () => {
-  // v0.14.0 cross-review F2: the sole merge-contract exception is consent-gated removal
-  // of RETIRED preset blocks; active presets must never appear in the cleanup list.
+const RETIRED = [
+  "ultimate", "ultimate-f5", "daily", "fast", "ideal",
+  "escalate-surgical", "monorepo", "reviewer", "fable-sol", "grok-main",
+];
+
+test("legacy cleanup is consent-gated, an exact closed retired list, never an active preset", () => {
+  // v0.14.0 cross-review F2 (r1+r2): the sole merge-contract exception is consent-gated
+  // removal of the EXACT retired list — open-ended wording ("등"/"비활성 옛 프리셋") is banned.
   const seg = command.match(/구버전 정리:[\s\S]*?않는다\)\./)?.[0];
   expect(seg).toBeDefined();
   expect(seg!).toMatch(/동의/);
+  expect(seg!).toMatch(/닫힌 목록/);
+  expect(seg!).toContain("이 목록에 없는 프로파일은 이름이 무엇이든 절대 제거 대상이 아니다");
+  expect(seg!).not.toMatch(/ 등[)이]/);
+  const named = [...seg!.matchAll(/`([a-z0-9-]+)`/g)].map((m) => m[1]);
+  expect([...new Set(named)].sort()).toEqual([...RETIRED].sort());
   for (const active of Object.keys(parsed.profiles)) {
-    expect(seg!).not.toMatch(new RegExp("[`/]" + active + "[`/]"));
+    expect(RETIRED).not.toContain(active);
+    expect(named).not.toContain(active);
+  }
+});
+
+test("skill and setup cleanup wording carry the same closed retired list", async () => {
+  const skill = await Bun.file(new URL("skills/multivendor-presets/SKILL.md", root)).text();
+  const setup = await Bun.file(new URL("templates/setup.md", root)).text();
+  for (const text of [skill, setup]) {
+    expect(text).toMatch(/닫힌 목록/);
+    for (const name of RETIRED) expect(text).toContain("`" + name + "`");
+    expect(text).not.toMatch(/비활성 옛 프리셋/);
   }
 });

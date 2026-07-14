@@ -94,11 +94,12 @@ native crystallization + sanctioned final write 이후:
 ### Sanctioned write (session-keyed, gjc 0.10.1)
 
 ```sh
-# spec 본문은 bash tool의 env 파라미터로 주입한다(셸 붙여넣기 금지).
+# spec 본문은 반드시 bash tool의 `env` 파라미터(GJC_DEEP_INTERVIEW_SPEC)로 주입한다 —
+# 셸에 리터럴로 붙여넣지도, 스니펫 안에서 재할당하지도 말 것(주입값을 덮어쓴다).
 # ⚠ 커맨드-로컬 할당(VAR=... cmd "$VAR")은 같은 명령줄의 "$VAR" 인자 확장에 적용되지 않아
-#   빈 spec이 넘어간다 — 반드시 별도 export 후, 비어있지 않음을 가드하고 호출한다.
-export GJC_DEEP_INTERVIEW_SPEC='<full markdown via tool env, not shell paste>'
-[ -n "$GJC_DEEP_INTERVIEW_SPEC" ] || { echo "empty spec — abort (write 금지)"; exit 1; }
+#   빈 spec이 넘어간다 — env 주입 + 비어있지 않음 가드 후 호출한다.
+[ -n "${GJC_DEEP_INTERVIEW_SPEC:-}" ] || { echo "empty spec — abort (write 금지)"; exit 1; }
+export GJC_DEEP_INTERVIEW_SPEC
 GJC_NOTIFICATIONS=0 gjc deep-interview --write --stage final \
   --session-id "$GJC_SESSION_ID" \
   --slug "$TARGET_SLUG" \

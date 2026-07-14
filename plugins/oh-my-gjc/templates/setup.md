@@ -54,7 +54,7 @@ bash "${OMG_ROOT}bin/install-skill.sh" all
 
 `~/.gjc/agent/models.yml`을 읽어 `grok` 프리셋이 없으면 제안한다:
 "멀티벤더 프리셋 `grok`을 병합할까? → `/omg:presets`"
-이미 있으면 건너뛴다. 구버전 `daily`/`fast`/`ultimate`/`ultimate-f5` 또는 비활성 옛 프리셋이 보이면 정리도 함께 제안.
+이미 있으면 건너뛴다. 은퇴 프리셋(닫힌 목록 — `/omg:presets` 본문의 구버전 정리 목록: `ultimate`/`ultimate-f5`/`daily`/`fast`/`ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main`)이 보이면 정리도 함께 제안(동의 후에만, 목록 밖 프로파일은 절대 제거 금지).
 병합 후 세션 시작 기본은 `gjc --mpreset grok --default`로 고정하도록 안내한다.
 
 ## Step 4 — 전제조건 기능 사용 가능 여부 (읽기 전용 안내)

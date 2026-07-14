@@ -67,9 +67,21 @@ payload에서 expected 2개(`skills/plain-layer/SKILL.md`, `templates/plain.md`)
 --tools read,search,find`, 입력 = `git diff v0.11.0..HEAD` + 레포 읽기 권한.
 점검 지시: 카운트 정합·REMOVED 스윕·presets 정합·안전계약 불약화·회귀.
 
-**VERDICT: (아래 판정 절에 기록)**
+**Round 1 (candidate 3c098c5): VERDICT: REQUEST_CHANGES** — 5건, 전건 fix-forward(60b6888):
+1. plain-layer sanctioned-write 스니펫이 커맨드-로컬 할당으로 빈 spec 전달 → **export + 비어있지
+   않음 가드**로 교체, 정적 회귀 + stub-gjc 행동 테스트(--spec 비공백 수신 증명) 추가.
+2. presets 레거시 정리가 AGENTS 병합 계약과 모순 → 계약을 "은퇴 프리셋 목록 한정·동의 게이트"로
+   정합 + 보존 테스트(정리 문단에 활성 프리셋 이름 금지) 추가.
+3. 커맨드 카운트 표기 불일치 → 전 표면 "13 commands (/omg + 12 /omg:*)" 통일, AGENTS "=14" 오기 정정.
+4. stale 참조 2건(plain-layer hook 8/13, codex-deepwork 묘비의 lazycodex-work 방향 지시) 정정.
+5. provenance MARKERS에 `references/presets.yml`·`skills/plain-layer/SKILL.md` 추가(py_compile OK).
+
+수정 후 단위 테스트 **46 pass / 0 fail**(신규 회귀 3건 포함), `bash -n`·JSON parse OK.
+
+**Round 2 (re-sign, candidate 60b6888): VERDICT: (수신 후 기록)**
 
 ## 8. 판정
 
-Gate 1 **PASS**. Gate 2 verdict 수신 후 본 절 갱신, Gate 3 = 하코 직접 발주(본 릴리스의
-발원 지시)로 충족 — 발행: dev→main 머지 + `v0.14.0` 태그 + GitHub Release.
+Gate 1 **PASS**. Gate 2 round-2 verdict 수신 후 본 절 갱신. Gate 3 = 하코 직접 발주(본 릴리스의
+발원 지시 "0.14 배포되게 만들어놔 메인 브랜치")로 충족 — 발행: dev→main 머지 + `v0.14.0` 태그 +
+GitHub Release.

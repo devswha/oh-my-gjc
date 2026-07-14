@@ -13,10 +13,11 @@ gjc를 시켜 직접 병합한다.
 입력 인자: `$ARGUMENTS` → 비었으면 `grok`, `grok`/`sol`/`codex`면 해당 프리셋,
 `all`이면 셋 다 병합한다. 그 외 이름은 현재 정본에 없으므로 안내하고 멈춘다.
 
-구버전 정리: 대상 파일에 구버전 `ultimate` / `ultimate-f5` 또는 비활성 옛 프리셋
-(`daily`/`fast`/`ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main` 등)이 있으면,
-사용자에게 "옛 프리셋 발견 — 삭제할까?"를 물어보고 동의 시 해당 블록만 제거한다
-(다른 프로파일·최상위 키는 절대 건드리지 않는다).
+구버전 정리: 대상 파일에 **은퇴 프리셋(닫힌 목록)** — `ultimate`/`ultimate-f5`/`daily`/`fast`/
+`ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main` — 이 있으면,
+사용자에게 "옛 프리셋 발견 — 삭제할까?"를 물어보고 동의 시 해당 블록만 제거한다.
+**이 목록에 없는 프로파일은 이름이 무엇이든 절대 제거 대상이 아니다**
+(다른 프로파일·최상위 키도 절대 건드리지 않는다).
 
 ## 절대 규칙 (병합 안전 계약 — 약화 금지)
 

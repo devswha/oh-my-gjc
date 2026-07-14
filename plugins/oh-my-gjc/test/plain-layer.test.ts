@@ -90,16 +90,19 @@ describe("plain-layer static contract", () => {
     expect(t).toContain("gate-always de-dup");
   });
 
-  test("sanctioned write snippet exports spec before use (static)", () => {
+  test("sanctioned write snippet exports spec before use, never assigns a literal (static)", () => {
     const t = read(skillPath);
-    // regression (v0.14.0 cross-review F1): command-local assignment does not apply to
-    // same-command-line "$VAR" argument expansion → empty spec. Must export + guard.
+    // regression (v0.14.0 cross-review F1 r1): command-local assignment does not apply to
+    // same-command-line "$VAR" argument expansion → empty spec. Must guard + export.
     expect(t).toContain("export GJC_DEEP_INTERVIEW_SPEC");
-    expect(t).toContain('[ -n "$GJC_DEEP_INTERVIEW_SPEC" ]');
+    expect(t).toContain('[ -n "${GJC_DEEP_INTERVIEW_SPEC:-}" ]');
     expect(t).not.toMatch(/GJC_DEEP_INTERVIEW_SPEC='[^']*' \\\n\s+gjc /);
+    // regression (r2): snippet must not assign any literal — that would overwrite the
+    // value injected through the tool environment.
+    expect(t).not.toMatch(/GJC_DEEP_INTERVIEW_SPEC=[^\n ]/);
   });
 
-  test("sanctioned write snippet passes non-empty spec (behavioral, stub gjc)", () => {
+  test("sanctioned write snippet passes the injected spec verbatim and fails closed when empty (behavioral, stub gjc)", () => {
     const t = read(skillPath);
     const m = t.match(/### Sanctioned write[\s\S]*?```sh\n([\s\S]*?)```/);
     expect(m).not.toBeNull();
@@ -112,19 +115,26 @@ describe("plain-layer static contract", () => {
         '#!/usr/bin/env bash\nwhile [ $# -gt 0 ]; do if [ "$1" = --spec ]; then printf %s "$2" > "$CAPTURE"; shift; fi; shift; done\n',
         { mode: 0o755 },
       );
-      const r = spawnSync("bash", ["-c", snippet], {
-        env: {
-          ...process.env,
-          PATH: `${dir}:${process.env.PATH}`,
-          CAPTURE: join(dir, "spec.out"),
-          GJC_SESSION_ID: "test-session",
-          TARGET_SLUG: "test-slug",
-        },
+      const baseEnv = {
+        ...process.env,
+        PATH: `${dir}:${process.env.PATH}`,
+        CAPTURE: join(dir, "spec.out"),
+        GJC_SESSION_ID: "test-session",
+        TARGET_SLUG: "test-slug",
+      };
+      const SPEC = "# Polished Spec\n\nSPEC-BODY-XYZ-123 한국어 본문";
+      const ok = spawnSync("bash", ["-c", snippet], {
+        env: { ...baseEnv, GJC_DEEP_INTERVIEW_SPEC: SPEC },
         encoding: "utf8",
       });
-      expect(r.status).toBe(0);
-      const captured = readFileSync(join(dir, "spec.out"), "utf8");
-      expect(captured.length).toBeGreaterThan(0); // old snippet shape captured ""
+      expect(ok.status).toBe(0);
+      // exact round-trip: the injected env value — not a placeholder — reaches --spec
+      expect(readFileSync(join(dir, "spec.out"), "utf8")).toBe(SPEC);
+
+      rmSync(join(dir, "spec.out"), { force: true });
+      const empty = spawnSync("bash", ["-c", snippet], { env: baseEnv, encoding: "utf8" });
+      expect(empty.status).not.toBe(0); // guard fails closed
+      expect(existsSync(join(dir, "spec.out"))).toBe(false); // gjc never invoked
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
