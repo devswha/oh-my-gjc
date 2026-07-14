@@ -30,6 +30,14 @@ gjc --mpreset fable-opus-codex   # 안전-크리티컬 (Fable 본체)
 **이 목록에 없는 프로파일은 이름이 무엇이든 절대 제거 대상이 아니다**
 (다른 프로파일·최상위 키도 절대 건드리지 않는다).
 
+**시작 기본값 보호 (필수 — 약화 금지):** 은퇴 블록을 제거하기 **전에**
+`~/.gjc/agent/config.yml`의 `modelProfile.default`를 반드시 확인한다. 삭제 대상 이름이
+시작 기본값으로 박혀 있으면, 기본값을 먼저 이전한 뒤에만 그 블록을 삭제한다 —
+권장 이전: `sol` 병합 후 `gjc --mpreset sol --default`, 또는 대응 빌트인
+(`grok`→`opus-codex` · `codex`→`codex-medium`/`codex-pro` · `fable-codex`→`fable-opus-codex`).
+**기본값 이전 없이 그 블록을 삭제하는 것은 금지**한다 — 다음 gjc 시작이
+Unknown model profile로 깨진다. 사용자가 이전을 거부하면 해당 블록은 남긴다.
+
 ## 절대 규칙 (병합 안전 계약 — 약화 금지)
 
 - **이름 단위 병합만.** `sol`이 이미 있으면 해당 블록만 교체, 없으면 `profiles:` 맨 아래에 추가한다.

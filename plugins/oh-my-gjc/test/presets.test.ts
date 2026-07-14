@@ -96,3 +96,19 @@ test("skill and setup cleanup wording carry the same closed retired list", async
 		expect(text).not.toMatch(/비활성 옛 프리셋/);
 	}
 });
+
+test("retired cleanup guards the persisted startup default (v0.16.0 cross-review r2)", async () => {
+	// Removing a retired block that is still config.yml `modelProfile.default` (e.g. the
+	// previously recommended `grok --default`) would break the next gjc startup with
+	// "Unknown model profile". Every cleanup surface must require default migration first.
+	const skill = await Bun.file(new URL("skills/multivendor-presets/SKILL.md", root)).text();
+	const setup = await Bun.file(new URL("templates/setup.md", root)).text();
+	for (const text of [command, skill, setup]) {
+		expect(text).toContain("modelProfile.default");
+		expect(text).toMatch(/이전[^\n]*(뒤에만|후에만)[^\n]*삭제/);
+		expect(text).toMatch(/이전 없이[^\n]*삭제[^\n]*금지/);
+	}
+	// the command spells out the concrete migration mapping to builtins
+	expect(command).toContain("`grok`→`opus-codex`");
+	expect(command).toContain("`fable-codex`→`fable-opus-codex`");
+});
