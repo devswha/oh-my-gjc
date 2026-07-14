@@ -29,7 +29,7 @@ gjc plugin install oh-my-gjc@oh-my-gjc
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
 
-v0.15.0 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+v0.15.1 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -87,7 +87,7 @@ v0.15.0 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)
 (한 놈이 코드 짜고, 다른 놈이 검토하고, 또 다른 놈이 최종 점검하는 식.)
 
 - `grok` — 세션 시작 기본. default는 `grok-4.5:high`, 역할 좌석은 terra/sol/opus (executor는 벤치 근거 `terra:xhigh`).
-- `sol` — default는 `sol:low`, 역할 위임 좌석은 `grok`과 동일.
+- `sol` — 전 구간 저지연: default `sol:low`, 기획 좌석도 빠름(planner `sol:high` · architect `opus:medium` · critic `opus:high`). ralplan이 빨리 돌아야 할 때 이걸 쓴다. (executor는 벤치 근거 `terra:xhigh` 유지.) 실측(n=1): 신형은 수정 1회(stage 2)로 8:24에 합의 완료·플랜 산출, 구형 xhigh 좌석은 수정 3회(stage 4)를 돌고 17:18 시점에도 합의 미완 — **2배 이상 빠름** ([증거](./docs/verification/sol-v09-ralplan-bench-2026-07-14.md)).
 - `codex` — openai-codex 로그인 하나로 전 좌석 동작 (default `sol:medium`, executor `terra:xhigh`).
 - `fable-codex` — 안전-크리티컬 세션용. 대화 본체만 Fable 5(`claude-fable-5:high`, 적대적 감사 성향), 위임 좌석 4개는 `codex`와 동일.
 - 기존 설정은 안 건드리고 선택한 이름만 병합한다(넣기 전 백업). 옛 프리셋 정리는 동의 후.

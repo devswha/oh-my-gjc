@@ -1,9 +1,15 @@
-# multivendor-presets v0.8 — 멀티벤더 모델 프로파일 프리셋 (canonical source)
+# multivendor-presets v0.9 — 멀티벤더 모델 프로파일 프리셋 (canonical source)
 #
 # 이 파일의 `profiles:` 하위 블록을 사용자의 ~/.gjc/agent/models.yml `profiles:`
 # 아래로 "이름 단위"로 병합한다(같은 이름이면 교체, 없으면 추가). 그 외의
 # 프로파일이나 최상위 키(default 등)는 절대 건드리지 않는다.
 #
+# v0.9 (2026-07-14): `sol`을 전 구간 저지연으로 정합화 — 실사용 데이터 반영.
+#   - ralplan은 planner/architect/critic을 라운드마다 반복 호출하는 합의 루프인데,
+#     sol조차 기획 좌석이 grok과 동일한 xhigh 품질 좌석이라 과지연이 실측됨.
+#   - planner sol:xhigh→high, architect opus:high→medium, critic opus:xhigh→high.
+#     executor는 terra:xhigh 유지(벤치 근거 + ralplan 루프 밖). grok/codex/fable-codex 불변.
+#   - 실호출 검증 2026-07-14: opus-4-8:medium·sol:high OK.
 # v0.8 (2026-07-14): `fable-codex` 추가 = codex 골격에 대화 본체만 Fable 5.
 #   - default=anthropic/claude-fable-5:high (상류 built-in fable-opus-codex의 default와 동일),
 #     위임 좌석 4개는 `codex` 프리셋과 동일(executor terra:xhigh — 벤치 근거, planner sol:high,
@@ -57,18 +63,19 @@ profiles:
       planner:   openai-codex/gpt-5.6-sol:xhigh
       critic:    anthropic/claude-opus-4-8:xhigh
 
-  # ── sol: 대화 본체를 sol:low로 둔 빠른 프리셋.
-  #   일반 질의·작은 수정은 저지연 default가 처리하고, 역할 위임 시 품질 좌석은 grok과 동일하게 유지.
-  #   실호출 검증 2026-07-14: openai-codex/gpt-5.6-sol:low OK.
+  # ── sol: 전 구간 저지연 프리셋 — 본체도, 위임 좌석도 빠르다.
+  #   일반 질의·작은 수정 + 빠른 ralplan/interview 용. v0.9에서 기획 좌석 하향:
+  #   품질 랄플랜이 필요하면 grok을 쓴다(sol=빠른 랄플랜 / grok=품질 랄플랜).
+  #   실호출 검증 2026-07-14: sol:low·sol:high·opus-4-8:medium·opus-4-8:high OK.
   sol:
     display_name: sol
     required_providers: [openai-codex, anthropic]
     model_mapping:
       default:   openai-codex/gpt-5.6-sol:low
-      executor:  openai-codex/gpt-5.6-terra:xhigh               # grok과 동일 좌석
-      architect: anthropic/claude-opus-4-8:high
-      planner:   openai-codex/gpt-5.6-sol:xhigh
-      critic:    anthropic/claude-opus-4-8:xhigh
+      executor:  openai-codex/gpt-5.6-terra:xhigh               # 벤치 근거 — grok과 동일 좌석
+      architect: anthropic/claude-opus-4-8:medium
+      planner:   openai-codex/gpt-5.6-sol:high
+      critic:    anthropic/claude-opus-4-8:high
 
   # ── codex: openai-codex 단일 로그인 전용 (anthropic·grok-build 불필요).
   #   상류 built-in codex-pro 골격에 executor만 벤치 근거로 terra:xhigh

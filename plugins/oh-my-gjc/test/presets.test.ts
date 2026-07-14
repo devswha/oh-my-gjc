@@ -19,9 +19,9 @@ test("preset source defines grok, sol, codex and fable-codex", () => {
     model_mapping: {
       default: "openai-codex/gpt-5.6-sol:low",
       executor: "openai-codex/gpt-5.6-terra:xhigh",
-      architect: "anthropic/claude-opus-4-8:high",
-      planner: "openai-codex/gpt-5.6-sol:xhigh",
-      critic: "anthropic/claude-opus-4-8:xhigh",
+      architect: "anthropic/claude-opus-4-8:medium",
+      planner: "openai-codex/gpt-5.6-sol:high",
+      critic: "anthropic/claude-opus-4-8:high",
     },
   });
   expect(parsed.profiles.codex).toEqual({

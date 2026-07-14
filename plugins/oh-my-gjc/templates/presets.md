@@ -74,7 +74,7 @@ echo "OMG=$OMG"
 활성화:
   gjc --mpreset grok                   # 품질 중심 범용
   gjc --mpreset grok --default         # 시작 기본값으로 고정(config.yml)
-  gjc --mpreset sol                    # 빠른 대화·소형 작업
+  gjc --mpreset sol                    # 빠른 대화·소형 작업·빠른 ralplan
   gjc --mpreset codex                  # openai-codex 단일 로그인 전용
   gjc --mpreset fable-codex            # Fable 5 본체 + codex 위임 좌석 (안전-크리티컬)
 
@@ -87,7 +87,7 @@ echo "OMG=$OMG"
 
 프리셋 요약:
   grok               default=grok-4.5:high, 역할 좌석=terra/sol/opus (executor=terra:xhigh)
-  sol                default=sol:low, 역할 위임 좌석은 grok과 동일
+  sol                default=sol:low, 기획 좌석도 저지연(planner sol:high · architect opus:medium · critic opus:high) — 빠른 ralplan용
   codex              default=sol:medium, 전 좌석 openai-codex (executor=terra:xhigh, critic=sol:max)
   fable-codex        default=claude-fable-5:high, 위임 좌석 4개는 codex와 동일
 ```

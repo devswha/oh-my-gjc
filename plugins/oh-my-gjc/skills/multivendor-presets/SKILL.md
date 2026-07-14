@@ -10,12 +10,12 @@ description: 멀티벤더 모델 프로파일 프리셋을 ~/.gjc/agent/models.y
 안전하게 설치한다. gjc 플러그인 매니페스트에는 profiles 필드가 없어 자동 주입이
 불가하므로, gjc가 직접 병합한다.
 
-## 프리셋 (v0.8)
+## 프리셋 (v0.9)
 
 | 프리셋 | 성격 | 요약 |
 | --- | --- | --- |
 | `grok` | 세션 시작 기본 · 품질 중심 범용 | default=grok-build/grok-4.5:high, executor=terra:xhigh, planner=sol:xhigh, architect/critic=opus(:high/:xhigh). interview/ralplan/ultragoal 겸용 |
-| `sol` | 빠른 대화·소형 작업 | default=sol:low, 역할 위임 좌석은 grok과 동일 |
+| `sol` | 빠른 대화·소형 작업 · 빠른 ralplan | default=sol:low, 기획 좌석도 저지연: planner=sol:high, architect=opus:medium, critic=opus:high (executor는 벤치 근거 terra:xhigh 유지) |
 | `codex` | openai-codex 단일 로그인 전용 | default=sol:medium, executor=terra:xhigh, planner=sol:high, architect=sol:xhigh, critic=sol:max. 상류 codex-pro 골격 + 벤치 근거 executor |
 | `fable-codex` | 안전-크리티컬 세션 | default=claude-fable-5:high(적대적 감사 성향 본체), 위임 좌석 4개는 `codex`와 동일. Fable 본체 + 교차 패밀리 실행/비평 |
 
@@ -46,7 +46,7 @@ description: 멀티벤더 모델 프로파일 프리셋을 ~/.gjc/agent/models.y
 ```
 gjc --mpreset grok                   # 품질 중심 범용
 gjc --mpreset grok --default         # 시작 기본값 고정(config.yml)
-gjc --mpreset sol                    # 빠른 대화·소형 작업
+gjc --mpreset sol                    # 빠른 대화·소형 작업·빠른 ralplan
 gjc --mpreset codex                  # openai-codex 단일 로그인 전용
 gjc --mpreset fable-codex            # Fable 5 본체 + codex 위임 좌석 (안전-크리티컬)
 

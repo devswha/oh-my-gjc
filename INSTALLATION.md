@@ -15,7 +15,7 @@ Do exactly the following in a terminal. Do not improvise other steps.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
-One install brings the whole v0.15.0 suite (9 skills + 14 commands: `/omg` + 13 `/omg:*`). There are no separate/optional plugins to add.
+One install brings the whole v0.15.1 suite (9 skills + 14 commands: `/omg` + 13 `/omg:*`). There are no separate/optional plugins to add.
 
 ## Manual path (equivalent, if curl|bash is disallowed)
 ```sh
