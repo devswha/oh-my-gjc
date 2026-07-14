@@ -1,8 +1,9 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치하면 스킬 8개 + 커맨드 13개가 전부 들어오고,
-모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다. 전제조건이 있는 기능(ChatGPT 구독+
-크로미움 — insane-review)도 함께 설치되며, 없으면 실행 시 자기진단해
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.15.0 한 번 설치로 스킬 9개 + 커맨드 14개
+(`/omg` + `/omg:*` 13개)가 전부 들어오고, 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다.
+전제조건이 있는 기능(ChatGPT 구독+크로미움 — insane-review; 설치·로그인된 Codex+
+LazyCodex/OMO — lazycodex-gjc)도 함께 설치되며, 없으면 실행 시 자기진단해
 친절히 멈춘다 — 설치는 가볍고 기능이 스스로 안내한다.
 
 ## Quick Start
@@ -19,11 +20,11 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 /omg
 ```
 
-## 들어있는 것 (스킬 8 · 커맨드 13)
+## 들어있는 것 (스킬 9 · 커맨드 14)
 
 ### 스킬 (자연어 트리거 자동활성화)
 `easy-answer` · `gate-briefing` · `plain-layer` · `multivendor-presets` · `branch-flow` · `extragoal`
-· `insane-review` · `gjc-bugwatch`
+· `insane-review` · `gjc-bugwatch` · `lazycodex-gjc`
 
 ### 커맨드
 
@@ -40,8 +41,18 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 | `/omg:branchflow-always [on\|off\|status]` | 레포 dev/main 브랜치 규율 (레포 AGENTS.md + docs/WORKFLOW.md) | — |
 | `/omg:insane-review` | GPT-5.5 Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
 | `/omg:bugwatch-scan` | gjc 자체 버그 수집 (초안만) | — |
+| `/omg:lazycodex-gjc "<작업>"` | 격리 외부 `codex exec --ephemeral` 작업자 (기본 read-only) | 설치·로그인된 Codex + LazyCodex/OMO |
+
 > 전제가 붙은 커맨드는 설치는 이미 됐고, 그 도구가 있어야 실제 동작한다. 없으면 실행 시
 > 안내하고 멈춘다. 예전 개별 명령들은 폐기됐다 — 구 이름은 더는 설치되지 않는다(0.8.0의 한-릴리스 안내 스텁은 0.8.1에서 삭제).
+
+### `lazycodex-gjc` 격리 경계
+
+`lazycodex-gjc`는 제거된 옛 `lazycodex` setup/work 표면을 되살리지 않는다. 이미 설치된
+Codex CLI + LazyCodex/OMO를 외부 `codex exec --ephemeral`로 한 번 동기 실행한다. 기본은
+`read-only`이고, 이번 요청에서 대상 저장소 수정을 명시적으로 허용했을 때만 그 저장소에
+`workspace-write`를 쓴다. child GJC 세션·task를 만들지 않으며 GJC config·자격증명을 변경하거나
+외부 작업자에게 복사하지 않는다. Codex/LazyCodex/OMO 설치·업데이트·로그인도 자동화하지 않는다.
 
 ### 모델 프리셋
 

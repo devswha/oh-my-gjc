@@ -8,6 +8,7 @@ const pluginRoot = join(import.meta.dir, "..");
 const installerPath = join(pluginRoot, "bin/install-skill.sh");
 const skillPath = join(pluginRoot, "skills/lazycodex-gjc/SKILL.md");
 const commandPath = join(pluginRoot, "templates/lazycodex-gjc.md");
+const provenancePath = join(pluginRoot, "../../ops/verify/record_provenance.py");
 const sandboxes: string[] = [];
 
 type Scope = "user" | "project";
@@ -73,6 +74,21 @@ afterEach(() => {
 });
 
 describe("lazycodex-gjc skill and command contract", () => {
+  test("pins every executable bridge surface in release provenance", () => {
+    const match = read(provenancePath).match(/^MARKERS = \[([\s\S]*?)^\]/m);
+    if (match === null || match[1] === undefined) throw new TypeError("missing provenance MARKERS");
+    const markers = [...match[1].matchAll(/"([^"]+)"/g)]
+      .map((marker) => marker[1] ?? "")
+      .filter((marker) => marker.includes("lazycodex-gjc"))
+      .sort();
+
+    expect(markers).toEqual([
+      "bin/lazycodex-gjc.mjs",
+      "skills/lazycodex-gjc/SKILL.md",
+      "templates/lazycodex-gjc.md",
+    ]);
+  });
+
   test("exposes one native bridge with safe synchronous task transport", () => {
     const skill = read(skillPath);
     const command = read(commandPath);

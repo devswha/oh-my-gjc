@@ -15,10 +15,13 @@ import argparse, hashlib, json, os, sys
 # candidate stores the plugin under plugins/oh-my-gjc/; cache root IS the plugin root.
 MARKERS = [
     "bin/install-skill.sh",
+    "bin/lazycodex-gjc.mjs",
     ".claude-plugin/plugin.json",
     "templates/omg.md",
     "templates/setup.md",
+    "templates/lazycodex-gjc.md",
     "skills/insane-review/SKILL.md",
+    "skills/lazycodex-gjc/SKILL.md",
     "references/presets.yml",
     "skills/plain-layer/SKILL.md",
 ]
