@@ -15,7 +15,7 @@ Do exactly the following in a terminal. Do not improvise other steps.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
-One install brings the whole v0.16.0 suite (9 skills + 14 commands: `/omg` + 13 `/omg:*`). There are no separate/optional plugins to add.
+One install brings the whole v0.17.0 suite (10 skills + 15 commands: `/omg` + 14 `/omg:*`). There are no separate/optional plugins to add.
 
 ## Manual path (equivalent, if curl|bash is disallowed)
 ```sh
@@ -34,8 +34,9 @@ The self-hosted web UI now lives in [`devswha/claudecodeui`'s canonical SELF-HOS
 ## Verify (report these)
 ```sh
 gjc plugin list                                   # oh-my-gjc@oh-my-gjc listed
-ls ~/.gjc/agent/skills/                            # 9 skills (easy-answer, gate-briefing, plain-layer, lazycodex-gjc, …)
-ls ~/.gjc/agent/commands/ | grep '^omg'            # 14 commands: omg.md + 13 omg:<name>.md
+ls ~/.gjc/agent/skills/                            # 10 skills (easy-answer, gate-briefing, plain-layer, release-gate, lazycodex-gjc, …)
+ls ~/.gjc/agent/commands/ | grep '^omg'            # 15 commands: omg.md + 14 omg:<name>.md
+grep -A1 '^  sol:' ~/.gjc/agent/models.yml          # sol preset auto-merged at install (custom picker entry)
 ls -l ~/.gjc/agent/runtimes/lazycodex-gjc/binding    # mode-0600 runtime binding (only when Codex CLI + systemd + Codex home were present at install; otherwise the bridge is skipped fail-closed)
 ```
 

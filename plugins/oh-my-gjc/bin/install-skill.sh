@@ -43,9 +43,9 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # ── EXPECTED manifest (the single source of truth for a complete install) ────────────
 EXPECTED_SKILLS=(easy-answer gate-briefing multivendor-presets branch-flow extragoal \
-                 insane-review gjc-bugwatch plain-layer lazycodex-gjc)
+                 insane-review gjc-bugwatch plain-layer lazycodex-gjc release-gate)
 EXPECTED_COMMANDS=(omg setup easy easy-always gate gate-always presets fable branchflow-always \
-                   insane-review bugwatch-scan worktree plain lazycodex-gjc)
+                   insane-review bugwatch-scan worktree plain lazycodex-gjc release)
 EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs)
 # Capabilities REMOVED (관제탑 발주, 하코 승인). 0.11.0: codex-deepwork(실사용 0회, lazycodex와 중복) +
 # codex-app 짝(대상 앱 빌드 트랙 07-03 아카이브; Pro 리뷰는 insane-review 전담). 0.12.0: codex-cli-ask·
@@ -220,6 +220,115 @@ cleanup_removed() { # $1=scope — sweep only native files of capabilities remov
   if [ "$removed" -gt 0 ]; then echo "✓ cleaned $removed removed-capability native file(s) (0.11.0–0.12.0 removals; gajae-app ownership transfer 0.14.0)"; fi
 }
 
+# ── Install-time preset merge (v0.17.0, 하코 지시 2026-07-14) ──────────────────────────
+# A fresh machine must see the custom `sol` profile in the model-preset picker right after
+# install — without running /omg:presets first. Same merge safety contract as the command:
+# name-scoped (ONLY the `sol` block), backup first, never touch other profiles or top-level
+# keys, validate against the live gjc profile registry, restore the backup on ANY failure.
+# NON-FATAL by construction (v0.17.0 cross-review r1): the whole body runs in a SUBSHELL
+# with errexit/pipefail disabled, every step self-checks, the merged result is built in a
+# temp file and moved into place in one write, and the registry probe is time-bounded —
+# no failure in here may abort or hang the installer (the suite install is already
+# complete when this runs). Consent-gated retired-preset cleanup stays in /omg:presets
+# ONLY — this function never deletes anything.
+merge_sol_preset() ( # user scope only — models.yml is user-global; body = subshell
+  set +e +u +o pipefail
+  warn() { echo "! $*" >&2; }
+  src="$PLUGIN_ROOT/references/presets.yml"
+  dst="$HOME/.gjc/agent/models.yml"
+  [ -f "$src" ] || { warn "preset merge skipped: references/presets.yml missing — run /omg:presets later"; return 0; }
+  command -v gjc >/dev/null 2>&1 || { warn "preset merge skipped: gjc not on PATH — run /omg:presets later"; return 0; }
+  # canonical sol block = everything below `profiles:` (the canonical source is sol-only since v0.10)
+  block="$(awk 'f; /^profiles:$/ {f=1}' "$src" 2>/dev/null)"
+  extract_rc=$?
+  [ "$extract_rc" -eq 0 ] && [ -n "$block" ] || { warn "preset merge skipped: could not extract sol block — run /omg:presets later"; return 0; }
+  mkdir -p "$(dirname "$dst")" 2>/dev/null || { warn "preset merge skipped: cannot create $(dirname "$dst")"; return 0; }
+  # temp lives NEXT TO the target so the final `mv` is a same-filesystem atomic rename —
+  # the live file is either the old content or the complete new content, never partial.
+  tmp="$(mktemp "$(dirname "$dst")/.models.yml.omg.XXXXXX" 2>/dev/null)" || { warn "preset merge skipped: mktemp failed in $(dirname "$dst")"; return 0; }
+  bak=""
+  if [ -f "$dst" ]; then
+    bak="$dst.bak-$(date +%s).$$"    # PID suffix: same-second reruns must not clobber a backup
+    cp "$dst" "$bak" 2>/dev/null || { warn "preset merge skipped: backup failed"; rm -f "$tmp"; return 0; }
+    if awk 'BEGIN{f=0} /^[^ \t#]/{inprof = ($0 ~ /^profiles:[ \t]*(#.*)?$/)} inprof && /^  sol:[ \t]*(#.*)?$/{f=1} END{exit !f}' "$dst" 2>/dev/null; then
+      # REPLACE the FIRST sol block INSIDE the `profiles:` section only (r3 finding 1 —
+      # a `sol:` key nested under another top-level section like modelBindings must pass
+      # through untouched). Boundary rules (r2 finding 2):
+      # - comments contiguously ABOVE `  sol:` document sol by YAML convention → replaced
+      #   with the canonical block (which carries its own docs);
+      # - INSIDE the block, 2-space comments and blank lines are held in a pending buffer:
+      #   if 4+-space body follows they were internal (dropped with the old block); if a
+      #   key/top-level line follows they belong to the NEXT section and are flushed intact.
+      # Other profiles, their comments, and top-level keys pass through untouched.
+      OMG_SOL_BLOCK="$block" awk '
+        function flushpend() { for (j = 1; j <= p; j++) print pend[j]; p = 0 }
+        function flushbuf()  { for (j = 1; j <= n; j++) print buf[j];  n = 0 }
+        BEGIN { n = 0; p = 0; insol = 0; inprof = 0; done = 0 }
+        {
+          if (insol) {
+            if ($0 ~ /^    /)                     { p = 0; next }
+            if ($0 ~ /^[ \t]*$/ || $0 ~ /^  #/)   { pend[++p] = $0; next }
+            insol = 0; flushpend()
+          }
+          if ($0 ~ /^[^ \t#]/) { inprof = ($0 ~ /^profiles:[ \t]*(#.*)?$/) }
+          if (inprof && $0 ~ /^  #/) { buf[++n] = $0; next }
+          if (inprof && !done && $0 ~ /^  sol:[ \t]*(#.*)?$/) { n = 0; print ENVIRON["OMG_SOL_BLOCK"]; insol = 1; done = 1; next }
+          flushbuf(); print
+        }
+        END { if (insol) insol = 0; flushpend(); flushbuf() }
+      ' "$dst" > "$tmp" 2>/dev/null || { warn "preset merge skipped: block replace failed"; rm -f "$tmp"; return 0; }
+    elif grep -q '^profiles:' "$dst"; then
+      # APPEND: insert the sol block right AFTER the `profiles:` line, so a later
+      # top-level key (modelBindings, providers, …) can never swallow it.
+      OMG_SOL_BLOCK="$block" awk '
+        { print }
+        /^profiles:[ \t]*(#.*)?$/ && !done { print ""; print ENVIRON["OMG_SOL_BLOCK"]; done = 1 }
+      ' "$dst" > "$tmp" 2>/dev/null || { warn "preset merge skipped: append failed"; rm -f "$tmp"; return 0; }
+    else
+      { cat "$dst" && printf '\nprofiles:\n\n%s\n' "$block"; } > "$tmp" 2>/dev/null || { warn "preset merge skipped: build failed"; rm -f "$tmp"; return 0; }
+    fi
+  else
+    printf 'profiles:\n\n%s\n' "$block" > "$tmp" 2>/dev/null || { warn "preset merge skipped: build failed"; rm -f "$tmp"; return 0; }
+  fi
+  grep -Eq '^  sol:' "$tmp" 2>/dev/null || { warn "preset merge skipped: merge produced no sol block"; rm -f "$tmp"; return 0; }
+  # single atomic write — no cp fallback: if rename fails the live file stays untouched
+  mv "$tmp" "$dst" 2>/dev/null || { warn "preset merge skipped: cannot write $dst"; rm -f "$tmp"; return 0; }
+  # Validate against the live registry, ALWAYS time-bounded (r2 finding 1): prefer
+  # coreutils `timeout`; otherwise a bash watchdog kills the probe after the budget.
+  # The probe fails fast (no auth/network) and its error lists every registered profile —
+  # `sol` must be among them, meaning the file parses AND the profile registered.
+  # (word-safe match: avoid `fable-sol` false hits)
+  probe_budget="${OMG_PROBE_TIMEOUT:-60}"
+  case "$probe_budget" in ''|0|*[!0-9]*) probe_budget=60 ;; esac   # positive integer only — 0/garbage must not disable the bound
+  probe_out="$(mktemp 2>/dev/null)" || probe_out="$tmp.probe"
+  if command -v timeout >/dev/null 2>&1 && timeout -k 5 1 true 2>/dev/null; then
+    # -k: a probe that ignores TERM still gets KILL 5s later
+    timeout -k 5 "$probe_budget" env GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" > "$probe_out" 2>&1
+  elif command -v timeout >/dev/null 2>&1; then
+    timeout "$probe_budget" env GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" > "$probe_out" 2>&1
+  else
+    GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" > "$probe_out" 2>&1 &
+    probe_pid=$!
+    waited=0
+    while kill -0 "$probe_pid" 2>/dev/null && [ "$waited" -lt "$probe_budget" ]; do sleep 1; waited=$((waited+1)); done
+    kill -9 "$probe_pid" 2>/dev/null
+    wait "$probe_pid" 2>/dev/null
+  fi
+  if grep -qE '[:,] sol(,|$)' "$probe_out" 2>/dev/null; then
+    rm -f "$probe_out"
+    echo "✓ preset  (user): merged \`sol\` into $dst${bak:+ (backup: $bak)}"
+  else
+    rm -f "$probe_out"
+    if [ -n "$bak" ]; then
+      cp "$bak" "$dst" 2>/dev/null || { warn "preset merge ROLLBACK FAILED — restore manually: cp $bak $dst"; return 0; }
+    else
+      rm -f "$dst" 2>/dev/null || warn "preset merge cleanup failed — remove $dst manually"
+    fi
+    warn "preset merge rolled back (registry validation failed or probe timed out) — run /omg:presets manually"
+  fi
+  return 0
+)
+
 MISSING=()
 
 install_skill() { # $1=name $2=scope
@@ -302,6 +411,7 @@ case "$mode" in
       cleanup_legacy_commands "$mode"
       cleanup_removed "$mode"
       report_missing
+      if [ "$mode" = "user" ]; then merge_sol_preset; fi
     else
       if [ "$target" = "lazycodex-gjc" ]; then
         [ -f "$PLUGIN_ROOT/bin/lazycodex-gjc.mjs" ] && [ ! -L "$PLUGIN_ROOT/bin/lazycodex-gjc.mjs" ] || MISSING+=("bin/lazycodex-gjc.mjs")
@@ -312,6 +422,7 @@ case "$mode" in
       if [ -f "$PLUGIN_ROOT/templates/$target.md" ]; then install_command "$target" "$mode"; fi
       if [ "$target" = "lazycodex-gjc" ] && [ "$mode" = "user" ]; then install_runtime_binding; fi
       report_missing
+      if [ "$target" = "multivendor-presets" ] && [ "$mode" = "user" ]; then merge_sol_preset; fi
     fi
     if [ "$mode" = "user" ]; then
       echo "  → skills auto-activate by trigger words; commands are /omg:<name>. Type /omg for the catalog."

@@ -150,7 +150,7 @@ describe("install-skill.sh manifest includes plain-layer", () => {
 });
 
 describe("isolated HOME install/uninstall", () => {
-  test("all install copies 9 skills / 14 omg commands including plain", () => {
+  test("all install copies 10 skills / 15 omg commands including plain", () => {
     const home = mkdtempSync(join(tmpdir(), "omg-plain-"));
     const env = { ...process.env, HOME: home, CODEX_HOME: process.env.CODEX_HOME ?? join(process.env.HOME ?? "", ".codex") };
     try {
@@ -161,13 +161,13 @@ describe("isolated HOME install/uninstall", () => {
       const skills = spawnSync("bash", ["-lc", `ls -1 "${home}/.gjc/agent/skills" | wc -l`], {
         encoding: "utf8",
       });
-      expect(Number(skills.stdout.trim())).toBe(9);
+      expect(Number(skills.stdout.trim())).toBe(10);
       const cmds = spawnSync(
         "bash",
         ["-lc", `ls -1 "${home}/.gjc/agent/commands" | grep -E '^(omg\\.md|omg:)' | wc -l`],
         { encoding: "utf8" },
       );
-      expect(Number(cmds.stdout.trim())).toBe(14);
+      expect(Number(cmds.stdout.trim())).toBe(15);
 
       const u = spawnSync("bash", [installSh, "all", "uninstall", "user"], { env, encoding: "utf8" });
       expect(u.status).toBe(0);

@@ -21,14 +21,15 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 - `/omg:insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰. · 전제: ChatGPT 구독 + 크로미움 로그인
 - `/omg:bugwatch-scan` — gjc 자체 버그 수집(초안만).
 - `/omg:lazycodex-gjc "<작업>"` — 이미 설치된 Codex+LazyCodex 외부 작업자(기본 read-only, GJC child 세션 없음). · 전제: Codex+호환 OMO+user-scope runner receipt
+- `/omg:release [<버전> [<요약>]]` — 3게이트 릴리스: 검증 → fresh-context 교차리뷰(VERDICT, fail-closed) → 인간 승인(자기 승인 금지) → 머지·태그·발행 + 증거 문서.
 
 > **전제**가 붙은 커맨드는 설치는 이미 됐고, 그 도구가 있어야 실제로 동작한다. 없으면
 > 실행 시 친절히 안내하고 안전하게 멈춘다(설치를 깨뜨리지 않는다).
 > 예전 개별 명령들은 폐기·제거됐다(0.8.1에서 안내 스텁까지 삭제·설치 시 자동 청소) — 지금 있는 이름은 위의 `/omg:*`가 전부다.
 
-## 스킬 (9 · 트리거로 자동 활성)
+## 스킬 (10 · 트리거로 자동 활성)
 - `easy-answer` · `gate-briefing` · `plain-layer`(쉬운 기획) · `multivendor-presets` · `branch-flow` · `extragoal`(외부 최종 리뷰 게이트)
-- `insane-review` · `gjc-bugwatch` · `lazycodex-gjc`
+- `insane-review` · `gjc-bugwatch` · `lazycodex-gjc` · `release-gate`(3게이트 릴리스)
 
 ## 문서
 - 설치·자세히: 저장소 README. 원샷 설치: `install.sh`(curl 한 줄) / 에이전트용 `INSTALLATION.md`.

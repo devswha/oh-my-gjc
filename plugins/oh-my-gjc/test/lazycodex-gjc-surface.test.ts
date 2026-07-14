@@ -187,7 +187,7 @@ describe("lazycodex-gjc skill and command contract", () => {
 });
 
 describe("lazycodex-gjc isolated native install", () => {
-  test.each(["user", "project"] as const)("installs exactly 9 skills and 14 commands in %s scope", (scope) => {
+  test.each(["user", "project"] as const)("installs exactly 10 skills and 15 commands in %s scope", (scope) => {
     const f = fixture(scope);
     writeSentinel(join(f.nativeRoot, "skills/sentinel/SKILL.md"), "keep skill");
     writeSentinel(join(f.nativeRoot, "commands/sentinel.md"), "keep command");
@@ -200,8 +200,8 @@ describe("lazycodex-gjc isolated native install", () => {
     expect(result.status, result.stderr).toBe(0);
     const expectedSkills = parseManifest("EXPECTED_SKILLS");
     const expectedCommands = ownedCommands();
-    expect(expectedSkills).toHaveLength(9);
-    expect(expectedCommands).toHaveLength(14);
+    expect(expectedSkills).toHaveLength(10);
+    expect(expectedCommands).toHaveLength(15);
     expect(expectedSkills).toContain("lazycodex-gjc");
     expect(expectedCommands).toContain("omg:lazycodex-gjc.md");
     expect(readdirSync(join(f.nativeRoot, "skills")).sort()).toEqual([...expectedSkills, "sentinel"].sort());

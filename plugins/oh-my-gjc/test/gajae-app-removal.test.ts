@@ -37,8 +37,8 @@ describe("gajae-app removal manifest", () => {
     const expectedCommands = parseManifest("EXPECTED_COMMANDS");
     const removedSkills = parseManifest("REMOVED_SKILLS");
     const removedCommands = parseManifest("REMOVED_COMMANDS");
-    expect(expectedSkills).toHaveLength(9);
-    expect(expectedCommands).toHaveLength(14);
+    expect(expectedSkills).toHaveLength(10);
+    expect(expectedCommands).toHaveLength(15);
     expect(expectedSkills).not.toContain("gajae-app");
     expect(expectedCommands).not.toContain("gajae-app");
 
@@ -52,6 +52,7 @@ describe("gajae-app removal manifest", () => {
       "gjc-bugwatch",
       "plain-layer",
       "lazycodex-gjc",
+      "release-gate",
     ]);
     expect(expectedCommands).toEqual([
       "omg",
@@ -68,6 +69,7 @@ describe("gajae-app removal manifest", () => {
       "worktree",
       "plain",
       "lazycodex-gjc",
+      "release",
     ]);
     expect(removedSkills).toContain("gajae-app");
     expect(removedCommands).toContain("gajae-app");

@@ -29,7 +29,7 @@ gjc plugin install oh-my-gjc@oh-my-gjc
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
 
-v0.16.0 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+v0.17.0 한 번 설치로 스킬 10개 + 커맨드 15개(`/omg` + `/omg:*` 14개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -42,6 +42,7 @@ v0.16.0 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)
 - `multivendor-presets` — 커스텀 프리셋 `sol`(전 구간 저지연, 기본 권장) 병합 + 품질/비상/안전 레인은 gjc 빌트인 안내
 - `branch-flow` — dev 통합 / main 릴리스 브랜치 규칙 + git worktree 병렬 세션(`/omg:worktree`) · 상시 온·오프 가능(`/omg:branchflow-always`)
 - `extragoal` — 외부 최종 리뷰 게이트(무공유·교차패밀리 리뷰 후 머지)
+- `release-gate` — 3게이트 릴리스 절차(검증 → 교차리뷰 VERDICT → 인간 승인, 자기 승인 금지) (`/omg:release`)
 - `lazycodex-gjc` — 설치된 Codex+LazyCodex/OMO를 격리 외부 작업자로 실행(`/omg:lazycodex-gjc`) · 기본 읽기 전용
 - `/omg:fable` — 안전-크리티컬 코드 적대적 감사(돈·데이터·보안 코드) · **Fable 5 모델 필요**
 - `insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰 · **ChatGPT 구독 + 크로미움 로그인 필요**
@@ -89,7 +90,7 @@ v0.16.0 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)
 - **`sol` (커스텀, 유일)** — 전 구간 저지연: default `sol:low`, 기획 좌석도 빠름(planner `sol:high` · architect `opus:medium` · critic `opus:high`), executor는 벤치 근거 `terra:xhigh`. 실측(n=1): 신형은 수정 1회(stage 2)로 8:24에 합의 완료·플랜 산출, 구형 xhigh 좌석은 수정 3회(stage 4)를 돌고 17:18 시점에도 합의 미완 — **2배 이상 빠름** ([증거](./docs/verification/sol-v09-ralplan-bench-2026-07-14.md)).
 - 나머지 용도는 **gjc 빌트인**을 그대로 쓴다(병합 불필요, gjc 업그레이드 시 자동 최신화): 품질 랄플랜 `opus-codex` · openai-codex 단일 로그인 비상 `codex-medium`/`codex-pro` · 안전-크리티컬 `fable-opus-codex`.
 - 기존 설정은 안 건드리고 `sol`만 병합한다(넣기 전 백업). 옛 프리셋 정리는 동의 후.
-- 쓰기: `/omg:presets` → `gjc --mpreset sol --default`(기본 고정 권장). 품질이 필요하면 그 세션만 `gjc --mpreset opus-codex`.
+- 쓰기: **설치 시 `sol`이 자동 병합**된다(백업·검증·실패 시 복구, v0.17.0+). 재병합/정리는 `/omg:presets` → `gjc --mpreset sol --default`(기본 고정 권장). 품질이 필요하면 그 세션만 `gjc --mpreset opus-codex`.
 - 원문: [`plugins/oh-my-gjc/skills/multivendor-presets/SKILL.md`](./plugins/oh-my-gjc/skills/multivendor-presets/SKILL.md)
 
 ### `extragoal` — 외부 최종 리뷰 게이트

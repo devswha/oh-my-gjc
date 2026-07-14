@@ -1,7 +1,7 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.16.0 한 번 설치로 스킬 9개 + 커맨드 14개
-(`/omg` + `/omg:*` 13개)가 전부 들어오고, 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다.
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.17.0 한 번 설치로 스킬 10개 + 커맨드 15개
+(`/omg` + `/omg:*` 14개)가 전부 들어오고, 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다.
 전제조건이 있는 기능(ChatGPT 구독+크로미움 — insane-review; 설치·로그인된 Codex+
 LazyCodex/OMO — lazycodex-gjc)도 함께 설치되며, 없으면 실행 시 자기진단해
 친절히 멈춘다 — 설치는 가볍고 기능이 스스로 안내한다.
@@ -20,11 +20,11 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 /omg
 ```
 
-## 들어있는 것 (스킬 9 · 커맨드 14)
+## 들어있는 것 (스킬 10 · 커맨드 15)
 
 ### 스킬 (자연어 트리거 자동활성화)
 `easy-answer` · `gate-briefing` · `plain-layer` · `multivendor-presets` · `branch-flow` · `extragoal`
-· `insane-review` · `gjc-bugwatch` · `lazycodex-gjc`
+· `insane-review` · `gjc-bugwatch` · `lazycodex-gjc` · `release-gate`
 
 ### 커맨드
 
@@ -41,6 +41,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 | `/omg:branchflow-always [on\|off\|status]` | 레포 dev/main 브랜치 규율 (레포 AGENTS.md + docs/WORKFLOW.md) | — |
 | `/omg:insane-review` | GPT-5.6 Sol Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
 | `/omg:bugwatch-scan` | gjc 자체 버그 수집 (초안만) | — |
+| `/omg:release [<버전> [<요약>]]` | 3게이트 릴리스 (검증 → 교차리뷰 VERDICT → 인간 승인 → 발행+증거) | git |
 | `/omg:lazycodex-gjc "<작업>"` | 격리 외부 `codex exec --ephemeral` 작업자 (기본 read-only) | 설치·로그인된 Codex + LazyCodex/OMO |
 
 > 전제가 붙은 커맨드는 설치는 이미 됐고, 그 도구가 있어야 실제 동작한다. 없으면 실행 시
@@ -69,7 +70,7 @@ helper, private tmp만 노출한다. web/MCP/apps/hooks/browser egress와 child 
 | 비상 단일 로그인 | `codex-medium` / `codex-pro` | gjc 빌트인 | openai-codex 하나로 전 좌석 |
 | 안전-크리티컬 | `fable-opus-codex` | gjc 빌트인 | Fable 5 본체 |
 
-활성화: `gjc --mpreset sol --default`(기본 고정 권장), 필요 세션만 `gjc --mpreset opus-codex` 등. 커스텀 정답지: [`references/presets.yml`](./references/presets.yml) — 빌트인은 병합 없이 바로 활성화된다.
+활성화: **네이티브 설치 시 `sol`이 models.yml에 자동 병합**된다(이름 단위·백업·레지스트리 검증·실패 시 복구; v0.17.0+). `gjc --mpreset sol --default`(기본 고정 권장), 필요 세션만 `gjc --mpreset opus-codex` 등. 커스텀 정답지: [`references/presets.yml`](./references/presets.yml) — 빌트인은 병합 없이 바로 활성화된다.
 
 ## 세마포어 구조
 
