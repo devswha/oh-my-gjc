@@ -54,25 +54,38 @@ Rules:
 The hazard: two sessions sharing **one working directory** or **one branch**
 clobber each other's uncommitted changes and interleave commits. The fix is
 **git worktrees** — separate folders, separate branches, one shared `.git`.
+In the oh-my-gjc suite, `/omg:worktree new <slug> [type] | list | clean` automates
+exactly the contract below.
 
 ```bash
 # From the primary checkout, spin up an isolated workspace for a parallel task:
-git worktree add ../<repo>-featureX -b feat/featureX dev
-#   → work in ../<repo>-featureX on feat/featureX, fully isolated on disk
+git fetch origin
+git worktree add ../<repo>-<slug>-wt -b <type>/<slug> origin/dev
+#   → work in ../<repo>-<slug>-wt on <type>/<slug>, isolated on disk, off origin/dev
 
-git worktree list          # see all active worktrees
-git worktree remove ../<repo>-featureX   # tear down when done (commit/push first)
+git worktree list                          # see all active worktrees
+git worktree remove ../<repo>-<slug>-wt    # tear down when done (commit/push first)
+git branch -d <type>/<slug> && git worktree prune
 ```
 
 Rules for parallel work:
-1. **One worktree + one branch per parallel session.** Never run two sessions in
-   the same directory on the same branch.
-2. **Branch each parallel effort from the latest `dev`.** For long-running work,
-   periodically `git merge dev` (or rebase) to limit divergence.
-3. **Split scope by files.** Parallel efforts touching disjoint file sets almost
-   never conflict; overlapping file sets conflict at the `dev` merge.
-4. **`dev` is the single convergence point.** Resolve conflicts once, when each
-   branch merges into `dev`.
+1. **One worktree + one branch per parallel session**, named `../<repo>-<slug>-wt`
+   (repo's sibling dir, `-wt` suffix) on branch `<type>/<slug>`. Never two sessions in
+   the same directory on the same branch, and never nest a worktree inside the repo
+   (it pollutes build/search/watchers).
+2. **Branch from `origin/dev`** (the remote is truth; a stale local `dev` is still safe
+   and your current checkout is untouched). No remote `dev` → local `dev`; no `dev` at
+   all → branch from `main` and say so. For long-running work, periodically
+   `git merge dev` to limit divergence.
+3. **Split scope by files.** Disjoint file sets almost never conflict; overlaps conflict
+   at the `dev` merge — the single convergence point.
+4. **Clean only fully-done worktrees.** Remove one only when all three hold: its branch
+   is **merged into `dev`** (`git branch --merged dev`), the tree is **clean**, and it is
+   **not locked / not the main checkout**. Never self-run `git worktree remove --force`
+   or `git branch -D` — only when the user explicitly names a worktree to force-delete.
+   A dirty worktree is another session's in-flight work; leave it with a stated reason.
+   A stale entry whose folder was already deleted by hand is cleaned only by
+   `git worktree prune`.
 
 ---
 
@@ -136,7 +149,7 @@ git switch dev && git merge main           # keep dev in sync after the release
 | Task | Command |
 |---|---|
 | New work | `git switch dev && git switch -c feat/x` (or `fix/`, `chore/`, `docs/`) |
-| Parallel session | `git worktree add ../repo-x -b feat/x dev` |
+| Parallel session | `git worktree add ../<repo>-<slug>-wt -b <type>/<slug> origin/dev` (or `/omg:worktree new <slug>`) |
 | Open PR into dev | `gh pr create --base dev` |
 | Release | version bump → `gh pr create --base main --head dev` → merge → tag |
 | Keep dev synced | `git switch dev && git merge main` |
