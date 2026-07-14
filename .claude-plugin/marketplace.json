@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "oh-my-gajaecode — the oh-my single-plugin suite for Gajae Code (gjc). One install, one native surface: 9 skills + 14 commands (/omg + 13 /omg:*).",
-    "version": "0.15.0"
+    "version": "0.15.1"
   },
   "plugins": [
     {

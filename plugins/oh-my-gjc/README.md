@@ -1,6 +1,6 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.15.0 한 번 설치로 스킬 9개 + 커맨드 14개
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.15.1 한 번 설치로 스킬 9개 + 커맨드 14개
 (`/omg` + `/omg:*` 13개)가 전부 들어오고, 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다.
 전제조건이 있는 기능(ChatGPT 구독+크로미움 — insane-review; 설치·로그인된 Codex+
 LazyCodex/OMO — lazycodex-gjc)도 함께 설치되며, 없으면 실행 시 자기진단해
@@ -65,7 +65,7 @@ helper, private tmp만 노출한다. web/MCP/apps/hooks/browser egress와 child 
 | 프리셋 | 성격 | 요약 |
 |---|---|---|
 | `grok` | 세션 시작 기본 · 품질 중심 | default=grok-build/grok-4.5:high · executor=terra:xhigh · planner=sol:xhigh · architect/critic=opus |
-| `sol` | 빠른 대화·소형 작업 · 빠른 ralplan | default=sol:low · planner=sol:high · architect=opus:medium · critic=opus:high · executor=terra:xhigh (실측: 실전 ralplan 2.06× 단축) |
+| `sol` | 빠른 대화·소형 작업 · 빠른 ralplan | default=sol:low · planner=sol:high · architect=opus:medium · critic=opus:high · executor=terra:xhigh (실측 n=1: 실전 ralplan 2배 이상 단축) |
 | `codex` | openai-codex 단일 로그인 전용 | default=sol:medium · executor=terra:xhigh · planner=sol:high · architect=sol:xhigh · critic=sol:max |
 | `fable-codex` | 안전-크리티컬 세션 | default=claude-fable-5:high(적대적 감사 성향 본체) · 위임 좌석 4개는 `codex`와 동일 |
 
