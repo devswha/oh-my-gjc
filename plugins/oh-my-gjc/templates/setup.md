@@ -65,6 +65,7 @@ bash "${OMG_ROOT}bin/install-skill.sh" all
 | 감지 | 확인 | 바로 쓸 수 있는 커맨드 |
 |---|---|---|
 | Chrome + ChatGPT | 크롬 프로필 존재 | `/omg:insane-review` |
+| Codex + LazyCodex | `codex`가 PATH에 있고 호환 OMO `$omo:ultrawork` + user-scope runner receipt 설치됨 | `/omg:lazycodex-gjc` |
 
 ## Step 5 — 상시 모드 안내 (선택)
 

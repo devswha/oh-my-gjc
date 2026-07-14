@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-insane-review — repomix 패킹 → 구독 ChatGPT(웹) GPT-5.5 Pro 투입 → 분석 회수 (API 비용 0)
+insane-review — repomix 패킹 → 구독 ChatGPT(웹) GPT-5.6 Sol Pro 투입 → 분석 회수 (API 비용 0)
 
 흐름:
   1) 분석 대상 폴더를 repomix로 단일 파일 패킹 (--compress, secretlint 기본 on)
@@ -9,7 +9,7 @@ insane-review — repomix 패킹 → 구독 ChatGPT(웹) GPT-5.5 Pro 투입 → 
   4) 턴 단위로 응답 완료를 판정(stop-button 사라짐 + copy 버튼 등장 + 텍스트 안정) → 회수
   5) 응답을 .md로 원자적 저장
 
-v2 (2026-06-20): GPT-5.5 Pro 리뷰 반영 — 턴-스코프 판정, 모델 검증, fail-closed CDP/로그인,
+v2 (2026-06-20): GPT-5.6 Sol Pro 리뷰 반영 — 턴-스코프 판정, 모델 검증, fail-closed CDP/로그인,
 force-answer 재시도, UUID/PID 파일명, repomix 버전 핀+timeout, 권한/시크릿, env 설정화.
 """
 
@@ -553,7 +553,7 @@ def check_env(do_install: bool = False) -> int:
         if login_state == "ok":
             ok.append("ChatGPT 로그인됨 (입력창/모델 어포던스 확인)")
         elif login_state == "no":
-            issues.append(("ChatGPT 로그인 안 됨", "해당 브라우저에서 chatgpt.com 로그인 + GPT-5.5 Pro 선택"))
+            issues.append(("ChatGPT 로그인 안 됨", "해당 브라우저에서 chatgpt.com 로그인 + GPT-5.6 Sol Pro 선택"))
 
     for o in ok:
         print(f"  ✓ {o}")
@@ -682,7 +682,7 @@ MODEL_SWITCHER_SELECTORS = [
     'button[data-testid="model-switcher-dropdown-button"]',
     'button[aria-label*="model" i]',
 ]
-# 실측: pill 클릭 → menuitemradio(즉시/중간/높음/매우 높음/Pro=추론단계) + menuitem("GPT-5.5"=모델명)
+# 실측: pill 클릭 → menuitemradio(즉시/중간/높음/매우 높음/Pro=추론단계) + menuitem("GPT-5.6"=모델명)
 EFFORT_ITEM_SELECTORS = ['[role="menuitemradio"]', '[role="menuitem"]', '[role="option"]']
 
 
@@ -745,7 +745,7 @@ def read_menu_state(page) -> dict:
 
 def select_model(page, want: str, require_model: str | None = None) -> tuple[bool, str | None]:
     """모델 스위처를 열고 want(추론단계, 예: 'pro')를 선택 + 검증.
-    require_model 지정 시 모델명(예: 'GPT-5.5')이 일치하지 않으면 False(실패) 반환.
+    require_model 지정 시 모델명(예: 'GPT-5.6')이 일치하지 않으면 False(실패) 반환.
     반환: (verified, verified_model_name)"""
     want_l = want.lower()
     if not _open_switcher(page):
@@ -1276,7 +1276,7 @@ def ensure_project(page, name: str, cache_key: str, cache_path: Path) -> str | N
 # main
 # ===========================================================================
 def main():
-    ap = argparse.ArgumentParser(description="repomix → 구독 ChatGPT(GPT-5.5 Pro) 분석")
+    ap = argparse.ArgumentParser(description="repomix → 구독 ChatGPT(GPT-5.6 Sol Pro) 분석")
     ap.add_argument("--target", default=None, help="분석 대상 폴더(생략 시 프롬프트만 = 의견 모드)")
     ap.add_argument("--include", default=None, help='repomix --include 글롭')
     ap.add_argument("--ignore", default=None, help="repomix --ignore 글롭")
@@ -1292,7 +1292,7 @@ def main():
     ap.add_argument("--prompt-file", default=None)
     ap.add_argument("--model", default=None, help='추론단계 선택(예: "pro")')
     ap.add_argument("--require-model", default=None,
-                    help='모델명 검증(예: "GPT-5.5") — 불일치 시 전송 중단')
+                    help='모델명 검증(예: "GPT-5.6") — 불일치 시 전송 중단')
     ap.add_argument("--force-answer-after", type=int, default=None,
                     help="N초 후 리즈닝 중이면 '지금 답변 받기' 재시도")
     ap.add_argument("--max-wait", type=int, default=None,
@@ -1364,7 +1364,7 @@ def main():
     # 스킵되는 fail-open을 차단(fail-closed). 모델/추론단계를 함께 지정해야 검증이 돈다.
     if args.require_model and not args.model:
         sys.exit('❌ --require-model은 --model과 함께 써야 합니다(모델/추론단계를 선택·검증하는 경로).\n'
-                 '     예: --model pro --require-model "GPT-5.5"')
+                 '     예: --model pro --require-model "GPT-5.6"')
 
     real_stdout = sys.stdout
     if args.council:

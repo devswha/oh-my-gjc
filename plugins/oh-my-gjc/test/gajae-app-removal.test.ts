@@ -37,8 +37,8 @@ describe("gajae-app removal manifest", () => {
     const expectedCommands = parseManifest("EXPECTED_COMMANDS");
     const removedSkills = parseManifest("REMOVED_SKILLS");
     const removedCommands = parseManifest("REMOVED_COMMANDS");
-    expect(expectedSkills).toHaveLength(8);
-    expect(expectedCommands).toHaveLength(13);
+    expect(expectedSkills).toHaveLength(9);
+    expect(expectedCommands).toHaveLength(14);
     expect(expectedSkills).not.toContain("gajae-app");
     expect(expectedCommands).not.toContain("gajae-app");
 
@@ -51,6 +51,7 @@ describe("gajae-app removal manifest", () => {
       "insane-review",
       "gjc-bugwatch",
       "plain-layer",
+      "lazycodex-gjc",
     ]);
     expect(expectedCommands).toEqual([
       "omg",
@@ -66,6 +67,7 @@ describe("gajae-app removal manifest", () => {
       "bugwatch-scan",
       "worktree",
       "plain",
+      "lazycodex-gjc",
     ]);
     expect(removedSkills).toContain("gajae-app");
     expect(removedCommands).toContain("gajae-app");
@@ -110,7 +112,7 @@ describe("gajae-app upgrade cleanup", () => {
 
       const result = spawnSync("bash", [installSh, "all", scope], {
         cwd: scope === "project" ? project : sandbox,
-        env: { ...process.env, HOME: home },
+        env: { ...process.env, HOME: home, CODEX_HOME: process.env.CODEX_HOME ?? join(process.env.HOME ?? "", ".codex") },
         encoding: "utf8",
       });
 

@@ -29,7 +29,7 @@ gjc plugin install oh-my-gjc@oh-my-gjc
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
 
-한 번 설치로 스킬 8개 + 커맨드 13개가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+v0.15.0 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -42,8 +42,9 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 - `multivendor-presets` — 역할별 모델 프리셋 4종: `grok`(기본) · `sol`(저지연) · `codex`(단일 로그인) · `fable-codex`(안전-크리티컬)
 - `branch-flow` — dev 통합 / main 릴리스 브랜치 규칙 + git worktree 병렬 세션(`/omg:worktree`) · 상시 온·오프 가능(`/omg:branchflow-always`)
 - `extragoal` — 외부 최종 리뷰 게이트(무공유·교차패밀리 리뷰 후 머지)
+- `lazycodex-gjc` — 설치된 Codex+LazyCodex/OMO를 격리 외부 작업자로 실행(`/omg:lazycodex-gjc`) · 기본 읽기 전용
 - `/omg:fable` — 안전-크리티컬 코드 적대적 감사(돈·데이터·보안 코드) · **Fable 5 모델 필요**
-- `insane-review` — GPT-5.5 Pro 웹 코드 리뷰 · **ChatGPT 구독 + 크로미움 로그인 필요**
+- `insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰 · **ChatGPT 구독 + 크로미움 로그인 필요**
 - `gjc-bugwatch` — gjc 자체 버그 수집
 
 ## 3. 자세히
@@ -99,7 +100,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 검토하는 게 아니라, 실제 PR 리뷰처럼 무공유·교차패밀리로 판정 → 승인/변경요청 verdict → 발견 정리 →
 (최대 2라운드) 고치고 재서명 → 기계적 머지.
 
-- 리뷰어 레인: 네이티브 교차세션 gjc(기본) / `/omg:fable` / `insane-review`(GPT-5.5 Pro 웹) — AND 게이트로 합침.
+- 리뷰어 레인: 네이티브 교차세션 gjc(기본) / `/omg:fable` / `insane-review`(GPT-5.6 Sol Pro 웹) — AND 게이트로 합침.
 - fail-closed: verdict 누락·malformed·timeout은 절대 승인으로 안 친다. 시크릿 스캔은 번들이 기기 밖 나가는 레인에서 비타협.
 - 켜기: 스킬 트리거로 활성. 옛 `reviewer` mpreset은 v0.4에서 정본 제외(교차 패밀리 원샷 레인으로 충분). 원문: [`plugins/oh-my-gjc/skills/extragoal/SKILL.md`](./plugins/oh-my-gjc/skills/extragoal/SKILL.md)
 
@@ -113,6 +114,19 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 - 켜기: `/omg:branchflow-always on` (`off` / `status`로 확인)
 - 원문: [`plugins/oh-my-gjc/skills/branch-flow/SKILL.md`](./plugins/oh-my-gjc/skills/branch-flow/SKILL.md)
 
+### `lazycodex-gjc` — 격리된 Codex+LazyCodex 외부 작업자
+
+이미 설치·로그인된 **Codex CLI + LazyCodex/OMO**를 외부 `codex exec --ephemeral` 작업자로
+한 번 동기 실행하고 결과만 가져온다. 기본은 `read-only`; 사용자가 이번 요청에서 대상 저장소
+수정을 명시적으로 허용했을 때만 그 저장소에 `workspace-write`를 쓴다.
+
+- child GJC 세션·task를 만들지 않고, GJC config·자격증명도 변경하거나 외부 작업자에게 복사하지 않는다.
+- Codex/LazyCodex/OMO 설치·업데이트·로그인은 자동화하지 않는다. 준비돼 있지 않으면 안내하고 멈춘다.
+- native user install의 private SHA-256 receipt와 canonical user cache runner가 일치해야 한다. project install만으로는 이 민감 bridge를 실행하지 않는다.
+- 호환 OMO ultrawork를 검증한 뒤 custom permission profile로 대상 저장소, 정확한 Codex runtime helper, private tmp만 노출한다. web/MCP/apps/hooks/browser egress와 child shell 환경 상속은 비활성화하며 raw child stderr를 전달하지 않는다.
+- 쓰기: `/omg:lazycodex-gjc "<작업>"`
+- 원문: [`plugins/oh-my-gjc/skills/lazycodex-gjc/SKILL.md`](./plugins/oh-my-gjc/skills/lazycodex-gjc/SKILL.md)
+
 ### `/omg:fable` — 안전-크리티컬 코드 적대적 감사
 
 돈·데이터·보안 걸린 코드를 Fable 5 모델로 적대적 감사한다. 설계 리뷰가 아니라
@@ -125,14 +139,14 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 - 쓰기: `/omg:fable "주문 경로와 손절 로직"`
 - 원문: [`plugins/oh-my-gjc/templates/fable.md`](./plugins/oh-my-gjc/templates/fable.md)
 
-### `insane-review` — GPT-5.5 Pro 웹 리뷰
+### `insane-review` — GPT-5.6 Sol Pro 웹 리뷰
 
-GPT-5.5 Pro는 웹 구독에서만 되고 API가 없다. 이 스킬이 구독 ChatGPT 웹을 CDP로
+GPT-5.6 Sol Pro는 웹 구독에서만 되고 API가 없다. 이 스킬이 구독 ChatGPT 웹을 CDP로
 자동화해서 Pro를 gjc 안으로 끌어온다. API 비용 0. 코드를 통째로 넣는 게 아니라
 관련 타겟만 골라 repomix로 묶어 넣고 리뷰를 회수한다.
 
 - 전제: ChatGPT 구독 + 크로미움 로그인(설치는 원샷에 포함, 로그인은 자동 안 됨).
-- 크로미움 브라우저를 전용 프로필로 디버그포트(9222)에 띄우고, chatgpt.com 로그인 + GPT-5.5 Pro 선택해야 한다. 로그인은 자동 안 된다.
+- 크로미움 브라우저를 전용 프로필로 디버그포트(9222)에 띄우고, chatgpt.com 로그인 + GPT-5.6 Sol Pro 선택해야 한다. 로그인은 자동 안 된다.
 - 결과는 프로젝트의 `.insane-review/`에 저장한다.
 - 원문: [`plugins/oh-my-gjc/skills/insane-review/SKILL.md`](./plugins/oh-my-gjc/skills/insane-review/SKILL.md)
 
