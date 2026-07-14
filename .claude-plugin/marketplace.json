@@ -6,7 +6,7 @@
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gajaecode — the oh-my single-plugin suite for Gajae Code (gjc). One install, one native surface: 9 skills + 14 commands (/omg + 13 /omg:*).",
+    "description": "oh-my-gajaecode — the oh-my single-plugin suite for Gajae Code (gjc). One install, one native surface: 10 skills + 15 commands (/omg + 14 /omg:*).",
     "version": "0.17.0"
   },
   "plugins": [

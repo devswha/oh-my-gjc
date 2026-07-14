@@ -225,56 +225,85 @@ cleanup_removed() { # $1=scope — sweep only native files of capabilities remov
 # install — without running /omg:presets first. Same merge safety contract as the command:
 # name-scoped (ONLY the `sol` block), backup first, never touch other profiles or top-level
 # keys, validate against the live gjc profile registry, restore the backup on ANY failure.
-# NON-FATAL by design: a preset-merge failure must never break the suite install (warn and
-# point at /omg:presets). Consent-gated retired-preset cleanup stays in /omg:presets ONLY —
-# this function never deletes anything.
-merge_sol_preset() { # user scope only — models.yml is user-global
-  local src dst bak block out tmp
+# NON-FATAL by construction (v0.17.0 cross-review r1): the whole body runs in a SUBSHELL
+# with errexit/pipefail disabled, every step self-checks, the merged result is built in a
+# temp file and moved into place in one write, and the registry probe is time-bounded —
+# no failure in here may abort or hang the installer (the suite install is already
+# complete when this runs). Consent-gated retired-preset cleanup stays in /omg:presets
+# ONLY — this function never deletes anything.
+merge_sol_preset() ( # user scope only — models.yml is user-global; body = subshell
+  set +e +u +o pipefail
+  warn() { echo "! $*" >&2; }
   src="$PLUGIN_ROOT/references/presets.yml"
   dst="$HOME/.gjc/agent/models.yml"
-  [ -f "$src" ] || { echo "! preset merge skipped: references/presets.yml missing — run /omg:presets later" >&2; return 0; }
-  command -v gjc >/dev/null 2>&1 || { echo "! preset merge skipped: gjc not on PATH — run /omg:presets later" >&2; return 0; }
+  [ -f "$src" ] || { warn "preset merge skipped: references/presets.yml missing — run /omg:presets later"; return 0; }
+  command -v gjc >/dev/null 2>&1 || { warn "preset merge skipped: gjc not on PATH — run /omg:presets later"; return 0; }
   # canonical sol block = everything below `profiles:` (the canonical source is sol-only since v0.10)
-  block="$(awk 'f; /^profiles:$/ {f=1}' "$src")"
-  [ -n "$block" ] || { echo "! preset merge skipped: could not extract sol block — run /omg:presets later" >&2; return 0; }
-  mkdir -p "$(dirname "$dst")"
+  block="$(awk 'f; /^profiles:$/ {f=1}' "$src" 2>/dev/null)"
+  [ -n "$block" ] || { warn "preset merge skipped: could not extract sol block — run /omg:presets later"; return 0; }
+  mkdir -p "$(dirname "$dst")" 2>/dev/null || { warn "preset merge skipped: cannot create $(dirname "$dst")"; return 0; }
+  tmp="$(mktemp 2>/dev/null)" || { warn "preset merge skipped: mktemp failed"; return 0; }
   bak=""
   if [ -f "$dst" ]; then
-    bak="$dst.bak-$(date +%s)"
-    cp "$dst" "$bak" || { echo "! preset merge skipped: backup failed" >&2; return 0; }
-    if grep -Eq '^  sol:[[:space:]]*$' "$dst"; then
-      # Replace the existing sol block in place (its leading `  #` comments + 4+-space body).
-      # Other profiles, their comments, and top-level keys pass through untouched.
-      tmp="$(mktemp)"
+    bak="$dst.bak-$(date +%s).$$"    # PID suffix: same-second reruns must not clobber a backup
+    cp "$dst" "$bak" 2>/dev/null || { warn "preset merge skipped: backup failed"; rm -f "$tmp"; return 0; }
+    if grep -Eq '^  sol:[ \t]*(#.*)?$' "$dst"; then
+      # REPLACE the existing sol block: its leading contiguous `  #` comments + body
+      # (4+-space lines; internal blank lines are held and dropped only when more body
+      # follows, so a single separating blank after the block survives). Other profiles,
+      # their comments, and top-level keys pass through untouched.
       OMG_SOL_BLOCK="$block" awk '
-        BEGIN { n = 0; insol = 0 }
+        BEGIN { n = 0; insol = 0; pend = 0 }
         {
-          if (insol) { if ($0 ~ /^    /) next; insol = 0 }
+          if (insol) {
+            if ($0 ~ /^    /) { pend = 0; next }
+            if ($0 ~ /^[ \t]*$/) { pend = 1; next }
+            insol = 0
+            if (pend) print ""
+            pend = 0
+          }
           if ($0 ~ /^  #/) { buf[++n] = $0; next }
-          if ($0 ~ /^  sol:[ \t]*$/) { n = 0; print ENVIRON["OMG_SOL_BLOCK"]; insol = 1; next }
+          if ($0 ~ /^  sol:[ \t]*(#.*)?$/) { n = 0; print ENVIRON["OMG_SOL_BLOCK"]; insol = 1; next }
           for (i = 1; i <= n; i++) print buf[i]
           n = 0; print
         }
         END { for (i = 1; i <= n; i++) print buf[i] }
-      ' "$dst" > "$tmp" && mv "$tmp" "$dst"
+      ' "$dst" > "$tmp" 2>/dev/null
+    elif grep -q '^profiles:' "$dst"; then
+      # APPEND: insert the sol block right AFTER the `profiles:` line, so a later
+      # top-level key (modelBindings, providers, …) can never swallow it.
+      OMG_SOL_BLOCK="$block" awk '
+        { print }
+        /^profiles:[ \t]*(#.*)?$/ && !done { print ""; print ENVIRON["OMG_SOL_BLOCK"]; done = 1 }
+      ' "$dst" > "$tmp" 2>/dev/null
     else
-      grep -q '^profiles:' "$dst" || printf '\nprofiles:\n' >> "$dst"
-      printf '\n%s\n' "$block" >> "$dst"
+      { cat "$dst"; printf '\nprofiles:\n\n%s\n' "$block"; } > "$tmp" 2>/dev/null
     fi
   else
-    printf 'profiles:\n\n%s\n' "$block" > "$dst"
+    printf 'profiles:\n\n%s\n' "$block" > "$tmp" 2>/dev/null
   fi
-  # Validate against the live registry: the probe fails fast (no auth/network) and its
-  # error lists every registered profile — `sol` must be among them, meaning the file
-  # parses AND the profile registered. (word-safe match: avoid `fable-sol` false hits)
-  out="$(GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" 2>&1 || true)"
+  grep -Eq '^  sol:' "$tmp" 2>/dev/null || { warn "preset merge skipped: merge produced no sol block"; rm -f "$tmp"; return 0; }
+  # single-write install: the live file is never left half-written
+  if ! mv "$tmp" "$dst" 2>/dev/null; then
+    cp "$tmp" "$dst" 2>/dev/null || { warn "preset merge skipped: cannot write $dst"; rm -f "$tmp"; return 0; }
+    rm -f "$tmp"
+  fi
+  # Validate against the live registry, time-bounded: the probe fails fast (no auth/network)
+  # and its error lists every registered profile — `sol` must be among them, meaning the
+  # file parses AND the profile registered. (word-safe match: avoid `fable-sol` false hits)
+  if command -v timeout >/dev/null 2>&1; then
+    out="$(timeout 60 env GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" 2>&1)"
+  else
+    out="$(GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" 2>&1)"
+  fi
   if printf '%s' "$out" | grep -qE '[:,] sol(,|$)'; then
     echo "✓ preset  (user): merged \`sol\` into $dst${bak:+ (backup: $bak)}"
   else
-    if [ -n "$bak" ]; then cp "$bak" "$dst"; else rm -f "$dst"; fi
-    echo "! preset merge rolled back (registry validation failed) — run /omg:presets manually" >&2
+    if [ -n "$bak" ]; then cp "$bak" "$dst" 2>/dev/null; else rm -f "$dst"; fi
+    warn "preset merge rolled back (registry validation failed) — run /omg:presets manually"
   fi
-}
+  return 0
+)
 
 MISSING=()
 
