@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 const TASK_LIMIT = 256 * 1024;
 const OUTPUT_LIMIT = 1024 * 1024;
 const TIMEOUT_LIMIT = 3600;
+const CONTAINMENT_GRACE_SECONDS = 5;
 const WORKSPACE_DIRECTORY_LIMIT = 100000;
 const WORKSPACE_GJC_LIMIT = 256;
 const WORKSPACE_DENY_BYTES_LIMIT = 64 * 1024;
@@ -386,14 +387,37 @@ function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor)
       return;
     }
     const unit = `lazycodex-gjc-${process.pid}-${Date.now()}`;
-    const supervisorArgs = ["--user", "--wait", "--collect", "--pipe", "--quiet", `--unit=${unit}`, "--property=KillMode=control-group", "--property=TimeoutStopSec=1s", "--", supervisor.env, "-i"];
+    // Manager-enforced termination backstop: even if every `systemctl kill` we issue fails
+    // (or this process is SIGKILLed before its own timer fires), systemd force-terminates the
+    // whole unit cgroup at RuntimeMaxSec. The grace only matters on the failure path — normal
+    // flow kills at `timeoutSeconds` via our own timer, well before this cap.
+    const runtimeMaxSec = timeoutSeconds + CONTAINMENT_GRACE_SECONDS;
+    const supervisorArgs = ["--user", "--wait", "--collect", "--pipe", "--quiet", `--unit=${unit}`, "--property=KillMode=control-group", "--property=TimeoutStopSec=1s", `--property=RuntimeMaxSec=${runtimeMaxSec}`, "--", supervisor.env, "-i"];
     for (const [name, value] of Object.entries(env)) supervisorArgs.push(`${name}=${value}`);
     supervisorArgs.push(binary, ...args);
     const child = spawn(supervisor.systemdRun, supervisorArgs, { detached: true, env: process.env, shell: false, stdio: ["pipe", "pipe", "pipe"] });
     let failure;
     let containmentStopFailed = false;
+    let settled = false;
     let stdoutBytes = 0;
     let stderrBytes = 0;
+    let outputMonitor;
+    let timer;
+    const interrupt = () => stop("interrupted");
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearInterval(outputMonitor);
+      clearTimeout(timer);
+      process.off("SIGINT", interrupt);
+      process.off("SIGTERM", interrupt);
+      // Release the relay pipes and drop the child handle. On the containment-failure path
+      // the abandoned unit still holds the write ends; without this the event loop would stay
+      // alive until the RuntimeMaxSec backstop reaps it, hanging the synchronous call.
+      for (const stream of [child.stdin, child.stdout, child.stderr]) { try { stream.destroy(); } catch { /* already closed */ } } // no-excuse-ok: catch
+      try { child.unref(); } catch { /* already gone */ } // no-excuse-ok: catch
+      resolveResult(result);
+    };
     const stop = (reason) => {
       if (failure === undefined) failure = reason;
       void (async () => {
@@ -401,25 +425,24 @@ function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor)
         // caller reports an uncertain stop instead of silently assuming the unit died.
         if (!(await stopUnit(supervisor.systemctl, unit)) && !(await stopUnit(supervisor.systemctl, unit))) containmentStopFailed = true;
         killGroup(child);
+        // On a failed stop the unit may still hold the relay pipes, so `close` would not fire
+        // until the RuntimeMaxSec backstop reaps it. Do not block the synchronous call on that:
+        // resolve now with the failure recorded; systemd force-terminates the cgroup at the cap.
+        if (containmentStopFailed) finish({ code: null, signal: "SIGKILL", failure, containmentStopFailed });
       })();
     };
     const failOverflow = () => stop("overflow");
     child.stdout.on("data", (chunk) => { stdoutBytes += chunk.length; if (stdoutBytes > OUTPUT_LIMIT) failOverflow(); });
     child.stderr.on("data", (chunk) => { stderrBytes += chunk.length; if (stderrBytes > OUTPUT_LIMIT) failOverflow(); });
-    child.once("error", () => reject(new CliError("worker failed to start", 127)));
-    const outputMonitor = setInterval(() => { try { if (statSync(output).size > OUTPUT_LIMIT) failOverflow(); } catch { /* close handles missing output */ } }, 10); // no-excuse-ok: catch
-    const timer = setTimeout(() => stop("timeout"), timeoutSeconds * 1000);
-    const interrupt = () => stop("interrupted");
+    child.once("error", () => { if (settled) return; settled = true; clearInterval(outputMonitor); clearTimeout(timer); process.off("SIGINT", interrupt); process.off("SIGTERM", interrupt); reject(new CliError("worker failed to start", 127)); });
+    outputMonitor = setInterval(() => { try { if (statSync(output).size > OUTPUT_LIMIT) failOverflow(); } catch { /* close handles missing output */ } }, 10); // no-excuse-ok: catch
+    timer = setTimeout(() => stop("timeout"), timeoutSeconds * 1000);
     process.once("SIGINT", interrupt);
     process.once("SIGTERM", interrupt);
     child.once("close", async (code, signal) => {
-      clearInterval(outputMonitor);
-      clearTimeout(timer);
-      process.off("SIGINT", interrupt);
-      process.off("SIGTERM", interrupt);
       await stopUnit(supervisor.systemctl, unit);
       killGroup(child);
-      resolveResult({ code, signal, failure, containmentStopFailed });
+      finish({ code, signal, failure, containmentStopFailed });
     });
     child.stdin.on("error", (error) => { if (error.code !== "EPIPE") stop("input"); });
     child.stdin.end(prompt);
@@ -452,7 +475,7 @@ async function main() {
     if (result.failure === "input") throw new CliError(`worker input failed${stopSuffix}`, 1);
     if (result.failure === "interrupted") throw new CliError(`worker interrupted${stopSuffix}`, 130);
     if (result.failure === "timeout") throw new CliError(`worker timed out${stopSuffix}`, 124);
-    if (result.failure === "overflow" || statSync(output).size > OUTPUT_LIMIT) throw new CliError("worker output exceeded limit", 1);
+    if (result.failure === "overflow" || statSync(output).size > OUTPUT_LIMIT) throw new CliError(`worker output exceeded limit${stopSuffix}`, 1);
     if (result.code !== 0) throw new CliError(result.code === null ? `worker terminated by signal ${result.signal ?? "unknown"}` : `worker exited with code ${result.code}`, result.code ?? 1);
     const bytes = readFileSync(output);
     let finalOutput;

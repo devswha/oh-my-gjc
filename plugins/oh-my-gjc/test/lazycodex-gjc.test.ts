@@ -571,6 +571,28 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(existsSync(readFileSync(join(f.record, "temp"), "utf8"))).toBe(false);
   });
 
+  test("surfaces a failed containment stop and lets the manager backstop reap the worker", async () => {
+    const f = fixture("timeout");
+    // A trusted-but-failing systemctl: passes the binding trust walk (private 0700 root,
+    // 0755 non-writable file, owned by uid) yet exits non-zero on every kill attempt.
+    const failingSystemctl = join(f.root, "failing-systemctl");
+    writeFileSync(failingSystemctl, "#!/bin/sh\nexit 1\n");
+    chmodSync(failingSystemctl, 0o755);
+    updateBinding(f, { 12: digest(failingSystemctl), 13: failingSystemctl });
+    const result = run(f, ["--timeout-seconds", "1"]);
+    const pid = Number.parseInt(readFileSync(join(f.record, "descendant"), "utf8"), 10);
+    expect(result.status).toBe(124);
+    expect(result.stderr).toContain("containment stop failed");
+    // RuntimeMaxSec (timeout + 5s grace) force-reaps the transient unit and its descendants.
+    let procState: string | undefined;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      procState = existsSync(`/proc/${pid}/stat`) ? readFileSync(`/proc/${pid}/stat`, "utf8").split(" ")[2] : undefined;
+      if (procState === undefined || procState === "Z") break;
+      await Bun.sleep(200);
+    }
+    expect(procState === undefined || procState === "Z").toBe(true);
+  }, 20_000);
+
   test("kills detached descendants after a successful worker result", () => {
     const f = fixture("success-descendant");
     const result = run(f);
