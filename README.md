@@ -29,7 +29,7 @@ gjc plugin install oh-my-gjc@oh-my-gjc
 bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
 ```
 
-v0.15.1 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+v0.16.0 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -39,7 +39,7 @@ v0.15.1 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)
 - `easy-answer` — 쉬운 말로 답 · 상시 온·오프 가능(`/omg:easy-always`)
 - `gate-briefing` — 승인 게이트 비전문가 브리핑 · 상시 온·오프 가능(`/omg:gate-always`)
 - `plain-layer` — 쉬운 기획: 선택지 설명 + 인터뷰 후 대화로 스펙 다듬기 + 승인 시 gate-briefing 위임 (`/omg:plain`, 세션 한정; always 없음)
-- `multivendor-presets` — 역할별 모델 프리셋 4종: `grok`(기본) · `sol`(저지연) · `codex`(단일 로그인) · `fable-codex`(안전-크리티컬)
+- `multivendor-presets` — 커스텀 프리셋 `sol`(전 구간 저지연, 기본 권장) 병합 + 품질/비상/안전 레인은 gjc 빌트인 안내
 - `branch-flow` — dev 통합 / main 릴리스 브랜치 규칙 + git worktree 병렬 세션(`/omg:worktree`) · 상시 온·오프 가능(`/omg:branchflow-always`)
 - `extragoal` — 외부 최종 리뷰 게이트(무공유·교차패밀리 리뷰 후 머지)
 - `lazycodex-gjc` — 설치된 Codex+LazyCodex/OMO를 격리 외부 작업자로 실행(`/omg:lazycodex-gjc`) · 기본 읽기 전용
@@ -86,12 +86,10 @@ v0.15.1 한 번 설치로 스킬 9개 + 커맨드 14개(`/omg` + `/omg:*` 13개)
 여러 회사 AI 모델을 역할별로 섞어 쓰게 미리 짜둔 묶음을 설정 파일에 꽂아준다.
 (한 놈이 코드 짜고, 다른 놈이 검토하고, 또 다른 놈이 최종 점검하는 식.)
 
-- `grok` — 세션 시작 기본. default는 `grok-4.5:high`, 역할 좌석은 terra/sol/opus (executor는 벤치 근거 `terra:xhigh`).
-- `sol` — 전 구간 저지연: default `sol:low`, 기획 좌석도 빠름(planner `sol:high` · architect `opus:medium` · critic `opus:high`). ralplan이 빨리 돌아야 할 때 이걸 쓴다. (executor는 벤치 근거 `terra:xhigh` 유지.) 실측(n=1): 신형은 수정 1회(stage 2)로 8:24에 합의 완료·플랜 산출, 구형 xhigh 좌석은 수정 3회(stage 4)를 돌고 17:18 시점에도 합의 미완 — **2배 이상 빠름** ([증거](./docs/verification/sol-v09-ralplan-bench-2026-07-14.md)).
-- `codex` — openai-codex 로그인 하나로 전 좌석 동작 (default `sol:medium`, executor `terra:xhigh`).
-- `fable-codex` — 안전-크리티컬 세션용. 대화 본체만 Fable 5(`claude-fable-5:high`, 적대적 감사 성향), 위임 좌석 4개는 `codex`와 동일.
-- 기존 설정은 안 건드리고 선택한 이름만 병합한다(넣기 전 백업). 옛 프리셋 정리는 동의 후.
-- 쓰기: `/omg:presets [grok|sol|codex|fable-codex|all]` → `gjc --mpreset <이름>`. `grok`을 기본으로 고정하려면 `--default`.
+- **`sol` (커스텀, 유일)** — 전 구간 저지연: default `sol:low`, 기획 좌석도 빠름(planner `sol:high` · architect `opus:medium` · critic `opus:high`), executor는 벤치 근거 `terra:xhigh`. 실측(n=1): 신형은 수정 1회(stage 2)로 8:24에 합의 완료·플랜 산출, 구형 xhigh 좌석은 수정 3회(stage 4)를 돌고 17:18 시점에도 합의 미완 — **2배 이상 빠름** ([증거](./docs/verification/sol-v09-ralplan-bench-2026-07-14.md)).
+- 나머지 용도는 **gjc 빌트인**을 그대로 쓴다(병합 불필요, gjc 업그레이드 시 자동 최신화): 품질 랄플랜 `opus-codex` · openai-codex 단일 로그인 비상 `codex-medium`/`codex-pro` · 안전-크리티컬 `fable-opus-codex`.
+- 기존 설정은 안 건드리고 `sol`만 병합한다(넣기 전 백업). 옛 프리셋 정리는 동의 후.
+- 쓰기: `/omg:presets` → `gjc --mpreset sol --default`(기본 고정 권장). 품질이 필요하면 그 세션만 `gjc --mpreset opus-codex`.
 - 원문: [`plugins/oh-my-gjc/skills/multivendor-presets/SKILL.md`](./plugins/oh-my-gjc/skills/multivendor-presets/SKILL.md)
 
 ### `extragoal` — 외부 최종 리뷰 게이트

@@ -1,46 +1,32 @@
-# multivendor-presets v0.9 — 멀티벤더 모델 프로파일 프리셋 (canonical source)
+# multivendor-presets v0.10 — 모델 프로파일 프리셋 (canonical source)
 #
 # 이 파일의 `profiles:` 하위 블록을 사용자의 ~/.gjc/agent/models.yml `profiles:`
 # 아래로 "이름 단위"로 병합한다(같은 이름이면 교체, 없으면 추가). 그 외의
 # 프로파일이나 최상위 키(default 등)는 절대 건드리지 않는다.
 #
+# v0.10 (2026-07-14): 커스텀 정본을 `sol` 단일로 축소 — 하코 직접 지시.
+#   - gjc 빌트인이 나머지 용도를 전부 커버하므로 커스텀 사본을 유지할 이유가 없다
+#     (로컬 사본은 상류 갱신을 못 따라가 썩는다 — 구 daily 사례).
+#     품질 랄플랜 = 빌트인 `opus-codex` · 단일 로그인 = 빌트인 `codex-medium`/`codex-pro`
+#     · 안전-크리티컬 = 빌트인 `fable-opus-codex`. 전부 gjc 0.10.2 실활성 검증(2026-07-14).
+#   - `grok`/`codex`/`fable-codex`는 은퇴(닫힌 목록 등재). grok-build 의존도 함께 사라짐.
+#   - `sol`만 빌트인에 없는 구성이라 커스텀 유지: 저지연 본체 + 교차패밀리 중간 기획
+#     좌석 + 벤치 근거 executor. 실전 ralplan ≥2× 단축 실측
+#     (docs/verification/sol-v09-ralplan-bench-2026-07-14.md).
 # v0.9 (2026-07-14): `sol`을 전 구간 저지연으로 정합화 — 실사용 데이터 반영.
-#   - ralplan은 planner/architect/critic을 라운드마다 반복 호출하는 합의 루프인데,
-#     sol조차 기획 좌석이 grok과 동일한 xhigh 품질 좌석이라 과지연이 실측됨.
 #   - planner sol:xhigh→high, architect opus:high→medium, critic opus:xhigh→high.
-#     executor는 terra:xhigh 유지(벤치 근거 + ralplan 루프 밖). grok/codex/fable-codex 불변.
+#     executor는 terra:xhigh 유지(벤치 근거 + ralplan 루프 밖).
 #   - 실호출 검증 2026-07-14: opus-4-8:medium·sol:high OK.
-# v0.8 (2026-07-14): `fable-codex` 추가 = codex 골격에 대화 본체만 Fable 5.
-#   - default=anthropic/claude-fable-5:high (상류 built-in fable-opus-codex의 default와 동일),
-#     위임 좌석 4개는 `codex` 프리셋과 동일(executor terra:xhigh — 벤치 근거, planner sol:high,
-#     architect sol:xhigh, critic sol:max). 안전-크리티컬 작업 세션용: Fable이 본체에서
-#     적대적 관점을 유지하고, 실행·리뷰 좌석은 교차 패밀리(codex)로 분리.
-# v0.7 (2026-07-14): gpt-5.6 codex 프리셋 벤치마크(gajae-code docs/gpt-5.6-codex-preset-benchmark.md) 반영.
-#   - grok·sol executor를 terra:high → terra:xhigh로 승격: selected-task 샘플에서
-#     terra:high 6/11(54.5%) vs terra:xhigh 9/12(75%)+broad 8/8, luna:xhigh 동률이면서
-#     입력토큰 -72%·비용 -28%·시간 -29%. (벤치가 직접 측정한 역할은 executor뿐)
-#   - `codex` 추가 = openai-codex 단일 로그인 전용 프리셋. 상류 built-in codex-pro 골격
-#     (default sol:medium / planner sol:high / architect sol:xhigh / critic sol:max)에
-#     executor만 위 근거로 terra:xhigh.
-# v0.6 (2026-07-14): 역할이 바로 보이도록 `daily`→`grok`, `fast`→`sol`로 이름 변경.
-# v0.5 (2026-07-14): `fast` 추가.
-#   - fast = default를 grok-build/grok-4.5:high에서 openai-codex/sol:low로 바꾼 빠른 대화·소형 작업용
-# v0.4 (2026-07-14): 활성 프리셋을 `daily` 단일로 축소.
-#   - daily = interview/ralplan/ultragoal 겸용 본체 (세션 시작 기본)
-#   - ideal / escalate-surgical / monorepo / reviewer 는 정본에서 제외
-#     (필요하면 git 히스토리 v0.3 참조)
-# v0.3 (2026-07-14): `daily`를 세션 시작 기본 프리셋으로 추가.
-# v0.2 (2026-07): 구 ultimate/ultimate-f5를 폐기하고 증거 리서치 기반 3종으로 교체.
+# v0.8 이전 연혁은 git 히스토리 참조 (fable-codex 신설, codex 신설, grok/sol 개명 등).
 #
 # 활성화:
-#   gjc --mpreset grok                     # 이번 세션만
-#   gjc --mpreset grok --default           # config.yml에 시작 기본값으로 고정
-#   gjc --mpreset sol                      # 빠른 대화·소형 작업
-#   gjc --mpreset codex                    # openai-codex 단일 로그인 전용
-#   gjc --mpreset fable-codex              # Fable 5 본체 + codex 위임 좌석
+#   gjc --mpreset sol                      # 이번 세션만
+#   gjc --mpreset sol --default            # config.yml에 시작 기본값으로 고정 (권장)
+#   gjc --mpreset opus-codex               # 품질 랄플랜 (gjc 빌트인)
+#   gjc --mpreset codex-pro                # openai-codex 단일 로그인 비상 (gjc 빌트인)
+#   gjc --mpreset fable-opus-codex         # 안전-크리티컬 (gjc 빌트인)
 #
-# 요구 로그인: grok = grok-build·openai-codex·anthropic, sol = openai-codex·anthropic,
-# codex = openai-codex 단독, fable-codex = anthropic·openai-codex.
+# 요구 로그인: sol = openai-codex·anthropic.
 # required_providers 중 하나라도 자격증명이 없으면 활성화가 하드블록된다.
 #
 # ⚠ 셀렉터/벤치 근거는 카탈로그·시점 민감(2026-07 리서치 기준). 실호출 검증:
@@ -48,60 +34,17 @@
 
 profiles:
 
-  # ── grok: interview/ralplan/ultragoal 겸용 품질 중심 본체.
-  #   default=grok-build/grok-4.5:high(대화 본체, 모델 상한 effort), executor=terra:xhigh,
-  #   planner=sol:xhigh, architect/critic=opus(:high/:xhigh).
-  #   실호출 검증 2026-07-14: terra:xhigh·sol:xhigh·opus:high/:xhigh·grok-build/grok-4.5 OK.
-  #   ⚠ CLI 단독 `grok-build/grok-4.5:high`는 not found일 수 있으나 프로파일 경로에서는 정상 활성.
-  grok:
-    display_name: grok
-    required_providers: [grok-build, openai-codex, anthropic]
-    model_mapping:
-      default:   grok-build/grok-4.5:high                       # 대화 본체. 모델 상한 effort
-      executor:  openai-codex/gpt-5.6-terra:xhigh               # 벤치 selected 9/12, broad 8/8
-      architect: anthropic/claude-opus-4-8:high
-      planner:   openai-codex/gpt-5.6-sol:xhigh
-      critic:    anthropic/claude-opus-4-8:xhigh
-
-  # ── sol: 전 구간 저지연 프리셋 — 본체도, 위임 좌석도 빠르다.
-  #   일반 질의·작은 수정 + 빠른 ralplan/interview 용. v0.9에서 기획 좌석 하향:
-  #   품질 랄플랜이 필요하면 grok을 쓴다(sol=빠른 랄플랜 / grok=품질 랄플랜).
+  # ── sol: 유일한 커스텀 프리셋 — 전 구간 저지연 codex+opus.
+  #   일반 질의·작은 수정 + 빠른 ralplan/interview 용. ralplan 합의 루프(planner/
+  #   architect/critic 반복 호출) 과지연 실측으로 기획 좌석을 중간 effort로 유지한다.
+  #   executor는 벤치 근거 terra:xhigh(gajae-code docs/gpt-5.6-codex-preset-benchmark.md).
   #   실호출 검증 2026-07-14: sol:low·sol:high·opus-4-8:medium·opus-4-8:high OK.
   sol:
     display_name: sol
     required_providers: [openai-codex, anthropic]
     model_mapping:
       default:   openai-codex/gpt-5.6-sol:low
-      executor:  openai-codex/gpt-5.6-terra:xhigh               # 벤치 근거 — grok과 동일 좌석
+      executor:  openai-codex/gpt-5.6-terra:xhigh               # 벤치 근거
       architect: anthropic/claude-opus-4-8:medium
       planner:   openai-codex/gpt-5.6-sol:high
       critic:    anthropic/claude-opus-4-8:high
-
-  # ── codex: openai-codex 단일 로그인 전용 (anthropic·grok-build 불필요).
-  #   상류 built-in codex-pro 골격에 executor만 벤치 근거로 terra:xhigh
-  #   (상류 pro executor=terra:medium은 비용 판단; 본 스위트는 품질 우선).
-  #   실호출 검증 2026-07-14: sol:medium·sol:high·sol:max·terra:xhigh OK.
-  codex:
-    display_name: codex
-    required_providers: [openai-codex]
-    model_mapping:
-      default:   openai-codex/gpt-5.6-sol:medium
-      executor:  openai-codex/gpt-5.6-terra:xhigh
-      architect: openai-codex/gpt-5.6-sol:xhigh
-      planner:   openai-codex/gpt-5.6-sol:high
-      critic:    openai-codex/gpt-5.6-sol:max
-
-  # ── fable-codex: 안전-크리티컬 세션용 — 대화 본체가 Fable 5, 위임 좌석은 codex와 동일.
-  #   상류 built-in fable-opus-codex의 default(claude-fable-5:high)를 따르되, 위임 좌석은
-  #   본 스위트 codex 골격(벤치 근거 executor terra:xhigh 포함)으로 통일. 교차 패밀리 분리:
-  #   Fable(anthropic) 본체가 지시하고 codex(openai)가 실행·비평한다.
-  #   실호출 검증 2026-07-14: anthropic/claude-fable-5:high OK (codex 좌석 4종은 v0.7에서 검증済).
-  fable-codex:
-    display_name: fable-codex
-    required_providers: [anthropic, openai-codex]
-    model_mapping:
-      default:   anthropic/claude-fable-5:high                  # 적대적 감사 성향 본체
-      executor:  openai-codex/gpt-5.6-terra:xhigh
-      architect: openai-codex/gpt-5.6-sol:xhigh
-      planner:   openai-codex/gpt-5.6-sol:high
-      critic:    openai-codex/gpt-5.6-sol:max

@@ -1,26 +1,27 @@
 ---
 name: multivendor-presets
-description: 멀티벤더 모델 프로파일 프리셋을 ~/.gjc/agent/models.yml에 설치·병합한다. "멀티벤더 프리셋 깔아줘 / grok 프리셋 / sol 프리셋 / codex 프리셋 / fable 프리셋 / mpreset 프로파일 설치 / 역할별 모델 프로파일 세팅" 같은 요청에 활성화. 정본의 grok·sol·codex·fable-codex를 이름 단위로 병합한다.
+description: 커스텀 모델 프로파일 프리셋을 ~/.gjc/agent/models.yml에 설치·병합한다. "프리셋 깔아줘 / sol 프리셋 / 모델 프리셋 설치 / mpreset 프로파일 설치 / 역할별 모델 프로파일 세팅" 같은 요청에 활성화. 정본의 sol을 이름 단위로 병합하고, 품질/비상/안전 레인은 gjc 빌트인을 안내한다.
 ---
 
-# multivendor-presets — 멀티벤더 모델 프로파일 프리셋
+# multivendor-presets — 모델 프로파일 프리셋
 
-목적: gjc의 5개 역할(default/executor/planner/architect/critic)을 여러 벤더에
-분산 배치한 **멀티벤더 프로파일 프리셋**을 사용자의 `~/.gjc/agent/models.yml`에
-안전하게 설치한다. gjc 플러그인 매니페스트에는 profiles 필드가 없어 자동 주입이
-불가하므로, gjc가 직접 병합한다.
+목적: gjc의 5개 역할(default/executor/planner/architect/critic)에 대한 **커스텀
+프로파일 프리셋**을 사용자의 `~/.gjc/agent/models.yml`에 안전하게 설치한다.
+gjc 플러그인 매니페스트에는 profiles 필드가 없어 자동 주입이 불가하므로, gjc가 직접 병합한다.
 
-## 프리셋 (v0.9)
+## 프리셋 (v0.10 — 커스텀은 sol 단일)
 
-| 프리셋 | 성격 | 요약 |
-| --- | --- | --- |
-| `grok` | 세션 시작 기본 · 품질 중심 범용 | default=grok-build/grok-4.5:high, executor=terra:xhigh, planner=sol:xhigh, architect/critic=opus(:high/:xhigh). interview/ralplan/ultragoal 겸용 |
-| `sol` | 빠른 대화·소형 작업 · 빠른 ralplan | default=sol:low, 기획 좌석도 저지연: planner=sol:high, architect=opus:medium, critic=opus:high (executor는 벤치 근거 terra:xhigh 유지) |
-| `codex` | openai-codex 단일 로그인 전용 | default=sol:medium, executor=terra:xhigh, planner=sol:high, architect=sol:xhigh, critic=sol:max. 상류 codex-pro 골격 + 벤치 근거 executor |
-| `fable-codex` | 안전-크리티컬 세션 | default=claude-fable-5:high(적대적 감사 성향 본체), 위임 좌석 4개는 `codex`와 동일. Fable 본체 + 교차 패밀리 실행/비평 |
+| 레인 | 프리셋 | 출처 | 요약 |
+| --- | --- | --- | --- |
+| **기본 (권장 default)** | `sol` | 커스텀 (이 스위트) | default=sol:low · planner=sol:high · architect=opus:medium · critic=opus:high · executor=terra:xhigh(벤치 근거). 실측(n=1): 실전 ralplan 신형 8:24 합의완료 vs 구형 xhigh 좌석 17:18에도 미완 — ≥2× |
+| 품질 랄플랜 | `opus-codex` | gjc 빌트인 | opus 본체 + codex 좌석. 틀리면 비싼 계획일 때만 |
+| 비상 단일 로그인 | `codex-medium` / `codex-pro` | gjc 빌트인 | openai-codex 하나로 전 좌석 |
+| 안전-크리티컬 | `fable-opus-codex` | gjc 빌트인 | Fable 5 본체 + opus/codex 좌석 |
 
+빌트인은 병합할 필요 없이 `gjc --mpreset <이름>`으로 바로 활성화되고, gjc 업그레이드
+시 상류가 자동 최신화한다(커스텀 사본은 낡아 썩으므로 만들지 않는다 — v0.10 축소의 근거).
 원본 정의는 oh-my-gjc 플러그인의 `references/presets.yml`가 정답지다(gjc `read`로 참고).
-구버전의 `daily`/`fast`/`ultimate`/`ultimate-f5`/`ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main`은 정본에서 제외됨 — 필요 시 git 히스토리 참조.
+구버전의 `daily`/`fast`/`ultimate`/`ultimate-f5`/`ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main`/`grok`/`codex`/`fable-codex`는 정본에서 제외됨 — 필요 시 git 히스토리 참조.
 
 ## 실행
 
@@ -28,10 +29,10 @@ description: 멀티벤더 모델 프로파일 프리셋을 ~/.gjc/agent/models.y
 
 1. `references/presets.yml` 경로를 잡는다(`~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/presets.yml` glob → `sort -V | tail -1`로 최신 → 없으면 프로젝트/레포 폴백). ⚠ `*oh-my-gjc*`는 마켓플레이스명이라 모든 플러그인 폴더에 걸리니 쓰지 말 것.
 2. 대상 `~/.gjc/agent/models.yml`을 백업(`.bak-<ts>`) 후 읽는다. 없으면 `profiles:` 한 줄로 생성.
-3. 인자로 선택한 `grok`/`sol`/`codex`/`fable-codex`를 **이름 단위 병합**한다. 인자 없음은 `grok`, `all`은 넷 다다.
-4. 은퇴 프리셋 블록(닫힌 목록 — `/omg:presets` 커맨드 본문의 구버전 정리 목록과 동일: `ultimate`/`ultimate-f5`/`daily`/`fast`/`ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main`)이 보이면 사용자 동의 후에만 제거. 목록 밖 프로파일은 절대 제거 금지.
-5. 병합 후 유효 YAML + 선택한 프리셋 존재를 확인. 실패 시 백업으로 복구하고 멈춘다.
-6. 활성화·요구 로그인을 안내한다. 세션 기본은 `gjc --mpreset grok --default`.
+3. `sol`을 **이름 단위 병합**한다. 인자 없음/`sol`/`all` 전부 `sol` 병합이다. 빌트인 이름이 오면 병합 불필요 — 활성화 명령만 안내.
+4. 은퇴 프리셋 블록(닫힌 목록 — `/omg:presets` 커맨드 본문의 구버전 정리 목록과 동일: `ultimate`/`ultimate-f5`/`daily`/`fast`/`ideal`/`escalate-surgical`/`monorepo`/`reviewer`/`fable-sol`/`grok-main`/`grok`/`codex`/`fable-codex`)이 보이면 사용자 동의 후에만 제거. 목록 밖 프로파일은 절대 제거 금지. **시작 기본값 보호:** 제거 전 `~/.gjc/agent/config.yml`의 `modelProfile.default`를 확인하고, 삭제 대상이 기본값이면 먼저 `sol`/대응 빌트인으로 이전한 뒤에만 삭제(이전 없이는 삭제 금지 — 다음 시작이 Unknown model profile로 깨진다).
+5. 병합 후 유효 YAML + `sol` 존재를 확인. 실패 시 백업으로 복구하고 멈춘다.
+6. 활성화·요구 로그인을 안내한다. 세션 기본은 `gjc --mpreset sol --default`.
 
 ## 절대 규칙 (약화 금지)
 
@@ -44,11 +45,10 @@ description: 멀티벤더 모델 프로파일 프리셋을 ~/.gjc/agent/models.y
 ## 활성화 안내 (사용자에게 전달)
 
 ```
-gjc --mpreset grok                   # 품질 중심 범용
-gjc --mpreset grok --default         # 시작 기본값 고정(config.yml)
-gjc --mpreset sol                    # 빠른 대화·소형 작업·빠른 ralplan
-gjc --mpreset codex                  # openai-codex 단일 로그인 전용
-gjc --mpreset fable-codex            # Fable 5 본체 + codex 위임 좌석 (안전-크리티컬)
+gjc --mpreset sol --default          # 기본 (전 구간 저지연 — 빠른 ralplan 포함)
+gjc --mpreset opus-codex             # 품질 랄플랜 (빌트인)
+gjc --mpreset codex-pro              # openai-codex 단일 로그인 비상 (빌트인)
+gjc --mpreset fable-opus-codex       # 안전-크리티컬 (빌트인)
 
-요구 로그인: grok = grok-build · openai-codex · anthropic / sol = openai-codex · anthropic / codex = openai-codex 단독 / fable-codex = anthropic · openai-codex
+요구 로그인: sol = openai-codex · anthropic (빌트인은 각자 프로바이더)
 ```

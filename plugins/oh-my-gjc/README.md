@@ -1,6 +1,6 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.15.1 한 번 설치로 스킬 9개 + 커맨드 14개
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.16.0 한 번 설치로 스킬 9개 + 커맨드 14개
 (`/omg` + `/omg:*` 13개)가 전부 들어오고, 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다.
 전제조건이 있는 기능(ChatGPT 구독+크로미움 — insane-review; 설치·로그인된 Codex+
 LazyCodex/OMO — lazycodex-gjc)도 함께 설치되며, 없으면 실행 시 자기진단해
@@ -36,7 +36,7 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 | `/omg:easy [on\|off]` · `/omg:easy-always [on\|off\|status]` | 쉬운 답변 (이번 세션 / 상시) | — |
 | `/omg:gate [on\|off]` · `/omg:gate-always [on\|off\|status]` | 게이트 브리핑 (이번 세션 / 상시) | — |
 | `/omg:plain [<아이디어>\|off]` | 쉬운 기획 (선택지 설명·스펙 대화 다듬기·gate 위임, 세션 한정) | GJC ≥0.10.1 |
-| `/omg:presets [grok\|sol\|codex\|fable-codex\|all]` | 모델 프리셋 병합 | — |
+| `/omg:presets [sol\|all]` | 커스텀 프리셋 `sol` 병합 (+빌트인 레인 안내) | — |
 | `/omg:fable [대상]` | Fable 5 적대적 안전 감사 (읽기전용, 심각도+파일:라인, 스팟체크) | Fable 5 모델 |
 | `/omg:branchflow-always [on\|off\|status]` | 레포 dev/main 브랜치 규율 (레포 AGENTS.md + docs/WORKFLOW.md) | — |
 | `/omg:insane-review` | GPT-5.6 Sol Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
@@ -62,14 +62,14 @@ helper, private tmp만 노출한다. web/MCP/apps/hooks/browser egress와 child 
 
 ### 모델 프리셋
 
-| 프리셋 | 성격 | 요약 |
-|---|---|---|
-| `grok` | 세션 시작 기본 · 품질 중심 | default=grok-build/grok-4.5:high · executor=terra:xhigh · planner=sol:xhigh · architect/critic=opus |
-| `sol` | 빠른 대화·소형 작업 · 빠른 ralplan | default=sol:low · planner=sol:high · architect=opus:medium · critic=opus:high · executor=terra:xhigh (실측 n=1: 신형 8:24 합의완료 vs 구형 xhigh 좌석 17:18에도 합의 미완 — ≥2×) |
-| `codex` | openai-codex 단일 로그인 전용 | default=sol:medium · executor=terra:xhigh · planner=sol:high · architect=sol:xhigh · critic=sol:max |
-| `fable-codex` | 안전-크리티컬 세션 | default=claude-fable-5:high(적대적 감사 성향 본체) · 위임 좌석 4개는 `codex`와 동일 |
+| 레인 | 프리셋 | 출처 | 요약 |
+|---|---|---|---|
+| **기본 (권장 default)** | `sol` | 커스텀 | default=sol:low · planner=sol:high · architect=opus:medium · critic=opus:high · executor=terra:xhigh (실측 n=1: 신형 8:24 합의완료 vs 구형 xhigh 좌석 17:18에도 합의 미완 — ≥2×) |
+| 품질 랄플랜 | `opus-codex` | gjc 빌트인 | opus 본체 + codex 좌석 — 틀리면 비싼 계획일 때만 |
+| 비상 단일 로그인 | `codex-medium` / `codex-pro` | gjc 빌트인 | openai-codex 하나로 전 좌석 |
+| 안전-크리티컬 | `fable-opus-codex` | gjc 빌트인 | Fable 5 본체 |
 
-활성화: `gjc --mpreset grok --default` 또는 `gjc --mpreset sol` / `gjc --mpreset codex` / `gjc --mpreset fable-codex`. 정답지: [`references/presets.yml`](./references/presets.yml).
+활성화: `gjc --mpreset sol --default`(기본 고정 권장), 필요 세션만 `gjc --mpreset opus-codex` 등. 커스텀 정답지: [`references/presets.yml`](./references/presets.yml) — 빌트인은 병합 없이 바로 활성화된다.
 
 ## 세마포어 구조
 
