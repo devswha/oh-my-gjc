@@ -76,7 +76,11 @@ afterEach(() => {
 
 describe("lazycodex-gjc skill and command contract", () => {
   test("packages the native runner as an executable", () => {
-    expect(statSync(join(pluginRoot, "bin/lazycodex-gjc.mjs")).mode & 0o777).toBe(0o755);
+    // Working-tree modes are umask-dependent (git only tracks the +x bit), so assert
+    // the tracked index mode and the executable bits — not an exact 0o755 snapshot.
+    const indexMode = spawnSync("git", ["ls-files", "-s", "bin/lazycodex-gjc.mjs"], { cwd: pluginRoot, encoding: "utf8" });
+    expect(indexMode.stdout).toStartWith("100755 ");
+    expect(statSync(join(pluginRoot, "bin/lazycodex-gjc.mjs")).mode & 0o111).toBe(0o111);
   });
 
   test("pins every executable bridge surface in release provenance", () => {
