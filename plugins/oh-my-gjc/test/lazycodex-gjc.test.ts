@@ -183,6 +183,7 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(args).not.toContain('sandbox_workspace_write.network_access=false');
     expect(args).toContain('web_search="disabled"');
     expect(args).toContain('default_permissions="lazycodex_gjc"');
+    expect(args).toContain('permissions.lazycodex_gjc.extends=":workspace"');
     expect(args).toContain('permissions.lazycodex_gjc.network.enabled=false');
     expect(filesystem).toContain('":workspace_roots"={"."="write"}');
     expect(filesystem).toContain('":tmpdir"="write"');
@@ -203,9 +204,13 @@ describe("lazycodex-gjc isolated runner", () => {
     }
     expect(args.slice(-3)).toEqual(["--model", "gpt-5.6-sol", "-"]);
     expect(readFileSync(join(f.record, "executable"), "utf8")).toBe(realpathSync(join(f.root, "bin/codex")));
-    expect(readFileSync(join(f.record, "stdin"), "utf8")).toStartWith("$omo:ultrawork\n");
-    expect(readFileSync(join(f.record, "stdin"), "utf8")).toContain("<validated-omo-ultrawork");
-    expect(readFileSync(join(f.record, "stdin"), "utf8").split("<lazycodex-gjc-task>\n")[1]?.split("\n</lazycodex-gjc-task>")[0]).toBe(task);
+    const prompt = readFileSync(join(f.record, "stdin"), "utf8");
+    expect(prompt).toStartWith("$omo:ultrawork\n");
+    expect(prompt).toContain("<validated-omo-ultrawork");
+    expect(prompt).toContain("The built-in `file_change` route is broken under this custom permission profile; do not use it.");
+    expect(prompt).toContain("through the shell tool, using the existing `apply_patch` command");
+    expect(prompt).toContain("Verify every edit before finishing.");
+    expect(prompt.split("<lazycodex-gjc-task>\n")[1]?.split("\n</lazycodex-gjc-task>")[0]).toBe(task);
     expect(args).not.toContain(task);
     expect(readFileSync(join(f.record, "mode"), "utf8")).toBe("384");
     expect(existsSync(readFileSync(join(f.record, "temp"), "utf8"))).toBe(false);
@@ -220,6 +225,7 @@ describe("lazycodex-gjc isolated runner", () => {
     const filesystem = args.find((value) => value.startsWith("permissions.lazycodex_gjc.filesystem=")) ?? "";
     expect(result.status, result.stderr).toBe(0);
     expect(filesystem).toContain('":workspace_roots"={"."="read"}');
+    expect(args).toContain('permissions.lazycodex_gjc.extends=":read-only"');
     for (const path of [join(f.cwd, ".gjc"), join(f.home, ".gjc"), join(f.home, ".codex"), f.env.CODEX_HOME]) {
       expect(filesystem).toContain(JSON.stringify(realpathSync(path)) + '="deny"');
     }
@@ -241,6 +247,7 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(env.LAZYCODEX_CONFIG_MIGRATION_DISABLED).toBe("1");
     expect(env.OMO_CODEX_DISABLE_POSTHOG).toBe("1");
     expect(env.CODEX_CODEGRAPH_ENABLED).toBe("0");
+    expect(readFileSync(join(f.record, "stdin"), "utf8")).toContain("This worker is read-only; do not create, edit, delete, rename, or move files.");
   });
 
   test.each([

@@ -205,12 +205,18 @@ function resolveOmoSkill(codexHomeInput) {
   throw new CliError("compatible OMO ultrawork capability not found", 78);
 }
 
-function workerPrompt(task, omo) {
+function modeInstructions(sandbox) {
+  if (sandbox === "read-only") return "This worker is read-only; do not create, edit, delete, rename, or move files.";
+  return "The built-in `file_change` route is broken under this custom permission profile; do not use it. Make authorized workspace edits through the shell tool, using the existing `apply_patch` command for patches or other shell commands inside the active custom permission profile. Verify every edit before finishing.";
+}
+
+function workerPrompt(task, omo, sandbox) {
   return `$omo:ultrawork
 <validated-omo-ultrawork version="${omo.version}">
 ${omo.skill}
 </validated-omo-ultrawork>
 Run the raw task below as the sole goal. This is an isolated Codex/LazyCodex worker: do not invoke, configure, or mutate GJC tasks, sessions, plugins, credentials, or files. Do not run LazyCodex install, update, migration, doctor, or setup commands. Do not commit or push unless the raw task explicitly requests it. Obey the process permissions and return a final answer only after the goal is verified.
+${modeInstructions(sandbox)}
 <lazycodex-gjc-task>
 ${task}
 </lazycodex-gjc-task>
@@ -257,11 +263,12 @@ function childEnvironment(runtime, codexHome, privateRoot) {
 
 function childArgs(config, env, runtime, output) {
   const access = config.sandbox === "workspace-write" ? "write" : "read";
+  const baseProfile = config.sandbox === "workspace-write" ? ":workspace" : ":read-only";
   const workspaceRoots = `{"."="${access}"}`;
   const grants = [...config.protectedStatePaths.map((path) => [path, "deny"]), [env.HOME, "deny"], [runtime.core, "read"], [runtime.helperDir, "read"], [runtime.codexPath, "read"]].map(([path, mode]) => `${toml(path)}=${toml(mode)}`).join(",");
   const filesystem = `{":minimal"="read",":workspace_roots"=${workspaceRoots},":tmpdir"="write",${grants}}`;
   const args = ["exec", "--ephemeral", "--color", "never", "--ignore-user-config", "--ignore-rules", "--strict-config", "-C", config.cwd];
-  for (const value of ['approval_policy="never"', 'web_search="disabled"', 'default_permissions="lazycodex_gjc"', `permissions.lazycodex_gjc.filesystem=${filesystem}`, "permissions.lazycodex_gjc.network.enabled=false", 'shell_environment_policy.inherit="none"', `shell_environment_policy.set={HOME=${toml(env.HOME)},TMPDIR=${toml(env.TMPDIR)},PATH=${toml(runtime.safePath)}}`, "mcp_servers={}", "apps={}", "hooks={}"]) args.push("-c", value);
+  for (const value of ['approval_policy="never"', 'web_search="disabled"', 'default_permissions="lazycodex_gjc"', `permissions.lazycodex_gjc.extends=${toml(baseProfile)}`, `permissions.lazycodex_gjc.filesystem=${filesystem}`, "permissions.lazycodex_gjc.network.enabled=false", 'shell_environment_policy.inherit="none"', `shell_environment_policy.set={HOME=${toml(env.HOME)},TMPDIR=${toml(env.TMPDIR)},PATH=${toml(runtime.safePath)}}`, "mcp_servers={}", "apps={}", "hooks={}"]) args.push("-c", value);
   for (const feature of ["apps", "enable_mcp_apps", "hooks", "browser_use", "browser_use_external", "browser_use_full_cdp_access", "computer_use", "in_app_browser", "remote_plugin", "skill_mcp_dependency_install", "plugins"]) args.push("--disable", feature);
   args.push("-o", output);
   if (config.model !== undefined) args.push("--model", config.model);
@@ -313,7 +320,7 @@ async function main() {
   try {
     const runtime = prepareRuntime(binary, temp);
     const env = childEnvironment(runtime, codexHome, temp);
-    const result = await runChild(runtime.core, childArgs({ ...config, protectedStatePaths: protectedPaths }, env, runtime, output), workerPrompt(task, omo), env, output, config.timeoutSeconds);
+    const result = await runChild(runtime.core, childArgs({ ...config, protectedStatePaths: protectedPaths }, env, runtime, output), workerPrompt(task, omo, config.sandbox), env, output, config.timeoutSeconds);
     if (result.timedOut) throw new CliError("worker timed out", 124);
     if (result.overflow || statSync(output).size > OUTPUT_LIMIT) throw new CliError("worker output exceeded limit", 1);
     if (result.code !== 0) throw new CliError(result.code === null ? `worker terminated by signal ${result.signal ?? "unknown"}` : `worker exited with code ${result.code}`, result.code ?? 1);
