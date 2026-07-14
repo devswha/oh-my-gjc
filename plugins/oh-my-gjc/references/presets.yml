@@ -1,81 +1,78 @@
-# multivendor-presets v0.2 — 멀티벤더 모델 프로파일 프리셋 (canonical source)
+# multivendor-presets v0.7 — 멀티벤더 모델 프로파일 프리셋 (canonical source)
 #
 # 이 파일의 `profiles:` 하위 블록을 사용자의 ~/.gjc/agent/models.yml `profiles:`
 # 아래로 "이름 단위"로 병합한다(같은 이름이면 교체, 없으면 추가). 그 외의
 # 프로파일이나 최상위 키(default 등)는 절대 건드리지 않는다.
 #
+# v0.7 (2026-07-14): gpt-5.6 codex 프리셋 벤치마크(gajae-code docs/gpt-5.6-codex-preset-benchmark.md) 반영.
+#   - grok·sol executor를 terra:high → terra:xhigh로 승격: selected-task 샘플에서
+#     terra:high 6/11(54.5%) vs terra:xhigh 9/12(75%)+broad 8/8, luna:xhigh 동률이면서
+#     입력토큰 -72%·비용 -28%·시간 -29%. (벤치가 직접 측정한 역할은 executor뿐)
+#   - `codex` 추가 = openai-codex 단일 로그인 전용 프리셋. 상류 built-in codex-pro 골격
+#     (default sol:medium / planner sol:high / architect sol:xhigh / critic sol:max)에
+#     executor만 위 근거로 terra:xhigh.
+# v0.6 (2026-07-14): 역할이 바로 보이도록 `daily`→`grok`, `fast`→`sol`로 이름 변경.
+# v0.5 (2026-07-14): `fast` 추가.
+#   - fast = default를 grok-build/grok-4.5:high에서 openai-codex/sol:low로 바꾼 빠른 대화·소형 작업용
+# v0.4 (2026-07-14): 활성 프리셋을 `daily` 단일로 축소.
+#   - daily = interview/ralplan/ultragoal 겸용 본체 (세션 시작 기본)
+#   - ideal / escalate-surgical / monorepo / reviewer 는 정본에서 제외
+#     (필요하면 git 히스토리 v0.3 참조)
+# v0.3 (2026-07-14): `daily`를 세션 시작 기본 프리셋으로 추가.
 # v0.2 (2026-07): 구 ultimate/ultimate-f5를 폐기하고 증거 리서치 기반 3종으로 교체.
-#   - ultimate    → ideal에 흡수 (gemini architect가 툴체인 신뢰성 실측으로 탈락,
-#                   이후 교차비평으로 architect는 gpt-5.5로 확정 — 코드 레인 완전교차)
-#   - ultimate-f5 → 2026-07-07 만료 이벤트 프리셋이었음. 구원투수 역할은
-#                   escalate-surgical이 승계.
 #
 # 활성화:
-#   gjc --mpreset ideal                    # 이번 세션만
-#   gjc --mpreset ideal --default          # config.yml에 시작 기본값으로 고정
-#   gjc --mpreset escalate-surgical        # 난제 그 문제 하나만, 끝나면 복귀
-#   gjc --mpreset monorepo                 # 거대 코드베이스 전용
+#   gjc --mpreset grok                     # 이번 세션만
+#   gjc --mpreset grok --default           # config.yml에 시작 기본값으로 고정
+#   gjc --mpreset sol                      # 빠른 대화·소형 작업
+#   gjc --mpreset codex                    # openai-codex 단일 로그인 전용
 #
-# 요구 로그인: ideal = anthropic·openai-codex·xai(API키 가능),
-#   escalate-surgical + google-antigravity(부계정 권장 — 비공식 ToS 리스크),
-#   monorepo = anthropic·google-antigravity·opencode-go(OPENCODE_API_KEY).
-# required_providers 중 하나라도 자격증명이 없으면 활성화가 하드블록된다.
+# 요구 로그인: grok = grok-build·openai-codex·anthropic, sol = openai-codex·anthropic,
+# codex = openai-codex 단독. required_providers 중 하나라도 자격증명이 없으면 활성화가 하드블록된다.
 #
-# ⚠ 셀렉터/벤치 근거는 카탈로그·시점 민감(2026-07-03 리서치 기준). 실호출 검증:
+# ⚠ 셀렉터/벤치 근거는 카탈로그·시점 민감(2026-07 리서치 기준). 실호출 검증:
 #   GJC_NOTIFICATIONS=0 gjc -p --no-session --no-tools --model <selector> "Reply OK"
 
 profiles:
 
-  # ── ideal: 평시 기본. architect 배제 이력: gemini(툴체인 붕괴 — "6회 이상 연속 툴콜 정확도
-  #   붕괴"·"하네스 탈출", 여론 일관) → opus(v1) → gpt-5.5(v2, 교차비평 반영): opus architect는
-  #   opus executor 코드의 자기채점이라 코드 레인 교차가 우선. 플랜 레인(gpt plan→gpt review)의
-  #   부분 자기채점은 critic(grok) 게이트로 감수 — 3벤더 5좌석에선 양 레인 동시 완전교차 불가.
-  #   ⚠architect ctx 272K — 초대형 리뷰는 monorepo(opus architect 1M)로.
-  #   Opus 근거: SWE-bench Pro 69.2 1위, METR 12h 완주 50% 1위, 자기결함 플래깅 4배(Bridgewater).
-  #   ⚠Opus 프롬프트 인젝션 상대 취약 — 웹 헤비 세션 주의.
-  ideal:
-    display_name: ideal-v2
-    required_providers: [anthropic, openai-codex, xai]
+  # ── grok: interview/ralplan/ultragoal 겸용 품질 중심 본체.
+  #   default=grok-build/grok-4.5:high(대화 본체, 모델 상한 effort), executor=terra:xhigh,
+  #   planner=sol:xhigh, architect/critic=opus(:high/:xhigh).
+  #   실호출 검증 2026-07-14: terra:xhigh·sol:xhigh·opus:high/:xhigh·grok-build/grok-4.5 OK.
+  #   ⚠ CLI 단독 `grok-build/grok-4.5:high`는 not found일 수 있으나 프로파일 경로에서는 정상 활성.
+  grok:
+    display_name: grok
+    required_providers: [grok-build, openai-codex, anthropic]
     model_mapping:
-      default:   anthropic/claude-opus-4-8:xhigh                # 장기 코히런스·정직성 1위. xhigh = Anthropic 권장 에이전틱 버킷
-      executor:  anthropic/claude-opus-4-8:max                  # SWE Pro 69.2, 非Fable 최강. executor엔 위임급 작업만 도착 + adaptive thinking이라 :max 순이득. Fable 불가 시 폴백 겸용
-      planner:   openai-codex/gpt-5.5:xhigh                     # reasoning 100/100·agentic 99.2, cross-family 견제
-      architect: openai-codex/gpt-5.5:xhigh                     # 저자(opus)와 다른 벤더가 코드 아키리뷰 — 자기채점 제거
-      critic:    xai/grok-4.3:high                              # 3벤더째 독립 판정, structured output (xai :xhigh→:high 침묵 클램프)
+      default:   grok-build/grok-4.5:high                       # 대화 본체. 모델 상한 effort
+      executor:  openai-codex/gpt-5.6-terra:xhigh               # 벤치 selected 9/12, broad 8/8
+      architect: anthropic/claude-opus-4-8:high
+      planner:   openai-codex/gpt-5.6-sol:xhigh
+      critic:    anthropic/claude-opus-4-8:xhigh
 
-  # ── 구원투수: 상시 아님. "막힌 그 문제 하나"만 던지고 ideal로 회귀.
-  #   설계·판단 교착이면 planner만 fable-5:xhigh로 수동 스왑.
-  #   ⚠Fable 불가 시(수출통제 재발 전과 / 크레딧 소진 / refusal) → ideal로 회귀 (executor opus:max가 폴백)
-  escalate-surgical:                   # 외과적 최적화·탐색량 큰 난제 디버깅 — Fable5 executor
-    required_providers: [anthropic, openai-codex, google-antigravity, xai]
+  # ── sol: 대화 본체를 sol:low로 둔 빠른 프리셋.
+  #   일반 질의·작은 수정은 저지연 default가 처리하고, 역할 위임 시 품질 좌석은 grok과 동일하게 유지.
+  #   실호출 검증 2026-07-14: openai-codex/gpt-5.6-sol:low OK.
+  sol:
+    display_name: sol
+    required_providers: [openai-codex, anthropic]
     model_mapping:
-      default:   anthropic/claude-opus-4-8:high
-      executor:  anthropic/claude-fable-5:xhigh                 # SWE-V 95.0. ⚠:max 금지(xhigh 침묵 클램프). refusal(HTTP 200+stop_reason) 유의
-      planner:   openai-codex/gpt-5.5:xhigh
-      architect: google-antigravity/gemini-3.1-pro-low:high     # 1M ctx·멀티모달
-      critic:    xai/grok-4.3:high                              # cross-family — Fable 자기평가 금지
+      default:   openai-codex/gpt-5.6-sol:low
+      executor:  openai-codex/gpt-5.6-terra:xhigh               # grok과 동일 좌석
+      architect: anthropic/claude-opus-4-8:high
+      planner:   openai-codex/gpt-5.6-sol:xhigh
+      critic:    anthropic/claude-opus-4-8:xhigh
 
-  monorepo:                            # 거대 코드베이스 — 전 역할 ≥1M ctx (gpt-5.5 272K 배제)
-    required_providers: [anthropic, google-antigravity, opencode-go]
+  # ── codex: openai-codex 단일 로그인 전용 (anthropic·grok-build 불필요).
+  #   상류 built-in codex-pro 골격에 executor만 벤치 근거로 terra:xhigh
+  #   (상류 pro executor=terra:medium은 비용 판단; 본 스위트는 품질 우선).
+  #   실호출 검증 2026-07-14: sol:medium·sol:high·sol:max·terra:xhigh OK.
+  codex:
+    display_name: codex
+    required_providers: [openai-codex]
     model_mapping:
-      default:   anthropic/claude-opus-4-8:medium               # 1M
-      executor:  anthropic/claude-opus-4-8:high                 # 1M
-      planner:   google-antigravity/gemini-3.1-pro-low:high     # 1M
-      architect: anthropic/claude-opus-4-8:high                 # 1M 멀티턴 누적·실효검색 최상
-      critic:    opencode-go/glm-5.2                            # 1M. ⚠증류-상관성(GLM=Claude 증류 → 실패 표면 공유) — ctx 감수 가능하면 gpt-5.4:high 우선
-
-  # ── reviewer: 리뷰/감사 스탠스 — 저작 모드(executor 리드)를 반전. architect/critic이 리드,
-  #   executor는 지원(repro PoC·실패 테스트). 일반화 규칙: 리뷰 모델 패밀리 ≠ 코드를 저작한 패밀리.
-  #   용도: 교차세션 최종 리뷰 게이트(extragoal 스킬) — 저작 세션이 무공유 리뷰어 서브세션을 띄워
-  #   완성 diff를 저작 컨텍스트 없이 판정. 상류 정본(docs/multi-vendor-profiles.md) 흡수.
-  #   ⚠ 원샷 게이트(`gjc -p --no-session --model <cross-family> --tools read,search,find`)는
-  #   default 모델이 verdict 저자 — task 미허용이라 critic/architect 좌석은 안 탐. 이 프로파일은
-  #   role 위임이 실제로 일어나는 "인터랙티브 리뷰 세션"용. 셀렉터 실호출 검증 2026-07-08(전부 rc=0).
-  reviewer:
-    required_providers: [anthropic, openai-codex, google-antigravity]
-    model_mapping:
-      default:   anthropic/claude-opus-4-8:high                 # 집계자 절제 — 원 리뷰어 verdict 원문 보존
-      executor:  openai-codex/gpt-5.5:high                      # 지원 — repro PoC·실패 테스트·하네스
-      planner:   google-antigravity/gemini-3.1-pro-low:high     # 리뷰 체크리스트·감사 스코핑
-      architect: anthropic/claude-opus-4-8:high                 # 리드1 — 주 코드리뷰 판정(실효 롱컨텍스트)
-      critic:    openai-codex/gpt-5.5:high                      # 리드2 — 머지 게이트, Claude 저작 코드에 교차패밀리
+      default:   openai-codex/gpt-5.6-sol:medium
+      executor:  openai-codex/gpt-5.6-terra:xhigh
+      architect: openai-codex/gpt-5.6-sol:xhigh
+      planner:   openai-codex/gpt-5.6-sol:high
+      critic:    openai-codex/gpt-5.6-sol:max
