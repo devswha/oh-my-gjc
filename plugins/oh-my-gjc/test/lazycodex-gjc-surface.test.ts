@@ -213,6 +213,21 @@ describe("lazycodex-gjc isolated native install", () => {
     }
   });
 
+  test("all-user install without a Codex home skips only the runtime binding", () => {
+    const f = fixture("user");
+    const result = spawnSync("bash", [installerPath, "all", "user"], {
+      cwd: f.project,
+      env: { ...process.env, HOME: f.home, CODEX_HOME: join(f.home, ".codex-absent") },
+      encoding: "utf8",
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stderr).toContain("lazycodex-gjc runtime not bound");
+    expect(readdirSync(join(f.nativeRoot, "skills")).sort()).toEqual([...parseManifest("EXPECTED_SKILLS")].sort());
+    expect(readdirSync(join(f.nativeRoot, "commands")).sort()).toEqual([...ownedCommands()].sort());
+    expect(existsSync(join(f.nativeRoot, "runtimes/lazycodex-gjc"))).toBe(false);
+  });
+
   test("normalizes group-writable trusted runtime paths during user install", () => {
     const f = fixture("user");
     const fakeInstall = join(f.root, "codex-install");

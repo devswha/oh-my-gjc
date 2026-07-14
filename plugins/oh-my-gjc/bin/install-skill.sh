@@ -108,6 +108,18 @@ normalize_trusted_path() { # $1=absolute canonical path pinned by the runtime bi
   done
 }
 
+# Non-fatal availability probe for the `all` path: the suite must install for users
+# WITHOUT Codex (the other capabilities have no external prerequisites). When any
+# lazycodex-gjc runtime prerequisite is ABSENT, `all` skips the binding — the runner
+# fails closed without a binding, so the bridge stays dead-until-bound. A PRESENT but
+# broken runtime still hard-fails inside prepare_runtime_binding (real error, surface it).
+# Explicit `install-skill.sh lazycodex-gjc user` keeps the hard requirement.
+lazycodex_runtime_available() {
+  local entry
+  for entry in node codex systemd-run systemctl env; do command -v "$entry" >/dev/null 2>&1 || return 1; done
+  [ -d "$(readlink -f "${CODEX_HOME:-$HOME/.codex}" 2>/dev/null)" ] || return 1
+}
+
 RUNTIME_NODE="" RUNTIME_CORE="" RUNTIME_CODEX_PATH="" RUNTIME_CODEX_HOME=""
 RUNTIME_SYSTEMD_RUN="" RUNTIME_SYSTEMCTL="" RUNTIME_ENV=""
 prepare_runtime_binding() {
@@ -275,10 +287,14 @@ case "$mode" in
   user|project)
     if [ "$target" = "all" ]; then
       preflight_all
-      if [ "$mode" = "user" ]; then prepare_runtime_binding; fi
+      LAZYCODEX_BIND=0
+      if [ "$mode" = "user" ]; then
+        if lazycodex_runtime_available; then prepare_runtime_binding; LAZYCODEX_BIND=1
+        else echo "! lazycodex-gjc runtime not bound (Codex CLI / systemd / Codex home missing) — the bridge stays disabled (fail-closed). After installing+logging in Codex, re-run: install-skill.sh lazycodex-gjc user" >&2; fi
+      fi
       for s in "${EXPECTED_SKILLS[@]}";     do install_skill     "$s" "$mode"; done
       for c in "${EXPECTED_COMMANDS[@]}";   do install_command   "$c" "$mode"; done
-      if [ "$mode" = "user" ]; then install_runtime_binding; fi
+      if [ "$LAZYCODEX_BIND" = 1 ]; then install_runtime_binding; fi
       cleanup_legacy_commands "$mode"
       cleanup_removed "$mode"
       report_missing

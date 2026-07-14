@@ -30,7 +30,7 @@ catalog; `gjc plugin list` shows installed). **Plugin management is shell-CLI on
 
 ### Capability prerequisites (single `oh-my-gjc` suite)
 - `insane-review`: ChatGPT subscription + a Chromium-family browser on CDP `:9222` logged into chatgpt.com.
-- `lazycodex-gjc`: already installed and logged-in Codex CLI + LazyCodex/OMO; the suite never installs or logs in to them.
+- `lazycodex-gjc`: already installed and logged-in Codex CLI + LazyCodex/OMO; the suite never installs or logs in to them. Codex is NOT required to install the suite: `install-skill.sh all user` skips only the runtime binding when Codex/systemd/Codex-home are absent (bridge stays fail-closed disabled); after installing Codex, re-run `install-skill.sh lazycodex-gjc user`.
 - Everything else (easy-answer, gate-briefing, plain-layer, presets, branch-flow, extragoal, fable, gjc-bugwatch) + the `example-plugin` template: no external prerequisites (branch-flow/worktree need a git repo; fable needs Fable 5 model access; plain-layer needs GJC ≥0.10.1 with deep-interview --write).
 
 ## Layout
