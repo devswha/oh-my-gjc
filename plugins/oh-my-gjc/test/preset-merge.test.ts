@@ -28,7 +28,7 @@ echo 'Error: Unknown model profile "__omg_probe__". Available profiles: codex-pr
 exit 1
 `;
 
-function run(fakeGjc: string, seedModelsYml?: string) {
+function run(fakeGjc: string, seedModelsYml?: string, extraEnv: Record<string, string> = {}) {
 	const home = mkdtempSync(join(tmpdir(), "omg-merge-"));
 	const bin = join(home, "fakebin");
 	mkdirSync(bin, { recursive: true });
@@ -41,7 +41,7 @@ function run(fakeGjc: string, seedModelsYml?: string) {
 	}
 	const result = spawnSync("bash", [installer, "multivendor-presets", "user"], {
 		encoding: "utf8",
-		env: { ...process.env, HOME: home, PATH: `${bin}:${process.env.PATH}` },
+		env: { ...process.env, HOME: home, PATH: `${bin}:${process.env.PATH}`, ...extraEnv },
 	});
 	return { home, models, result, out: result.stdout + result.stderr };
 }
@@ -125,5 +125,69 @@ describe("merge_sol_preset behavioral", () => {
 		expect(result.status, out).toBe(0);
 		expect(out).toContain("preset merge rolled back");
 		expect(existsSync(models)).toBe(false);
+	});
+});
+
+const FAKE_GJC_HANG = "#!/usr/bin/env bash\nsleep 30\n";
+
+describe("merge_sol_preset failure injection (r2)", () => {
+	test("hanging probe is time-bounded: merge resolves and install stays rc=0", () => {
+		const seed = "profiles:\n  sol:\n    display_name: sol\n    required_providers: [openai-codex, anthropic]\n    model_mapping:\n      default: openai-codex/gpt-5.6-sol:low\n";
+		const started = Date.now();
+		const { models, result, out } = run(FAKE_GJC_HANG, seed, { OMG_PROBE_TIMEOUT: "2" });
+		expect(result.status, out).toBe(0); // NON-FATAL even when the probe hangs
+		expect(Date.now() - started).toBeLessThan(25_000); // bounded well under the 30s hang
+		expect(out).toContain("preset merge rolled back");
+		expect(readFileSync(models, "utf8")).toBe(seed); // rollback restored the original
+	});
+
+	test("internal 2-space comment stays inside the old block; the NEXT section's comment survives", () => {
+		const seed = [
+			"profiles:",
+			"  sol:",
+			"    display_name: sol",
+			"    required_providers: [openai-codex, anthropic]",
+			"    model_mapping:",
+			"      default:   openai-codex/gpt-5.6-sol:low",
+			"  # internal stale note",
+			"      planner:   openai-codex/gpt-5.6-sol:xhigh",
+			"",
+			"  # belongs to after",
+			"  after:",
+			"    display_name: after",
+			"    required_providers: [anthropic]",
+			"    model_mapping:",
+			"      default: anthropic/claude-opus-4-8:low",
+			"",
+		].join("\n");
+		const { models, result, out } = run(FAKE_GJC_OK, seed);
+		expect(result.status, out).toBe(0);
+		expect(out).toContain("merged `sol`");
+		const raw = readFileSync(models, "utf8");
+		const profiles = parseProfiles(models);
+		expect(Object.keys(profiles).sort()).toEqual(["after", "sol"]);
+		expect(raw.match(/^  sol:/gm)?.length).toBe(1);
+		expect(raw).not.toContain("internal stale note"); // old-block internal comment dropped
+		expect(raw).not.toContain("sol:xhigh"); // stale field behind the internal comment dropped too
+		expect(raw).toContain("belongs to after"); // next section's comment preserved
+	});
+
+	test("unwritable agent dir: merge skips with a warning, install stays rc=0", () => {
+		const seed = "profiles:\n  keepme:\n    display_name: keepme\n    required_providers: [anthropic]\n    model_mapping:\n      default: anthropic/claude-opus-4-8:low\n";
+		const { home, models, result, out } = run(FAKE_GJC_OK, seed);
+		// second run against a read-only dir (mktemp/backup must fail cleanly)
+		chmodSync(join(home, ".gjc/agent"), 0o555);
+		try {
+			const second = spawnSync("bash", [installer, "multivendor-presets", "user"], {
+				encoding: "utf8",
+				env: { ...process.env, HOME: home, PATH: `${join(home, "fakebin")}:${process.env.PATH}` },
+			});
+			expect(second.status, second.stdout + second.stderr).toBe(0);
+			expect(second.stdout + second.stderr).toMatch(/preset merge skipped/);
+		} finally {
+			chmodSync(join(home, ".gjc/agent"), 0o755);
+		}
+		expect(result.status, out).toBe(0);
+		expect(readFileSync(models, "utf8")).toContain("keepme");
 	});
 });

@@ -242,65 +242,81 @@ merge_sol_preset() ( # user scope only — models.yml is user-global; body = sub
   block="$(awk 'f; /^profiles:$/ {f=1}' "$src" 2>/dev/null)"
   [ -n "$block" ] || { warn "preset merge skipped: could not extract sol block — run /omg:presets later"; return 0; }
   mkdir -p "$(dirname "$dst")" 2>/dev/null || { warn "preset merge skipped: cannot create $(dirname "$dst")"; return 0; }
-  tmp="$(mktemp 2>/dev/null)" || { warn "preset merge skipped: mktemp failed"; return 0; }
+  # temp lives NEXT TO the target so the final `mv` is a same-filesystem atomic rename —
+  # the live file is either the old content or the complete new content, never partial.
+  tmp="$(mktemp "$(dirname "$dst")/.models.yml.omg.XXXXXX" 2>/dev/null)" || { warn "preset merge skipped: mktemp failed in $(dirname "$dst")"; return 0; }
   bak=""
   if [ -f "$dst" ]; then
     bak="$dst.bak-$(date +%s).$$"    # PID suffix: same-second reruns must not clobber a backup
     cp "$dst" "$bak" 2>/dev/null || { warn "preset merge skipped: backup failed"; rm -f "$tmp"; return 0; }
     if grep -Eq '^  sol:[ \t]*(#.*)?$' "$dst"; then
-      # REPLACE the existing sol block: its leading contiguous `  #` comments + body
-      # (4+-space lines; internal blank lines are held and dropped only when more body
-      # follows, so a single separating blank after the block survives). Other profiles,
-      # their comments, and top-level keys pass through untouched.
+      # REPLACE the existing sol block. Boundary rules (r2 finding 2):
+      # - comments contiguously ABOVE `  sol:` document sol by YAML convention → replaced
+      #   with the canonical block (which carries its own docs);
+      # - INSIDE the block, 2-space comments and blank lines are held in a pending buffer:
+      #   if 4+-space body follows they were internal (dropped with the old block); if a
+      #   key/top-level line follows they belong to the NEXT section and are flushed intact.
+      # Other profiles, their comments, and top-level keys pass through untouched.
       OMG_SOL_BLOCK="$block" awk '
-        BEGIN { n = 0; insol = 0; pend = 0 }
+        function flushpend() { for (j = 1; j <= p; j++) print pend[j]; p = 0 }
+        function flushbuf()  { for (j = 1; j <= n; j++) print buf[j];  n = 0 }
+        BEGIN { n = 0; p = 0; insol = 0 }
         {
           if (insol) {
-            if ($0 ~ /^    /) { pend = 0; next }
-            if ($0 ~ /^[ \t]*$/) { pend = 1; next }
-            insol = 0
-            if (pend) print ""
-            pend = 0
+            if ($0 ~ /^    /)                     { p = 0; next }
+            if ($0 ~ /^[ \t]*$/ || $0 ~ /^  #/)   { pend[++p] = $0; next }
+            insol = 0; flushpend()
           }
           if ($0 ~ /^  #/) { buf[++n] = $0; next }
           if ($0 ~ /^  sol:[ \t]*(#.*)?$/) { n = 0; print ENVIRON["OMG_SOL_BLOCK"]; insol = 1; next }
-          for (i = 1; i <= n; i++) print buf[i]
-          n = 0; print
+          flushbuf(); print
         }
-        END { for (i = 1; i <= n; i++) print buf[i] }
-      ' "$dst" > "$tmp" 2>/dev/null
+        END { if (insol) insol = 0; flushpend(); flushbuf() }
+      ' "$dst" > "$tmp" 2>/dev/null || { warn "preset merge skipped: block replace failed"; rm -f "$tmp"; return 0; }
     elif grep -q '^profiles:' "$dst"; then
       # APPEND: insert the sol block right AFTER the `profiles:` line, so a later
       # top-level key (modelBindings, providers, …) can never swallow it.
       OMG_SOL_BLOCK="$block" awk '
         { print }
         /^profiles:[ \t]*(#.*)?$/ && !done { print ""; print ENVIRON["OMG_SOL_BLOCK"]; done = 1 }
-      ' "$dst" > "$tmp" 2>/dev/null
+      ' "$dst" > "$tmp" 2>/dev/null || { warn "preset merge skipped: append failed"; rm -f "$tmp"; return 0; }
     else
-      { cat "$dst"; printf '\nprofiles:\n\n%s\n' "$block"; } > "$tmp" 2>/dev/null
+      { cat "$dst"; printf '\nprofiles:\n\n%s\n' "$block"; } > "$tmp" 2>/dev/null || { warn "preset merge skipped: build failed"; rm -f "$tmp"; return 0; }
     fi
   else
-    printf 'profiles:\n\n%s\n' "$block" > "$tmp" 2>/dev/null
+    printf 'profiles:\n\n%s\n' "$block" > "$tmp" 2>/dev/null || { warn "preset merge skipped: build failed"; rm -f "$tmp"; return 0; }
   fi
   grep -Eq '^  sol:' "$tmp" 2>/dev/null || { warn "preset merge skipped: merge produced no sol block"; rm -f "$tmp"; return 0; }
-  # single-write install: the live file is never left half-written
-  if ! mv "$tmp" "$dst" 2>/dev/null; then
-    cp "$tmp" "$dst" 2>/dev/null || { warn "preset merge skipped: cannot write $dst"; rm -f "$tmp"; return 0; }
-    rm -f "$tmp"
-  fi
-  # Validate against the live registry, time-bounded: the probe fails fast (no auth/network)
-  # and its error lists every registered profile — `sol` must be among them, meaning the
-  # file parses AND the profile registered. (word-safe match: avoid `fable-sol` false hits)
+  # single atomic write — no cp fallback: if rename fails the live file stays untouched
+  mv "$tmp" "$dst" 2>/dev/null || { warn "preset merge skipped: cannot write $dst"; rm -f "$tmp"; return 0; }
+  # Validate against the live registry, ALWAYS time-bounded (r2 finding 1): prefer
+  # coreutils `timeout`; otherwise a bash watchdog kills the probe after the budget.
+  # The probe fails fast (no auth/network) and its error lists every registered profile —
+  # `sol` must be among them, meaning the file parses AND the profile registered.
+  # (word-safe match: avoid `fable-sol` false hits)
+  probe_budget="${OMG_PROBE_TIMEOUT:-60}"
+  probe_out="$(mktemp 2>/dev/null)" || probe_out="$tmp.probe"
   if command -v timeout >/dev/null 2>&1; then
-    out="$(timeout 60 env GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" 2>&1)"
+    timeout "$probe_budget" env GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" > "$probe_out" 2>&1
   else
-    out="$(GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" 2>&1)"
+    GJC_NOTIFICATIONS=0 gjc --mpreset __omg_probe__ -p --no-session --no-tools "x" > "$probe_out" 2>&1 &
+    probe_pid=$!
+    waited=0
+    while kill -0 "$probe_pid" 2>/dev/null && [ "$waited" -lt "$probe_budget" ]; do sleep 1; waited=$((waited+1)); done
+    kill -9 "$probe_pid" 2>/dev/null
+    wait "$probe_pid" 2>/dev/null
   fi
-  if printf '%s' "$out" | grep -qE '[:,] sol(,|$)'; then
+  if grep -qE '[:,] sol(,|$)' "$probe_out" 2>/dev/null; then
+    rm -f "$probe_out"
     echo "✓ preset  (user): merged \`sol\` into $dst${bak:+ (backup: $bak)}"
   else
-    if [ -n "$bak" ]; then cp "$bak" "$dst" 2>/dev/null; else rm -f "$dst"; fi
-    warn "preset merge rolled back (registry validation failed) — run /omg:presets manually"
+    rm -f "$probe_out"
+    if [ -n "$bak" ]; then
+      cp "$bak" "$dst" 2>/dev/null || { warn "preset merge ROLLBACK FAILED — restore manually: cp $bak $dst"; return 0; }
+    else
+      rm -f "$dst" 2>/dev/null || warn "preset merge cleanup failed — remove $dst manually"
+    fi
+    warn "preset merge rolled back (registry validation failed or probe timed out) — run /omg:presets manually"
   fi
   return 0
 )

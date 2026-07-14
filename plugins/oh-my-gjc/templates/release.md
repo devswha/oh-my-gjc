@@ -45,12 +45,17 @@ argument-hint: "[<버전> [<한 줄 요약>]]  (기본: 버전 자동 제안)"
 **작업 시작 전의 "릴리스해라" 지시는 착수 권한이지 발행 승인이 아니다** — 최종 후보가
 확정된 지금 명시 확인을 받은 뒤에만 Step 4로 간다. **자기 승인 금지.**
 
-## Step 4 — 발행 + 증거
+## Step 4 — 발행 + 증거 (승인된 HEAD 그대로)
 
-1. 증거 문서 작성·커밋: `docs/verification/<repo>-release-v<ver>-<날짜>.md`
-   (G1 결과표 · G2 전 라운드 verdict와 수정 커밋 · G3 승인 근거 · 빈도 캡 예외 시 사유).
-2. 발행 경로는 레포 거버넌스 우선: branch-flow/브랜치 보호가 있으면 release PR
+0. **빈도 캡 확인:** 당일 이미 발행된 릴리스가 있으면 — 긴급 security/install-breakage
+   수정이 아닌 한 — 발행을 멈추고 다음 날 번들을 안내한다.
+1. **승인된 HEAD를 그대로 발행한다** (발행 전 어떤 커밋도 추가 금지 — 추가되면 승인 무효,
+   Gate 2부터 다시): branch-flow/브랜치 보호가 있으면 release PR
    (`gh pr create --base main --head dev`) + CI 통과 후 머지, 없으면
    `git checkout main && git merge --no-ff dev` → `git tag -a v<ver>` → push(main+tags).
-3. 릴리스 발행(예: `gh release create v<ver>`) — 노트에 변경 요약·게이트 증거 링크.
+   머지 후 `git diff <승인해시>..main --stat`이 비어 있는지(트리 동일) 확인한다.
+2. 릴리스 발행(예: `gh release create v<ver>`) — 노트에 변경 요약·게이트 증거 링크.
+3. **발행 후** 증거 문서를 dev에 docs-only 커밋: `docs/verification/<repo>-release-v<ver>-<날짜>.md`
+   (G1 결과표 · G2 전 라운드 verdict와 수정 커밋 · G3 승인 근거와 승인 해시 · 빈도 캡
+   예외 시 사유). 릴리스 태그 밖이므로 승인을 무효화하지 않는다.
 4. 작업 브랜치로 복귀. 결과(태그·URL·증거 경로)를 보고한다.

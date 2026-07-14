@@ -45,13 +45,19 @@ G1·G2를 통과한 최종 후보를 보고 이뤄져야 한다(사전 지시가
 
 ## 통과 후 — 기계적 발행 + 증거 박제
 
-- 발행 경로는 레포 거버넌스를 따른다: **branch-flow/브랜치 보호가 있는 레포는 release
-  PR**(`gh pr create --base main --head dev`) + CI 통과 후 머지, 없는 레포만 로컬
-  `dev`→`main` `--no-ff` 머지 → 주석 태그 → 릴리스 발행(GitHub Release 등).
-- **증거 문서**를 `docs/verification/<프로젝트>-release-vX.Y.Z-<날짜>.md`로 커밋:
-  게이트 1 체크리스트 결과, 게이트 2 전 라운드 verdict·블로커·수정 커밋, 게이트 3 승인 근거.
-- 빈도 캡(기본: 문서·패치 번들 1일 1릴리스). 예외는 **긴급 security/install-breakage
-  한정** — 그 외 초과는 운영자의 명시 지시가 있을 때만 허용되며 사유를 증거 문서에 기록.
+- **발행 대상 = 승인된 HEAD의 트리, 정확히 그것.** 발행 경로는 레포 거버넌스를 따른다:
+  branch-flow/브랜치 보호가 있는 레포는 release PR(`gh pr create --base main --head dev`)
+  + CI 통과 후 머지, 없는 레포는 로컬 `dev`→`main` `--no-ff` 머지 → 주석 태그 → 릴리스
+  발행(GitHub Release 등). 머지 커밋은 승인 HEAD만 담아야 하며 **트리가 승인 HEAD와
+  동일함을 확인**한다(`git diff <승인해시>..main --stat`이 비어야 함).
+- **증거 문서는 발행 후에 커밋한다** (r2 finding 4 — 발행 전에 커밋하면 실제 발행
+  HEAD가 미승인 커밋이 되는 자기모순): `docs/verification/<프로젝트>-release-vX.Y.Z-<날짜>.md`를
+  발행 직후 dev에 **docs-only 커밋**으로 남긴다. 릴리스 태그에는 포함되지 않고(코드가
+  아닌 기록이므로 승인 무효화 없음) 다음 릴리스 디프 범위에 자연 포함된다.
+  내용: 게이트 1 체크리스트 결과, 게이트 2 전 라운드 verdict·블로커·수정 커밋,
+  게이트 3 승인 근거(승인된 해시 포함).
+- 빈도 캡(기본: 문서·패치 번들 1일 1릴리스). **예외는 긴급 security/install-breakage
+  수정뿐**이며 그때도 게이트 1·2는 그대로 실행한다.
 - 롤백은 **fix-forward만**: revert 커밋 → 게이트 1·2 재실행 → 새 패치 릴리스.
   태그/릴리스 삭제·강제 이동 금지(superseded 표기).
 

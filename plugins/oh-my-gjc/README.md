@@ -20,11 +20,11 @@ bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install
 /omg
 ```
 
-## 들어있는 것 (스킬 9 · 커맨드 14)
+## 들어있는 것 (스킬 10 · 커맨드 15)
 
 ### 스킬 (자연어 트리거 자동활성화)
 `easy-answer` · `gate-briefing` · `plain-layer` · `multivendor-presets` · `branch-flow` · `extragoal`
-· `insane-review` · `gjc-bugwatch` · `lazycodex-gjc`
+· `insane-review` · `gjc-bugwatch` · `lazycodex-gjc` · `release-gate`
 
 ### 커맨드
 
