@@ -21,3 +21,6 @@ node_modules/
 .insane-review/
 __pycache__/
 *.pyc
+
+# OMO/LazyCodex worker runtime state (created by lazycodex-gjc dogfooding)
+.omo/

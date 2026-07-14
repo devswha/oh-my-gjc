@@ -1,11 +1,11 @@
 ---
 name: insane-review
-description: GPT-5.5 Pro(웹 전용·API 없음)를 gjc(Gajae Code) 안에서 활용한다. 사용자가 검토/수정/문제/리뷰/의견을 요청하면, 의도를 파악해 repomix로 관련 코드만 정밀 패킹한 뒤 구독 ChatGPT Pro에 투입하고 분석을 회수해 반영한다. 트리거 — "GPT한테 물어봐", "Pro 모델 의견", "다른 모델로 검토해줘", "GPT Pro로 리뷰", "repomix로 묶어서 GPT에 넣어줘", "GPT는 어떻게 생각해", "ask gpt pro", "second opinion", "have Pro review this". agent-council의 웹 전용 멤버로도 동작.
+description: GPT-5.6 Sol Pro(웹 전용·API 없음)를 gjc(Gajae Code) 안에서 활용한다. 사용자가 검토/수정/문제/리뷰/의견을 요청하면, 의도를 파악해 repomix로 관련 코드만 정밀 패킹한 뒤 구독 ChatGPT Pro에 투입하고 분석을 회수해 반영한다. 트리거 — "GPT한테 물어봐", "Pro 모델 의견", "다른 모델로 검토해줘", "GPT Pro로 리뷰", "repomix로 묶어서 GPT에 넣어줘", "GPT는 어떻게 생각해", "ask gpt pro", "second opinion", "have Pro review this". agent-council의 웹 전용 멤버로도 동작.
 ---
 
 # insane-review (gjc 포트)
 
-**왜 존재하나:** GPT-5.5 Pro는 **웹(구독)에서만** 쓸 수 있고 **API가 없다.** 그래서 Codex CLI·API provider·agent-council의 기존 API 멤버로는 못 부른다. 이 스킬은 **구독 ChatGPT 웹을 CDP로 자동화해 Pro를 gjc 안으로 끌어오는 유일한 경로**다. API 비용 0, 사용자의 요금제로 동작.
+**왜 존재하나:** GPT-5.6 Sol Pro는 **웹(구독)에서만** 쓸 수 있고 **API가 없다.** 그래서 Codex CLI·API provider·agent-council의 기존 API 멤버로는 못 부른다. 이 스킬은 **구독 ChatGPT 웹을 CDP로 자동화해 Pro를 gjc 안으로 끌어오는 유일한 경로**다. API 비용 0, 사용자의 요금제로 동작.
 
 핵심 가치는 "통째 패킹"이 아니라 **"의도 파악 → 관련 타겟만 정밀 선별 → 그것만 패킹"** 이다. 이 선별을 gjc(너)가 수행하는 것이 이 도구의 차별점이다.
 
@@ -30,8 +30,8 @@ echo "IR=$IR"
 
 - **deps**(`playwright`·`pyperclip`): 없으면 "지금 자동 설치" 선택 → `--check-env --install`. (`npx`/repomix는 `npx -y`로 완전 자동.)
 - **browser**: 크로미움 계열 브라우저가 디버그포트(9222)에 **전용 프로필**로 떠 있어야 함(주 브라우저와 격리; Chrome 136+는 전용 프로필 없으면 CDP가 안 열림). 없으면 `--check-env`/`--list-browsers`의 `BROWSERS …` 목록으로 브라우저를 고르게 한 뒤 gjc가 `python3 "$IR" --launch-browser "<이름>"`(크로스플랫폼 mac/win/linux·전용 프로필·선택 자동 저장)을 실행. (쿠키는 전용 프로필에 보존 → 로그인 유지.)
-- **login**: 로그인 프로브가 `login=no`면, "방금 연 브라우저에서 chatgpt.com 로그인 + GPT-5.5 Pro 선택" 후 "로그인 완료" 선택 → 재점검. **로그인은 자동 불가 → 반드시 사용자에게 요청**(에러로 끝내지 말 것).
-- **모델 5.5 Pro**: 스크립트 `--model pro`가 자동선택·검증(`--require-model "GPT-5.5"`). 안 되면 사용자가 1회 수동 설정하면 새 채팅이 상속.
+- **login**: 로그인 프로브가 `login=no`면, "방금 연 브라우저에서 chatgpt.com 로그인 + GPT-5.6 Sol Pro 선택" 후 "로그인 완료" 선택 → 재점검. **로그인은 자동 불가 → 반드시 사용자에게 요청**(에러로 끝내지 말 것).
+- **모델 5.6 Sol Pro**: 스크립트 `--model pro`가 자동선택·검증(`--require-model "GPT-5.6"`). 안 되면 사용자가 1회 수동 설정하면 새 채팅이 상속.
 
 ## 핵심 절차 (검토/수정/리뷰 요청을 받았을 때)
 
@@ -51,7 +51,7 @@ echo "IR=$IR"
 ```bash
 python3 "$IR" \
   --target <repo_root> --include "<관련 파일 글롭>" \
-  --model pro --require-model "GPT-5.5" \
+  --model pro --require-model "GPT-5.6" \
   --prompt "<의도를 담은 정확한 질문 — '판정마다 파일/라인/코드조각을 인용하라'를 반드시 포함>"
 ```
 **레포 없이 순수 질문(의견)만:** `--target` 생략 → 프롬프트만 전송.
@@ -69,7 +69,7 @@ python3 "$IR" --model pro --force-answer-after 90 --prompt "<질문>"
 
 ### 4) 회수 & 반영
 - 응답은 **현재 프로젝트의 `.insane-review/response_*.md`**에 저장되고, stdout 끝에 미리보기가 나온다. gjc `read` 도구로 전문을 읽어라.
-- 그 의견을 읽고 **GPT-5.5 Pro의 의견임을 명시**하여 사용자에게 반영/요약한다. 동의/이견을 너의 판단과 함께 제시하라.
+- 그 의견을 읽고 **GPT-5.6 Sol Pro의 의견임을 명시**하여 사용자에게 반영/요약한다. 동의/이견을 너의 판단과 함께 제시하라.
 
 ## 주의/가드 (실측 기반)
 
@@ -88,11 +88,11 @@ python3 "$IR" --model pro --force-answer-after 90 --prompt "<질문>"
 - 이름 바꾸려면 `--project "<이름>"`, 끄려면 `--no-project`.
 
 ## 주요 플래그
-`--target`(생략=프롬프트only) · `--include`(정밀 글롭) · `--ignore` · `--compress` · `--model pro` · `--require-model "GPT-5.5"` · `--force-answer-after N` · `--max-wait N` · `--retries N` · `--style xml|markdown|plain` · `--browser <이름|경로>` · `--launch-browser <이름>` · `--list-browsers` · `--project "<이름>"` · `--no-project` · `--pack-only` · `--delete-pack` · `--council`
+`--target`(생략=프롬프트only) · `--include`(정밀 글롭) · `--ignore` · `--compress` · `--model pro` · `--require-model "GPT-5.6"` · `--force-answer-after N` · `--max-wait N` · `--retries N` · `--style xml|markdown|plain` · `--browser <이름|경로>` · `--launch-browser <이름>` · `--list-browsers` · `--project "<이름>"` · `--no-project` · `--pack-only` · `--delete-pack` · `--council`
 
 ## agent-council 멤버로 쓰기
 `references/council-setup.md` 참고. `--council` 모드는 프롬프트를 위치인자로 받고 **응답만 stdout**으로 내보내(진행로그는 stderr) council worker가 그대로 캡처한다. Pro를 웹 전용 council 멤버로 등록하면 다른 모델들과 토론에 참여시킬 수 있다.
 
 ## 범위
-**한다:** gjc가 관련 코드를 완전하게 선별 → repomix 풀코드 패킹(라인번호·secretlint·감사) → 로그인된 ChatGPT 웹을 CDP로 구동 → GPT-5.5 Pro 모델 검증(fail-closed) → 응답 회수·저장·반영. agent-council 웹 전용 멤버.
-**안 한다:** GPT-5.5 Pro API 호출(존재하지 않음), 자동 로그인(사용자 1회 수동), gjc `browser` 도구로 엔진 재구현, OpenAI 계정 자동 생성.
+**한다:** gjc가 관련 코드를 완전하게 선별 → repomix 풀코드 패킹(라인번호·secretlint·감사) → 로그인된 ChatGPT 웹을 CDP로 구동 → GPT-5.6 Sol Pro 모델 검증(fail-closed) → 응답 회수·저장·반영. agent-council 웹 전용 멤버.
+**안 한다:** GPT-5.6 Sol Pro API 호출(존재하지 않음), 자동 로그인(사용자 1회 수동), gjc `browser` 도구로 엔진 재구현, OpenAI 계정 자동 생성.

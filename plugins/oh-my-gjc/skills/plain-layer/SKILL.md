@@ -159,4 +159,4 @@ plain-layer는 승인 포맷을 새로 만들지 않는다.
 
 - 정적: 이 파일에 native-only 경계, 3항목 해설, single Phase-5, writer 경로, exact missing marker, ≥2 보류, no proxy, no plain-always, no direct `.gjc` edit
 - gate heading text tokens vs `gate-briefing/SKILL.md` 정본 일치
-- installer EXPECTED에 `plain-layer` / `plain` 포함 (8/13)
+- installer EXPECTED에 `plain-layer` / `plain` 포함 (9/14)

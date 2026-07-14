@@ -1,7 +1,7 @@
 {
   "name": "oh-my-gjc",
-  "version": "0.14.1",
-  "description": "oh-my-gajaecode — one plugin, everything. A single install brings 8 trigger-word skills + 13 commands (/omg + 12 /omg:*), all surfaced natively as /omg:* commands and trigger-word skills: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings), plain-layer (choice translation + post-interview conversational spec polish + gate delegation via /omg:plain), multivendor model presets (grok quality + sol low + codex single-login + fable-codex safety-critical; session default=grok), extragoal (external fresh-context cross-family final review gate), branch-flow (per-repo dev/main git discipline in the repo's AGENTS.md + docs/WORKFLOW.md, + git-worktree parallel sessions via /omg:worktree), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md marker blocks), /omg:fable (Fable 5 adversarial safety audit), /omg:insane-review (GPT-5.5 Pro web review), /omg:bugwatch-scan (gjc bug collector), and /omg:setup for optional model-preset merge + always-on toggles. Prerequisite-gated capabilities self-diagnose at first run; install stays light.",
+  "version": "0.15.0",
+  "description": "oh-my-gajaecode — one plugin, everything. A single install brings 9 trigger-word skills + 14 commands (/omg + 13 /omg:*), all surfaced natively as /omg:* commands and trigger-word skills: easy-answer (plain-language final answers), gate-briefing (domain-blind approval-gate briefings), plain-layer (choice translation + post-interview conversational spec polish + gate delegation via /omg:plain), multivendor model presets (grok quality + sol low + codex single-login + fable-codex safety-critical; session default=grok), extragoal (external fresh-context cross-family final review gate), branch-flow (per-repo dev/main git discipline in the repo's AGENTS.md + docs/WORKFLOW.md, + git-worktree parallel sessions via /omg:worktree), lazycodex-gjc (isolated external Codex+LazyCodex worker with no child GJC session), session toggles + always-on semaphores (~/.gjc/agent/SYSTEM.md marker blocks), /omg:fable (Fable 5 adversarial safety audit), /omg:insane-review (GPT-5.6 Sol Pro web review), /omg:bugwatch-scan (gjc bug collector), and /omg:setup for optional model-preset merge + always-on toggles. Prerequisite-gated capabilities self-diagnose at first run; install stays light.",
   "author": {
     "name": "devswha",
     "email": "devswha@gmail.com",
@@ -21,6 +21,8 @@
     "multi-vendor",
     "code-review",
     "orchestration",
-    "plain-layer"
+    "plain-layer",
+    "codex-bridge",
+    "lazycodex"
   ]
 }
