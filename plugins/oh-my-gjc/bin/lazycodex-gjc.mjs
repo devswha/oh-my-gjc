@@ -68,6 +68,26 @@ function within(path, parent) {
   return path === parent || path.startsWith(`${parent}${sep}`);
 }
 
+function protectedStatePaths(cwd, homeInput, codexHomeInput) {
+  if (!homeInput || !isAbsolute(homeInput) || !codexHomeInput || !isAbsolute(codexHomeInput)) {
+    throw new CliError("protected GJC or Codex state roots unavailable", 78);
+  }
+  let home;
+  let codexHome;
+  try {
+    home = realpathSync(homeInput);
+    codexHome = realpathSync(codexHomeInput);
+  } catch {
+    throw new CliError("protected GJC or Codex state roots unavailable", 78);
+  } // no-excuse-ok: catch
+  const canonical = (path) => {
+    try { return realpathSync(path); } catch { return resolve(path); } // no-excuse-ok: catch
+  };
+  const hostRoots = [join(home, ".gjc"), join(home, ".codex"), codexHome].map(canonical);
+  if (hostRoots.some((root) => within(cwd, root))) throw new CliError("--cwd cannot be inside protected GJC or Codex state");
+  return [...new Set([canonical(join(cwd, ".gjc")), ...hostRoots])];
+}
+
 function trustedFile(path) {
   const stats = statSync(path);
   const uid = process.getuid?.();
@@ -183,8 +203,9 @@ function childEnvironment(runtime, codexHome, privateRoot) {
 
 function childArgs(config, env, runtime, output) {
   const access = config.sandbox === "workspace-write" ? "write" : "read";
-  const grants = [[env.HOME, "deny"], [runtime.core, "read"], [runtime.helperDir, "read"], [runtime.codexPath, "read"]].map(([path, mode]) => `${toml(path)}=${toml(mode)}`).join(",");
-  const filesystem = `{":minimal"="read",":workspace_roots"={"."="${access}"},":tmpdir"="write",${grants}}`;
+  const workspaceRoots = `{"."="${access}",".gjc"="deny","*/**/.gjc/**"="deny"}`;
+  const grants = [...config.protectedStatePaths.map((path) => [path, "deny"]), [env.HOME, "deny"], [runtime.core, "read"], [runtime.helperDir, "read"], [runtime.codexPath, "read"]].map(([path, mode]) => `${toml(path)}=${toml(mode)}`).join(",");
+  const filesystem = `{":minimal"="read",":workspace_roots"=${workspaceRoots},":tmpdir"="write",${grants}}`;
   const args = ["exec", "--ephemeral", "--color", "never", "--ignore-user-config", "--ignore-rules", "--strict-config", "-C", config.cwd];
   for (const value of ['approval_policy="never"', 'web_search="disabled"', 'default_permissions="lazycodex_gjc"', `permissions.lazycodex_gjc.filesystem=${filesystem}`, "permissions.lazycodex_gjc.network.enabled=false", 'shell_environment_policy.inherit="none"', `shell_environment_policy.set={HOME=${toml(env.HOME)},TMPDIR=${toml(env.TMPDIR)},PATH=${toml(runtime.safePath)}}`, "mcp_servers={}", "apps={}", "hooks={}"]) args.push("-c", value);
   for (const feature of ["apps", "enable_mcp_apps", "hooks", "browser_use", "browser_use_external", "browser_use_full_cdp_access", "computer_use", "in_app_browser", "remote_plugin", "skill_mcp_dependency_install", "plugins"]) args.push("--disable", feature);
@@ -227,6 +248,7 @@ async function main() {
   if (config.help) { process.stdout.write(HELP); return; }
   const task = readTask();
   const codexHome = process.env.CODEX_HOME;
+  const protectedPaths = protectedStatePaths(config.cwd, process.env.HOME, codexHome);
   const omo = resolveOmoSkill(codexHome);
   const binary = resolveCodex(process.env.PATH, config.cwd);
   const temp = mkdtempSync(join(tmpdir(), "lazycodex-gjc-"));
@@ -236,7 +258,7 @@ async function main() {
   try {
     const runtime = prepareRuntime(binary, temp);
     const env = childEnvironment(runtime, codexHome, temp);
-    const result = await runChild(runtime.core, childArgs(config, env, runtime, output), workerPrompt(task, omo), env, output, config.timeoutSeconds);
+    const result = await runChild(runtime.core, childArgs({ ...config, protectedStatePaths: protectedPaths }, env, runtime, output), workerPrompt(task, omo), env, output, config.timeoutSeconds);
     if (result.timedOut) throw new CliError("worker timed out", 124);
     if (result.overflow || statSync(output).size > OUTPUT_LIMIT) throw new CliError("worker output exceeded limit", 1);
     if (result.code !== 0) throw new CliError(result.code === null ? `worker terminated by signal ${result.signal ?? "unknown"}` : `worker exited with code ${result.code}`, result.code ?? 1);

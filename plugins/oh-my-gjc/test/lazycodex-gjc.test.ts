@@ -30,7 +30,10 @@ function fixture(mode: Mode = "success", omoMode: OmoMode = "valid"): Fixture {
   mkdirSync(cwd);
   mkdirSync(home);
   mkdirSync(record);
-  const codexHome = join(home, ".codex");
+  mkdirSync(join(cwd, ".gjc"));
+  mkdirSync(join(cwd, "nested/repository/.gjc"), { recursive: true });
+  mkdirSync(join(home, ".codex"));
+  const codexHome = join(root, "codex-home");
   mkdirSync(codexHome);
   writeFileSync(join(codexHome, "config.toml"), 'sandbox_mode = "danger-full-access"\nweb_search = "live"\n[hooks]\n');
   if (omoMode !== "missing") {
@@ -181,8 +184,12 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(args).toContain('web_search="disabled"');
     expect(args).toContain('default_permissions="lazycodex_gjc"');
     expect(args).toContain('permissions.lazycodex_gjc.network.enabled=false');
-    expect(filesystem).toContain('":workspace_roots"={"."="write"}');
+    expect(filesystem).toContain('":workspace_roots"={"."="write",".gjc"="deny","*/**/.gjc/**"="deny"}');
     expect(filesystem).toContain('":tmpdir"="write"');
+    for (const path of [join(f.cwd, ".gjc"), join(f.home, ".gjc"), join(f.home, ".codex"), f.env.CODEX_HOME]) {
+      expect(filesystem).toContain(JSON.stringify(realpathSync(path)) + '="deny"');
+    }
+    expect(filesystem).not.toContain(JSON.stringify(realpathSync(f.home)) + '="deny"');
     expect(filesystem).toContain(`${JSON.stringify(env.HOME)}="deny"`);
     expect(filesystem).toContain(`${JSON.stringify(realpathSync(join(f.root, "bin/codex")))}="read"`);
     expect(filesystem).toContain('helpers"="read"');
@@ -211,7 +218,10 @@ describe("lazycodex-gjc isolated runner", () => {
     const env = stringRecord(parsedRecord(join(f.record, "env.json")));
     const filesystem = args.find((value) => value.startsWith("permissions.lazycodex_gjc.filesystem=")) ?? "";
     expect(result.status, result.stderr).toBe(0);
-    expect(filesystem).toContain('":workspace_roots"={"."="read"}');
+    expect(filesystem).toContain('":workspace_roots"={"."="read",".gjc"="deny","*/**/.gjc/**"="deny"}');
+    for (const path of [join(f.cwd, ".gjc"), join(f.home, ".gjc"), join(f.home, ".codex"), f.env.CODEX_HOME]) {
+      expect(filesystem).toContain(JSON.stringify(realpathSync(path)) + '="deny"');
+    }
     expect(args).not.toContain("--sandbox");
     expect(env.GJC_SESSION_ID).toBeUndefined();
     expect(env.OPENAI_API_KEY).not.toBe("must-not-leak");
@@ -248,6 +258,18 @@ describe("lazycodex-gjc isolated runner", () => {
     const f = fixture();
     const result = run(f, args, input);
     expect(result.status).toBe(2);
+    expect(existsSync(join(f.record, "args.json"))).toBe(false);
+  });
+
+  test.each([
+    ["user GJC state", (f: Fixture) => join(f.home, ".gjc/session")],
+    ["default Codex state", (f: Fixture) => join(f.home, ".codex")],
+    ["explicit CODEX_HOME", (f: Fixture) => join(f.env.CODEX_HOME, "plugins")],
+  ])("rejects cwd inside protected %s before spawning", (_label, protectedCwd) => {
+    const f = fixture();
+    const result = run(f, ["--cwd", protectedCwd(f)]);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe("lazycodex-gjc: --cwd cannot be inside protected GJC or Codex state\n");
     expect(existsSync(join(f.record, "args.json"))).toBe(false);
   });
 

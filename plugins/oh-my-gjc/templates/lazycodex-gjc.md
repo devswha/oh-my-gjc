@@ -14,7 +14,7 @@ argument-hint: "<작업> [대상 cwd와 수정 허용을 명시]"
 - 현재 턴에서 사용자가 수정할 작업과 대상 저장소를 명시적으로 허가했을 때만 그 절대 `cwd`에 `workspace-write`를 쓴다.
 - `danger-full-access`와 승인 우회는 항상 금지한다.
 - user-scope native install이 만든 SHA-256 receipt와 canonical user cache runner가 일치해야 한다. project-scope 설치만 있으면 안전하게 중단한다.
-- runner는 호환 OMO `ultrawork`를 먼저 검증하고 target `cwd`+정확한 Codex runtime helper+private tmp만 허용하는 custom permission profile을 쓴다. web/MCP/apps/hooks/browser egress와 child shell 환경 상속은 비활성화한다.
+- runner는 호환 OMO `ultrawork`를 먼저 검증하고 target `cwd`(모든 깊이의 `.gjc` 제외)+정확한 Codex runtime helper+private tmp만 허용하는 custom permission profile을 쓴다. 실제 사용자 `~/.gjc`, `~/.codex`, `CODEX_HOME`은 명시적으로 차단하고 그 안을 target `cwd`로 지정하면 spawn 전에 거부하며, web/MCP/apps/hooks/browser egress와 child shell 환경 상속도 비활성화한다.
 
 GJC `bash` 도구의 `env` 파라미터에 task를 `LAZYCODEX_GJC_TASK`로, 대상 절대 경로를
 `TARGET_CWD`로 전달한다. task를 아래 셸 문자열에 붙여 넣지 않는다. 필요할 때만
