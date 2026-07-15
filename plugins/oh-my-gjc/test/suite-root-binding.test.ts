@@ -75,7 +75,7 @@ describe("suite root runtime binding", () => {
   });
   test.each(["user", "project"] as const)("binds a single native %s capability to the suite root", (scope) => {
     const sandbox = createSandbox();
-    const result = run(sandbox, ["easy-answer", scope]);
+    const result = run(sandbox, ["gate-briefing", scope]);
     const binding = bindingPath(sandbox, scope);
 
     expect(result.status, result.stderr).toBe(0);
@@ -89,11 +89,33 @@ describe("suite root runtime binding", () => {
     const suiteSibling = join(dirname(binding), "keep");
     const runtimes = dirname(dirname(binding));
     const otherSuiteBinding = join(runtimes, "another-suite/root");
+    const nativeRoot =
+      scope === "user" ? join(sandbox.home, ".gjc/agent") : join(sandbox.project, ".gjc");
+    const retiredCommand = join(nativeRoot, "commands/omg:easy.md");
+    const userRetiredRuntime = join(sandbox.home, ".gjc/agent/runtimes/lazycodex-gjc/binding");
+    const models = join(sandbox.home, ".gjc/agent/models.yml");
+    const expectedSkills = ["gate-briefing", "extragoal", "insane-review"].map((name) =>
+      join(nativeRoot, `skills/${name}/SKILL.md`),
+    );
+    const expectedCommands = [
+      "omg.md",
+      "omg:setup.md",
+      "omg:gate.md",
+      "omg:gate-always.md",
+      "omg:fable.md",
+      "omg:insane-review.md",
+    ].map((name) => join(nativeRoot, `commands/${name}`));
 
     expect(run(sandbox, ["all", scope]).status).toBe(0);
     writeFileSync(suiteSibling, "suite sibling remains");
     mkdirSync(dirname(otherSuiteBinding), { recursive: true });
     writeFileSync(otherSuiteBinding, "other suite remains");
+    mkdirSync(dirname(retiredCommand), { recursive: true });
+    writeFileSync(retiredCommand, "retired command");
+    mkdirSync(dirname(userRetiredRuntime), { recursive: true });
+    writeFileSync(userRetiredRuntime, "retired runtime");
+    mkdirSync(dirname(models), { recursive: true });
+    writeFileSync(models, "profiles:\n  user-owned: {}\n");
 
     const result = run(sandbox, ["all", "uninstall", scope]);
 
@@ -101,6 +123,13 @@ describe("suite root runtime binding", () => {
     expect(existsSync(binding)).toBe(false);
     expect(readFileSync(suiteSibling, "utf8")).toBe("suite sibling remains");
     expect(readFileSync(otherSuiteBinding, "utf8")).toBe("other suite remains");
+    expect(existsSync(retiredCommand)).toBe(false);
+    for (const path of [...expectedSkills, ...expectedCommands]) {
+      expect(existsSync(path)).toBe(false);
+    }
+    if (scope === "user") expect(existsSync(userRetiredRuntime)).toBe(false);
+    else expect(readFileSync(userRetiredRuntime, "utf8")).toBe("retired runtime");
+    expect(readFileSync(models, "utf8")).toBe("profiles:\n  user-owned: {}\n");
   });
 
   test("fails closed when a user binding path component is symlinked", () => {

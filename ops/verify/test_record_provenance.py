@@ -26,15 +26,16 @@ PLUGIN_NAME = "oh-my-gjc"
 VERSION = "1.2.3"
 MARKERS = [
     "bin/install-skill.sh",
-    "bin/lazycodex-gjc.mjs",
     ".claude-plugin/plugin.json",
     "templates/omg.md",
     "templates/setup.md",
-    "templates/lazycodex-gjc.md",
+    "templates/gate.md",
+    "templates/gate-always.md",
+    "templates/fable.md",
+    "templates/insane-review.md",
     "skills/insane-review/SKILL.md",
-    "skills/lazycodex-gjc/SKILL.md",
-    "references/presets.yml",
-    "skills/plain-layer/SKILL.md",
+    "skills/gate-briefing/SKILL.md",
+    "skills/extragoal/SKILL.md",
 ]
 NON_MARKER_PAYLOADS = [
     "bin/pack_and_ask.py",

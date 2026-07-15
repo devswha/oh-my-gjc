@@ -8,15 +8,15 @@
 #                                explicit dev ref) for release-candidate provenance testing.
 #                                Default is the published marketplace (devswha/oh-my-gjc).
 #
-# One install brings ALL 10 skills + 15 commands (/omg + 14 /omg:*) — there are no separate/optional plugins. Legacy
+# One install brings ALL 3 skills + 6 commands (/omg + 5 /omg:*) — there are no separate/optional plugins. Legacy
 # args (--core, tower, insane-review, codex-*, lazycodex, gjc-bugwatch) are accepted only
 # to print a migration note; they NEVER add extra plugin installs.
 #
 # Absorbs everything setup does that needs no user choice: marketplace add, the single
 # plugin install, and the NATIVE skill/command copy. gjc 0.9.x auto-exposes plugin
 # commands as `oh-my-gjc:*` (wrong namespace), so command bodies ship in templates/ and
-# install natively as `omg:*`; skills install natively too. User-choice stuff — model presets
-# and always-on toggles — stays opt-in via /omg:setup. Idempotent. Shell CLI only.
+# install natively as `omg:*`; skills install natively too. Model selection stays entirely
+# with GJC defaults/built-ins; the gate always-on toggle is exposed through /omg:setup. Idempotent. Shell CLI only.
 set -euo pipefail
 
 MARKET_DEFAULT="devswha/oh-my-gjc"
@@ -195,8 +195,8 @@ fi
 
 cat <<DONE
 
-✓ oh-my-gajaecode installed — one plugin, 10 skills + 15 commands (/omg + 14 /omg:*), all native. No further required steps.
+✓ oh-my-gajaecode installed — one plugin, 3 skills + 6 commands (/omg + 5 /omg:*), all native. No further required steps.
   Just open a NEW gjc session (or run /move .). That's it.
     /omg   → catalog of everything you got
-  (Optional: /omg:setup merges model presets / turns on always-on modes.)
+  (Optional: /omg:setup checks prerequisites / explains the gate always-on mode.)
 DONE

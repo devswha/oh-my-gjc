@@ -42,15 +42,16 @@ SEMVER_RE = re.compile(
 # MARKERS remain independently reported critical surfaces; the full inventory is the payload proof.
 MARKERS = [
     "bin/install-skill.sh",
-    "bin/lazycodex-gjc.mjs",
     ".claude-plugin/plugin.json",
     "templates/omg.md",
     "templates/setup.md",
-    "templates/lazycodex-gjc.md",
+    "templates/gate.md",
+    "templates/gate-always.md",
+    "templates/fable.md",
+    "templates/insane-review.md",
     "skills/insane-review/SKILL.md",
-    "skills/lazycodex-gjc/SKILL.md",
-    "references/presets.yml",
-    "skills/plain-layer/SKILL.md",
+    "skills/gate-briefing/SKILL.md",
+    "skills/extragoal/SKILL.md",
 ]
 MARKETPLACE_MANIFEST = ".claude-plugin/marketplace.json"
 PLUGIN_MANIFEST = "plugins/{}/.claude-plugin/plugin.json".format(PLUGIN_NAME)
