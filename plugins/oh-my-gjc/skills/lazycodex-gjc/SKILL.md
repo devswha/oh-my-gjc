@@ -92,7 +92,7 @@ RUNNER_ARGS=(--cwd "$TARGET_CWD" --sandbox "$SANDBOX")
 - 실패하면 부분 결과를 성공처럼 사용하지 않는다. exit code와 runner의 한 줄 오류를 요약하고, 사용자가 직접 해결할 설치/PATH/로그인/timeout 조치만 안내한다.
 - child stderr는 원문 task나 파일 비밀을 포함할 수 있으므로 그대로 전달하지 않는다.
 - runner의 `--ephemeral`은 **외부 Codex 세션**을 저장하지 않는다는 뜻이다. 이 bash 호출과 결과는 현재 GJC 대화에 남지만, child GJC 세션은 생성되지 않는다.
-- `GJC_NOTIFICATIONS=0`은 runner 내부의 외부 child에만 적용된다. 현재 GJC 알림 설정은 변경하지 않는다.
+- `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`은 runner 내부의 외부 child와 그 shell에만 적용된다. 현재 GJC 알림·SDK 설정은 변경하지 않는다.
 
 ## 절대 금지
 

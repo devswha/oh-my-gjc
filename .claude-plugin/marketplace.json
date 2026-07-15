@@ -6,7 +6,7 @@
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gajaecode — focused Gajae Code suite: 4 skills + 7 commands. LazyCodex skill/command always install; its read-only runtime binds only when existing logged-in Codex + compatible OMO are available, otherwise fail-closed.",
+    "description": "oh-my-gajaecode — focused Gajae Code suite: 4 skills + 7 commands. LazyCodex skill/command always install; its read-only binding is installed when local containment prerequisites exist, while execution requires authenticated Codex + compatible OMO and otherwise fails closed.",
     "version": "0.18.0"
   },
   "plugins": [

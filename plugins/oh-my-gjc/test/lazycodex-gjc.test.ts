@@ -354,6 +354,8 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(filesystem).toContain(`${JSON.stringify(realpathSync(join(f.root, "bin/codex")))}="read"`);
     expect(filesystem).toContain('helpers"="read"');
     expect(args).toContain('shell_environment_policy.inherit="none"');
+    expect(args.find((arg) => arg.startsWith("shell_environment_policy.set="))).toContain('GJC_NOTIFICATIONS="0"');
+    expect(args.find((arg) => arg.startsWith("shell_environment_policy.set="))).toContain('GJC_SDK_DISABLE="1"');
     expect(args).toContain("mcp_servers={}");
     expect(args).toContain("apps={}");
     expect(args).toContain("hooks={}");
@@ -401,6 +403,7 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(env.PATH).not.toContain(f.cwd);
     expect(env.PATH).not.toContain(".gjc");
     expect(env.GJC_NOTIFICATIONS).toBe("0");
+    expect(env.GJC_SDK_DISABLE).toBe("1");
     expect(env.LAZYCODEX_AUTO_UPDATE_DISABLED).toBe("1");
     expect(env.LAZYCODEX_CONFIG_MIGRATION_DISABLED).toBe("1");
     expect(env.OMO_CODEX_DISABLE_POSTHOG).toBe("1");
