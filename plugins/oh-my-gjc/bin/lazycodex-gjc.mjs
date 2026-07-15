@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 
-import { constants, accessSync, chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, dirname, isAbsolute, join, resolve, sep } from "node:path";
-import { spawn } from "node:child_process";
+import { basename, delimiter, dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 
 const TASK_LIMIT = 256 * 1024;
 const OUTPUT_LIMIT = 1024 * 1024;
 const OUTPUT_HARD_LIMIT = 8 * OUTPUT_LIMIT;
-const OVERSIZED_OUTPUT_SUMMARY = "Worker completed successfully; its final summary exceeded the relay limit. Authorized workspace changes and worker verification were preserved.\n";
+const WORKSPACE_SNAPSHOT_BYTES_LIMIT = 512 * 1024 * 1024;
 const TIMEOUT_LIMIT = 3600;
 const CONTAINMENT_GRACE_SECONDS = 5;
+const UNIT_CONFIRM_ATTEMPTS = 20;
 const WORKSPACE_DIRECTORY_LIMIT = 100000;
 const WORKSPACE_GJC_LIMIT = 256;
 const WORKSPACE_DENY_BYTES_LIMIT = 64 * 1024;
@@ -222,6 +223,169 @@ function rejectNewWorkspaceState(cwd, initialPaths) {
   for (const path of created) rmSync(path, { recursive: true, force: true });
   if (created.length > 0) throw new CliError("worker created forbidden workspace .gjc state", 1);
 }
+function workspaceTree(root, bounded) {
+  const entries = [];
+  const hardLinks = new Map();
+  const pending = [[root, "."]];
+  let bytes = 0n;
+  let directories = 0;
+  while (pending.length > 0) {
+    const pair = pending.pop();
+    if (pair === undefined) continue;
+    const [path, relative] = pair;
+    const stats = lstatSync(path, { bigint: true });
+    const entry = {
+      path: relative,
+      mode: Number(stats.mode & 0o7777n),
+      uid: stats.uid.toString(),
+      gid: stats.gid.toString(),
+      mtimeNs: stats.mtimeNs.toString(),
+      ctimeNs: stats.ctimeNs.toString(),
+      nlink: stats.nlink.toString(),
+      identity: `${stats.dev}:${stats.ino}`,
+    };
+    if (stats.isDirectory()) {
+      directories += 1;
+      if (bounded && directories > WORKSPACE_DIRECTORY_LIMIT) throw new CliError("workspace rollback snapshot exceeds directory limit", 78);
+      entries.push({ ...entry, type: "directory" });
+      const names = readdirSync(path).sort().reverse();
+      for (const name of names) pending.push([join(path, name), relative === "." ? name : join(relative, name)]);
+      continue;
+    }
+    if (stats.isFile()) {
+      bytes += stats.size;
+      if (bounded && bytes > BigInt(WORKSPACE_SNAPSHOT_BYTES_LIMIT)) throw new CliError("workspace rollback snapshot exceeds byte limit", 78);
+      const hardLinkKey = `${stats.dev}:${stats.ino}`;
+      const link = hardLinks.get(hardLinkKey);
+      if (link === undefined) hardLinks.set(hardLinkKey, relative);
+      entries.push({ ...entry, type: "file", size: stats.size.toString(), link: link ?? relative });
+      continue;
+    }
+    if (stats.isSymbolicLink()) {
+      entries.push({ ...entry, type: "symlink", target: readlinkSync(path) });
+      continue;
+    }
+    throw new CliError("workspace rollback snapshot contains unsupported file type", 78);
+  }
+  entries.sort((left, right) => left.path.localeCompare(right.path));
+  const semantic = entries.map(({ identity: _identity, ctimeNs: _ctimeNs, ...entry }) => entry);
+  return { stable: JSON.stringify(entries), semantic: JSON.stringify(semantic) };
+}
+
+function workspaceIdentity(path) {
+  const stats = lstatSync(path, { bigint: true });
+  if (stats.isSymbolicLink() || !stats.isDirectory()) throw new CliError("workspace rollback snapshot could not be established", 78);
+  return `${stats.dev}:${stats.ino}`;
+}
+
+function privateSibling(parent, cwd) {
+  const parentStats = lstatSync(parent);
+  const uid = process.getuid?.();
+  if (parentStats.isSymbolicLink() || !parentStats.isDirectory() || (uid !== undefined && parentStats.uid !== uid) || (parentStats.mode & 0o022) !== 0) {
+    throw new CliError("workspace rollback requires an exclusive workspace parent", 78);
+  }
+  let container;
+  try {
+    container = mkdtempSync(join(parent, `.${basename(cwd)}.lazycodex-gjc-`));
+    chmodSync(container, 0o700);
+    const canonical = realpathSync(container);
+    const stats = lstatSync(canonical);
+    if (!within(canonical, parent) || stats.isSymbolicLink() || !stats.isDirectory() || (uid !== undefined && stats.uid !== uid) || (stats.mode & 0o077) !== 0) {
+      throw new Error("untrusted workspace rollback directory");
+    }
+    return { path: canonical, identity: workspaceIdentity(canonical) };
+  } catch {
+    if (container !== undefined) rmSync(container, { recursive: true, force: true });
+    throw new CliError("workspace rollback snapshot could not be established", 78);
+  }
+}
+function removePrivateSibling(path, identity) {
+  try {
+    if (workspaceIdentity(path) === identity) rmSync(path, { recursive: true, force: true });
+  } catch { /* never delete a path whose private-snapshot identity changed */ } // no-excuse-ok: catch
+}
+
+
+function rejectNestedWorkspaceMounts(cwd) {
+  try {
+    for (const line of readFileSync("/proc/self/mountinfo", "utf8").trimEnd().split("\n")) {
+      const fields = line.split(" ");
+      const mountPoint = fields[4]?.replace(/\\([0-7]{3})/g, (_match, octal) => String.fromCharCode(Number.parseInt(octal, 8)));
+      if (mountPoint !== undefined && (mountPoint === cwd || within(mountPoint, cwd))) {
+        throw new CliError("workspace rollback does not support workspace mount points", 78);
+      }
+    }
+  } catch (error) {
+    if (error instanceof CliError) throw error;
+    throw new CliError("workspace rollback mount topology could not be established", 78);
+  }
+}
+
+function trustedCopy(source, destination) {
+  const binary = "/usr/bin/cp";
+  if (!trustedFile(binary)) throw new CliError("trusted workspace snapshot utility unavailable", 78);
+  const copy = spawnSync(binary, ["-a", "--reflink=auto", "--", source, destination], { shell: false, stdio: "ignore" });
+  if (copy.error !== undefined || copy.status !== 0) throw new CliError("workspace rollback snapshot could not be established", 78);
+}
+
+function snapshotWorkspace(cwd) {
+  rejectNestedWorkspaceMounts(cwd);
+  const parent = realpathSync(dirname(cwd));
+  if (parent === cwd || statSync(parent).dev !== statSync(cwd).dev) throw new CliError("workspace rollback requires a rename-safe workspace parent", 78);
+  const parentIdentity = workspaceIdentity(parent);
+  const rootIdentity = workspaceIdentity(cwd);
+  const sibling = privateSibling(parent, cwd);
+  const container = sibling.path;
+  const baseline = join(container, "baseline");
+  try {
+    const before = workspaceTree(cwd, true);
+    trustedCopy(cwd, baseline);
+    const after = workspaceTree(cwd, true);
+    const copied = workspaceTree(baseline, true);
+    if (before.stable !== after.stable || before.semantic !== copied.semantic) {
+      throw new CliError("workspace changed while rollback snapshot was captured", 78);
+    }
+    return { parentIdentity, rootIdentity, container, containerIdentity: sibling.identity, baseline, baselineStable: copied.stable, baselineSemantic: copied.semantic };
+  } catch (error) {
+    removePrivateSibling(container, sibling.identity);
+    if (error instanceof CliError) throw error;
+    throw new CliError("workspace rollback snapshot could not be established", 78);
+  }
+}
+
+function restoreWorkspace(cwd, snapshot) {
+  const failed = join(snapshot.container, "worker-failed-workspace");
+  try {
+    if (workspaceIdentity(dirname(cwd)) !== snapshot.parentIdentity || workspaceIdentity(cwd) !== snapshot.rootIdentity || workspaceIdentity(snapshot.container) !== snapshot.containerIdentity || workspaceTree(snapshot.baseline, true).stable !== snapshot.baselineStable || workspaceTree(snapshot.baseline, true).semantic !== snapshot.baselineSemantic) {
+      throw new Error("workspace rollback assumptions changed");
+    }
+    renameSync(cwd, failed);
+    try {
+      renameSync(snapshot.baseline, cwd);
+    } catch (error) {
+      renameSync(failed, cwd);
+      throw error;
+    }
+    if (workspaceTree(cwd, true).semantic !== snapshot.baselineSemantic) throw new Error("workspace rollback verification failed");
+    removePrivateSibling(snapshot.container, snapshot.containerIdentity);
+  } catch {
+    throw new CliError("workspace rollback could not be completed safely; worker changes may remain", 1);
+  }
+}
+
+function rollbackWorkerFailure(cwd, snapshot, result, error) {
+  if (result.containmentStopFailed) {
+    const message = error instanceof CliError ? error.message : "worker failed";
+    const exitCode = error instanceof CliError ? error.exitCode : 1;
+    return new CliError(`${message}; containment stop was not confirmed — workspace may retain worker changes`, exitCode);
+  }
+  try {
+    restoreWorkspace(cwd, snapshot);
+  } catch (rollbackError) {
+    return rollbackError;
+  }
+  return error;
+}
 
 function ownedContainedFile(path, root) {
   const entry = lstatSync(path);
@@ -384,6 +548,55 @@ function stopUnit(systemctl, unit) {
   });
 }
 
+function unitControlGroup(systemctl, unit) {
+  return new Promise((resolveGroup) => {
+    const show = spawn(systemctl, ["--user", "show", "--property=ControlGroup", "--value", unit], { shell: false, stdio: ["ignore", "pipe", "ignore"] });
+    let output = "";
+    show.stdout.setEncoding("utf8");
+    show.stdout.on("data", (chunk) => { output += chunk; });
+    show.once("error", () => resolveGroup(undefined));
+    show.once("close", (code) => resolveGroup(code === 0 ? output.trim() : undefined));
+  });
+}
+
+function cgroupEmpty(controlGroup) {
+  if (!/^\/(?:[^/\0]+\/)*[^/\0]*$/.test(controlGroup) || controlGroup.split("/").some((part) => part === "." || part === "..")) return false;
+  try {
+    const path = `/sys/fs/cgroup${controlGroup}/cgroup.procs`;
+    const stats = lstatSync(path);
+    return !stats.isSymbolicLink() && stats.isFile() && readFileSync(path, "utf8").trim().length === 0;
+  } catch {
+    return false;
+  }
+}
+
+async function unitDrained(systemctl, unit) {
+  const inactiveCode = await new Promise((resolveInactive) => {
+    const status = spawn(systemctl, ["--user", "is-active", "--quiet", unit], { shell: false, stdio: "ignore" });
+    status.once("error", () => resolveInactive(undefined));
+    status.once("close", resolveInactive);
+  });
+  if (inactiveCode === 4) return true;
+  if (inactiveCode !== 3) return false;
+  const controlGroup = await unitControlGroup(systemctl, unit);
+  if (controlGroup === "") return true;
+  return controlGroup !== undefined && cgroupEmpty(controlGroup);
+}
+
+function pause(milliseconds) {
+  return new Promise((resolvePause) => { setTimeout(resolvePause, milliseconds); });
+}
+
+async function stopAndConfirmUnit(systemctl, unit) {
+  await stopUnit(systemctl, unit);
+  for (let attempt = 0; attempt < UNIT_CONFIRM_ATTEMPTS; attempt += 1) {
+    if (await unitDrained(systemctl, unit)) return true;
+    await pause(50);
+  }
+  await stopUnit(systemctl, unit);
+  return unitDrained(systemctl, unit);
+}
+
 function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor) {
   return new Promise((resolveResult, reject) => {
     if (process.platform !== "linux") {
@@ -396,7 +609,7 @@ function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor)
     // whole unit cgroup at RuntimeMaxSec. The grace only matters on the failure path — normal
     // flow kills at `timeoutSeconds` via our own timer, well before this cap.
     const runtimeMaxSec = timeoutSeconds + CONTAINMENT_GRACE_SECONDS;
-    const supervisorArgs = ["--user", "--wait", "--collect", "--pipe", "--quiet", `--unit=${unit}`, "--property=KillMode=control-group", "--property=TimeoutStopSec=1s", `--property=RuntimeMaxSec=${runtimeMaxSec}`, "--", supervisor.env, "-i"];
+    const supervisorArgs = ["--user", "--wait", "--pipe", "--quiet", `--unit=${unit}`, "--property=KillMode=control-group", "--property=TimeoutStopSec=1s", `--property=RuntimeMaxSec=${runtimeMaxSec}`, "--", supervisor.env, "-i"];
     for (const [name, value] of Object.entries(env)) supervisorArgs.push(`${name}=${value}`);
     supervisorArgs.push(binary, ...args);
     const child = spawn(supervisor.systemdRun, supervisorArgs, { detached: true, env: process.env, shell: false, stdio: ["pipe", "pipe", "pipe"] });
@@ -407,6 +620,7 @@ function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor)
     let stderrBytes = 0;
     let outputMonitor;
     let timer;
+    let containment;
     const interrupt = () => stop("interrupted");
     const finish = (result) => {
       if (settled) return;
@@ -422,17 +636,17 @@ function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor)
       try { child.unref(); } catch { /* already gone */ } // no-excuse-ok: catch
       resolveResult(result);
     };
+    const confirmContainment = () => {
+      if (containment === undefined) containment = stopAndConfirmUnit(supervisor.systemctl, unit);
+      return containment;
+    };
     const stop = (reason) => {
       if (failure === undefined) failure = reason;
       void (async () => {
-        // Fail-closed containment accounting: one retry, then record the failure so the
-        // caller reports an uncertain stop instead of silently assuming the unit died.
-        if (!(await stopUnit(supervisor.systemctl, unit)) && !(await stopUnit(supervisor.systemctl, unit))) containmentStopFailed = true;
+        const inactive = await confirmContainment();
+        containmentStopFailed = !inactive;
         killGroup(child);
-        // On a failed stop the unit may still hold the relay pipes, so `close` would not fire
-        // until the RuntimeMaxSec backstop reaps it. Do not block the synchronous call on that:
-        // resolve now with the failure recorded; systemd force-terminates the cgroup at the cap.
-        if (containmentStopFailed) finish({ code: null, signal: "SIGKILL", failure, containmentStopFailed });
+        finish({ code: null, signal: "SIGKILL", failure, containmentStopFailed });
       })();
     };
     const failOverflow = () => stop("overflow");
@@ -443,10 +657,13 @@ function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor)
     timer = setTimeout(() => stop("timeout"), timeoutSeconds * 1000);
     process.once("SIGINT", interrupt);
     process.once("SIGTERM", interrupt);
-    child.once("close", async (code, signal) => {
-      await stopUnit(supervisor.systemctl, unit);
-      killGroup(child);
-      finish({ code, signal, failure, containmentStopFailed });
+    child.once("close", (code, signal) => {
+      void (async () => {
+        const inactive = await confirmContainment();
+        containmentStopFailed = !inactive;
+        killGroup(child);
+        finish({ code, signal, failure, containmentStopFailed });
+      })();
     });
     child.stdin.on("error", (error) => { if (error.code !== "EPIPE") stop("input"); });
     child.stdin.end(prompt);
@@ -465,32 +682,37 @@ async function main() {
   const omo = resolveOmoSkill(codexHome);
   let temp;
   let childCodexHome;
+  let snapshot;
+  let result;
   try {
     temp = mkdtempSync(join(tmpdir(), "lazycodex-gjc-"));
     chmodSync(temp, 0o700);
     const runtime = prepareRuntime(binding.core, binding.codexPath, temp);
+    if (config.sandbox === "workspace-write") snapshot = snapshotWorkspace(config.cwd);
     childCodexHome = prepareChildCodexHome(binding.accountHome, codexHome);
     const output = join(temp, "final.txt");
     writeFileSync(output, "", { mode: 0o600 });
     const env = childEnvironment(runtime, childCodexHome, temp);
-    const result = await runChild(runtime.core, childArgs({ ...config, protectedStatePaths: protectedPaths }, env, runtime, output), workerPrompt(task, omo, config.sandbox), env, output, config.timeoutSeconds, binding);
-    rejectNewWorkspaceState(config.cwd, initialWorkspaceState);
-    const stopSuffix = result.containmentStopFailed ? "; containment stop failed — the systemd user unit may still be running" : "";
-    if (result.failure === "input") throw new CliError(`worker input failed${stopSuffix}`, 1);
-    if (result.failure === "interrupted") throw new CliError(`worker interrupted${stopSuffix}`, 130);
-    if (result.failure === "timeout") throw new CliError(`worker timed out${stopSuffix}`, 124);
-    if (result.failure === "overflow" || statSync(output).size > OUTPUT_HARD_LIMIT) throw new CliError(`worker output exceeded hard limit${stopSuffix}`, 1);
+    result = await runChild(runtime.core, childArgs({ ...config, protectedStatePaths: protectedPaths }, env, runtime, output), workerPrompt(task, omo, config.sandbox), env, output, config.timeoutSeconds, binding);
+    if (config.sandbox === "read-only" || !result.containmentStopFailed) rejectNewWorkspaceState(config.cwd, initialWorkspaceState);
+    if (result.failure === "input") throw new CliError("worker input failed", 1);
+    if (result.failure === "interrupted") throw new CliError("worker interrupted", 130);
+    if (result.failure === "timeout") throw new CliError("worker timed out", 124);
+    if (result.failure === "overflow" || statSync(output).size > OUTPUT_HARD_LIMIT) throw new CliError("worker output exceeded hard limit", 1);
     if (result.code !== 0) throw new CliError(result.code === null ? `worker terminated by signal ${result.signal ?? "unknown"}` : `worker exited with code ${result.code}`, result.code ?? 1);
+    if (result.containmentStopFailed) throw new CliError("worker containment was not confirmed", 1);
     const bytes = readFileSync(output);
     let finalOutput;
     try { finalOutput = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { throw new CliError("final output is not valid UTF-8", 1); } // no-excuse-ok: catch
-    if (bytes.length > OUTPUT_LIMIT) {
-      process.stdout.write(OVERSIZED_OUTPUT_SUMMARY);
-      return;
-    }
+    if (bytes.length > OUTPUT_HARD_LIMIT) throw new CliError("worker output exceeded hard limit", 1);
+    if (bytes.length > OUTPUT_LIMIT) throw new CliError("worker output exceeded relay limit", 1);
     if (finalOutput.trim().length === 0) throw new CliError("final output is empty", 1);
     process.stdout.write(finalOutput);
+  } catch (error) {
+    if (snapshot !== undefined && result !== undefined) throw rollbackWorkerFailure(config.cwd, snapshot, result, error);
+    throw error;
   } finally {
+    if (snapshot !== undefined) removePrivateSibling(snapshot.container, snapshot.containerIdentity);
     if (temp !== undefined) rmSync(temp, { recursive: true, force: true });
     if (childCodexHome !== undefined) rmSync(childCodexHome, { recursive: true, force: true });
   }
