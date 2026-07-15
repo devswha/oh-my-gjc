@@ -48,14 +48,13 @@ oh-my-gjc/
 │       ├── skills/<name>/SKILL.md       # skills
 │       ├── hooks/hooks.json             # hooks
 │       └── .mcp.json                    # MCP servers
-├── tools/                        # repo tooling (e.g. discord-notify-bridge.ts)
 ├── README.md                     # simple human intro
 └── AGENTS.md                     # this file
 ```
 
 > ⚠ `commands/` is the *generic* Claude-Code convention. In THIS repo the `oh-my-gjc` suite keeps its
-> command bodies in `templates/` (a non-convention dir) so gjc 0.9.x cannot auto-expose a duplicate
-> wrongly-namespaced `oh-my-gjc:*` surface; `bin/install-skill.sh` installs them natively as `/omg:*`.
+> command bodies in `templates/` (a non-convention dir) because GJC 0.11 marketplace commands are
+> exposed under the wrong `oh-my-gjc:*` namespace; `bin/install-skill.sh` installs `/omg:*` natively.
 
 Content is discovered by **convention directories** above; explicit paths in
 `plugin.json` are optional overrides.
@@ -143,10 +142,10 @@ Content is discovered by **convention directories** above; explicit paths in
 - **The current focused suite has 4 skills and 7 commands.** Skills: `gate-briefing`, `extragoal`, `insane-review`, and read-only `lazycodex-gjc`. Commands: bare `/omg` plus `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:fable`, `/omg:insane-review`, and `/omg:lazycodex-gjc`.
 - **Native install is REQUIRED:** canonical command bodies remain in `templates/`; the hardened one-shot installer copies all 4 skills and 7 commands, validates the LazyCodex runner, emits the suite-root binding, conditionally binds the trusted user runtime when prerequisites exist, and sweeps retired native surfaces.
 - **One-shot install:** root `install.sh` performs marketplace add/update → plugin install → native install. No optional plugin arguments.
-- **⚠ Upstream ideal (contribution CANDIDATE — doc only, needs separate approval):** the native-install dance exists because gjc has no first-class "gjc-native plugin distributed via the marketplace" surface. Historically gjc loaded neither plugin skills nor commands; as of **0.9.x it auto-exposes plugin COMMANDS** as `<plugin>:<name>` (claude-plugins provider, `discovery/index.ts` now imports `./claude-plugins`) — still the wrong namespace — while plugin **skills do not surface as slash commands**. There is a `gajae-plugin.json` "binding-only" marker that makes the claude-plugins provider skip a root, but routing marketplace installs through the gjc-native plugin loader is unverified. Until a clean native path exists, `templates/` + native `install-skill.sh` is the supported workaround. Candidate upstream PR to `Yeachan-Heo/gajae-code` base `dev`; **not started** — file only after explicit approval (like PR #1710/#1676).
+- **GJC 0.11 plugin boundary:** `gajae-plugin.json` now routes a source through GJC's native bundle installer before marketplace/npm classification, but native bundles intentionally forbid top-level `skills`, `commands`, and `agents`; they may only extend the four built-in workflows/role agents with subskills, tools, hooks, MCPs, and appendices. OMG's independent trigger skills and `/omg:*` commands therefore still require `templates/` + `install-skill.sh`. The SDK and native bundle mechanism are separate and neither changes this namespace contract.
 - **Semaphore mechanism:** `/omg:gate-always` owns only its marker block in user-global `~/.gjc/agent/SYSTEM.md`; it backs up before mutation and preserves all content outside its block. Legacy gate blocks in `AGENTS.md` migrate on command use. Installer upgrades separately remove only retired `easy-always` blocks after backup. A project `.gjc/SYSTEM.md` overrides the user file for that repository.
 - **`extragoal` skill (v0.4, 2026-07-08):** ultragoal + external final review gate. Reviewer lanes are native cross-session gjc, `/omg:fable`, and `insane-review` under an AND-gate. Missing/malformed/timeout verdicts fail closed; secret scanning is mandatory on egress.
-- **⚠ Ephemeral gjc harness runs MUST disable notifications.** Every throwaway `gjc -p` verify/audit/test invocation (preset `"Reply OK"` checks, `/omg:fable` audits, and any `gjc` run inside a `/tmp` clone) MUST be prefixed with `GJC_NOTIFICATIONS=0` — the authoritative hard opt-out in gajae-code `notifications/config.ts` (`isSessionNotificationsEnabled`/`shouldRegisterNotificationsExtension` both fail-closed on `"0"`, unit-tested). Without it, the global `notifications.enabled` config auto-ons the session, it publishes `.gjc/state/notifications/<id>.json`, and the managed Telegram daemon eagerly creates a provisional "GJC <id>" **ghost topic** for a session that dies seconds later. Live-verified: `GJC_NOTIFICATIONS=0 gjc -p … "Reply OK"` returns OK and writes **no** notifications endpoint. User *working* sessions (`gjc --mpreset …`) keep notifications on — this rule is only for ephemeral harness runs.
+- **⚠ Ephemeral gjc harness runs MUST disable both notifications and SDK hosting.** Every throwaway `gjc -p` verify/audit/test invocation (`/omg:fable`, external review, preset smoke, or a `/tmp` clone) MUST be prefixed with `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`. In GJC 0.11 the canonical SDK v3 loopback bus publishes `.gjc/state/sdk/<id>.json` independently of managed notifications; disabling notifications alone does not suppress that endpoint. User working sessions keep both surfaces available — this rule applies only to disposable harness runs.
 - Non-Goals: reimplementing gjc-native workflows (team/ultragoal/ralplan/deep-interview), vendor auto-login, or shipping custom model preset copies.
 
 ### `gjc-bugwatch` public surface (REMOVED after v0.17.1)
@@ -176,7 +175,7 @@ Content is discovered by **convention directories** above; explicit paths in
 Corrects the 2026-07-08 incident where 4 releases self-merged to `main` + tagged without review. **Every release to `main` (dev→main + tag + GitHub Release) MUST pass all 3 gates before publish. No self-merge releases.**
 
 1. **Verification gate.** Verification checklist done: JSON parse, `bash -n`/`py_compile` where relevant, **new-install reproduction with rc evidence** (isolated HOME, `gjc plugin marketplace add`→`install`→native), plus any relevant unit tests. Record the evidence.
-2. **External cross-review gate (dogfood `extragoal`).** Run the bundled `extragoal` external review on the **release diff** (`git diff <last-tag>..HEAD`): a fresh-context, **cross-family** reviewer (default lane `gjc -p --no-session --model openai-codex/gpt-5.5:xhigh --tools read,search,find …`) issues `VERDICT: APPROVE|REQUEST_CHANGES`. Fail-closed: no verdict / REQUEST_CHANGES ⇒ fix-forward, do not publish. We dogfood our own gate on our own releases.
+2. **External cross-review gate (dogfood `extragoal`).** Run the bundled `extragoal` external review on the **release diff** (`git diff <last-tag>..HEAD`): a fresh-context, **cross-family** reviewer (default lane `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1 gjc -p --no-session --model openai-codex/gpt-5.5:xhigh --tools read,search,find …`) issues `VERDICT: APPROVE|REQUEST_CHANGES`. Fail-closed: no verdict / REQUEST_CHANGES ⇒ fix-forward, do not publish. We dogfood our own gate on our own releases.
 3. **Approval gate (control tower → 하코).** After gates 1–2 pass, **request release approval** by enqueuing to the control tower (`horcrux queue add omj "release approval: …"`) with the verdict + evidence. The control tower queues it for 하코; **publish only after 하코 approves.** The agent never self-approves a release.
 4. **Escalation, never a dead end (2026-07-15 amendment, 하코 direct order — "릴리즈를 막지 마라").** Review findings always fix-forward on `dev` and the corrected HEAD is re-verified and re-signed; **release re-sign attempts have no numeric cap and may never block publication merely because a counter was exhausted.** Missing/malformed verdicts and real blockers remain fail-closed until corrected. Frequency-cap overflow may be overridden by 하코's explicit direction and recorded in evidence. When 하코 has explicitly ordered the release in-session, gates 1–2 still run in full and a clean candidate may publish while reporting; after publication the agent MUST enqueue a one-line control-tower `report` containing the released version, final candidate hash, and evidence path. The invariants that never bend are gates 1–2, no self-approval, evidence-backed publication, and the post-publication report receipt.
 
@@ -198,20 +197,12 @@ Before considering a plugin change done:
 - **Static (always):** `marketplace.json` and `plugin.json` parse as JSON; convention
   files exist at expected paths; `marketplace` entry name/source match the manifest.
 - **Behavioral (when the surface is reachable):** exercise the actual surface. The
-  hardened root `install.sh` path (in an isolated HOME) and `bun test` (gjc-bugwatch
-  collect/trigger, discord bridge) run anywhere; insane-review's CDP→ChatGPT harvest
-  needs a logged-in Pro browser session and is otherwise deferred-environment.
+  hardened root `install.sh` path (in an isolated HOME) and relevant `bun test` suites
+  run anywhere; insane-review's CDP→ChatGPT harvest needs a logged-in Pro browser
+  session and is otherwise deferred-environment.
 - Never fake live evidence. If a surface cannot be exercised in the current
   environment, mark it pending-environment and say so explicitly.
 
-## Tools
-
-`tools/discord-notify-bridge.ts` — forwards a live gjc session's notifications
-(action-needed / idle / resolved) to a Discord channel via an incoming webhook.
-Client of gjc's Notifications SDK (loopback WS at
-`.gjc/state/notifications/<sessionId>.json`). Notify-only (a webhook can't reply).
-Secrets read from `$DISCORD_WEBHOOK_URL` or `.gjc/secrets/discord-webhook`, never
-logged. Tests: `bun test tools/test/e2e-bridge.test.ts`.
 
 ## Schema reference
 

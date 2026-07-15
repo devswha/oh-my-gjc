@@ -1,5 +1,14 @@
 # gajae-code `docs/` 수확 조사 보고서
 
+> **HISTORICAL v0.9.1 SNAPSHOT — SDK sections superseded by GJC 0.11.0.**
+> GJC 0.11 replaces `.gjc/state/notifications/<id>.json` with the canonical, token-authenticated
+> `.gjc/state/sdk/<id>.json` external control/view bus. Use `@gajae-code/bridge-client` for
+> process-isolated control and `@gajae-code/coding-agent` for in-process embedding. SDK hosting is
+> independent of managed notifications; disposable runs require both
+> `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`. OMG's retired webhook-only Discord bridge must not be revived;
+> use GJC's managed Discord/Slack adapters. The historical priorities and paths below are preserved only
+> as evidence of the 2026-07-08 survey.
+
 - 조사일: 2026-07-08 · 소스: `Yeachan-Heo/gajae-code` `origin/main @ c0581e1a` (v0.9.1), 클론 `/tmp/gajae-code-check/docs`
 - 목적: 상류 문서 전수 → 항목별 기능 요약 + 함대 적용처(관제탑/flask/stock/omj) + 도입 난이도 + 우선순위. 즉시 적용 톱5 추천.
 - 범위: `docs/*.md` ~115편. 하이라이트 지정 영역(메모리·알림 SDK·멀티벤더·세션 export/fork/resume·computer use·python repl·스킬 템플릿·sdk) 심층, 나머지는 분류.
