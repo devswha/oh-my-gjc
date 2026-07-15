@@ -18,8 +18,9 @@ test("release-gate carries the non-weakenable gate contract", () => {
 		expect(text).toMatch(/fail-closed|Fail-closed/);
 		// the agent can never approve its own release
 		expect(text).toMatch(/자기 승인 금지/);
-		// bounded re-sign rounds
-		expect(text).toMatch(/2라운드/);
+		// re-sign attempts stay fail-closed on blockers but never stop on a numeric cap
+		expect(text).toMatch(/상한을 두지|횟수 제한/);
+		expect(text).not.toMatch(/2라운드|최대 2/);
 		// evidence recording location
 		expect(text).toContain("docs/verification/");
 	}
