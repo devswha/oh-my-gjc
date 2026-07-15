@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 const runner = join(import.meta.dir, "../bin/lazycodex-gjc.mjs");
 const sandboxes: string[] = [];
 
-type Mode = "success" | "success-descendant" | "create-gjc" | "create-gjc-symlink" | "nonzero" | "stderr-secret" | "empty" | "invalid" | "oversized" | "oversized-write" | "hard-oversized" | "stdout" | "stdout-infinite" | "final-infinite" | "timeout";
+type Mode = "success" | "success-write" | "success-descendant" | "create-gjc" | "create-gjc-nonzero" | "create-gjc-symlink" | "nonzero" | "symlink-mutate" | "stderr-secret" | "empty" | "invalid" | "oversized" | "oversized-write" | "hard-oversized" | "stdout" | "stdout-infinite" | "final-infinite" | "timeout";
 
 type OmoMode = "valid" | "missing" | "stale" | "incompatible" | "symlinked" | "writable";
 
@@ -96,7 +96,22 @@ process.stdin.on("end", () => {
   const childAuth = path.join(process.env.CODEX_HOME, "auth.json");
   fs.writeFileSync(${JSON.stringify(join(record, "auth-is-symlink"))}, String(fs.lstatSync(childAuth).isSymbolicLink()));
   fs.writeFileSync(${JSON.stringify(join(record, "auth-target"))}, fs.realpathSync(childAuth));
+  const workspaceWrite = args.some(value => value.includes('":workspace_roots"={"."="write"}'));
+  if (workspaceWrite && ["nonzero", "stderr-secret", "empty", "invalid", "oversized", "oversized-write", "hard-oversized", "stdout", "stdout-infinite", "final-infinite", "timeout"].includes(${JSON.stringify(mode)})) {
+    fs.writeFileSync(path.join(${JSON.stringify(cwd)}, "worker-change.txt"), "created");
+    const modified = path.join(${JSON.stringify(cwd)}, "modified-by-worker.txt");
+    const deleted = path.join(${JSON.stringify(cwd)}, "deleted-by-worker.txt");
+    if (fs.existsSync(modified)) fs.writeFileSync(modified, "worker-modified");
+    if (fs.existsSync(deleted)) fs.rmSync(deleted);
+  }
   if (${JSON.stringify(mode)} === "nonzero") process.exit(23);
+  if (${JSON.stringify(mode)} === "symlink-mutate") {
+    fs.chmodSync(path.join(${JSON.stringify(cwd)}, "mode-target.txt"), 0o600);
+    const link = path.join(${JSON.stringify(cwd)}, "external-link");
+    fs.rmSync(link);
+    fs.symlinkSync(path.join(${JSON.stringify(root)}, "replacement-target"), link);
+    process.exit(23);
+  }
   if (${JSON.stringify(mode)} === "stderr-secret") {
     process.stderr.write(input + "\\nFILE-CANARY-7d321\\n");
     process.exit(23);
@@ -107,7 +122,10 @@ process.stdin.on("end", () => {
     fs.writeFileSync(out, Buffer.alloc(1024 * 1024 + 1, 65));
   }
   else if (${JSON.stringify(mode)} === "hard-oversized") fs.writeFileSync(out, Buffer.alloc(8 * 1024 * 1024 + 1, 65));
-  else if (["success", "success-descendant", "create-gjc", "create-gjc-symlink"].includes(${JSON.stringify(mode)})) fs.writeFileSync(out, "worker-result");
+  else if (["success", "success-write", "success-descendant", "create-gjc", "create-gjc-symlink"].includes(${JSON.stringify(mode)})) {
+    if (${JSON.stringify(mode)} === "success-write") fs.writeFileSync(path.join(${JSON.stringify(cwd)}, "worker-change.txt"), "persisted");
+    fs.writeFileSync(out, "worker-result");
+  }
   else if (${JSON.stringify(mode)} === "stdout") {
     fs.writeFileSync(out, "must-not-succeed");
     for (let index = 0; index < 2049; index += 1) process.stdout.write(Buffer.alloc(512, 65));
@@ -132,11 +150,12 @@ process.stdin.on("end", () => {
     child.unref();
     fs.writeFileSync(${JSON.stringify(join(record, "descendant"))}, String(child.pid));
   }
-  if (${JSON.stringify(mode)} === "create-gjc") {
+  if (["create-gjc", "create-gjc-nonzero"].includes(${JSON.stringify(mode)})) {
     const state = path.join(${JSON.stringify(cwd)}, "new/subtree/.gjc");
     fs.mkdirSync(state, { recursive: true });
     fs.writeFileSync(path.join(state, "config.toml"), "malicious = true\\n");
   }
+  if (${JSON.stringify(mode)} === "create-gjc-nonzero") process.exit(23);
   if (${JSON.stringify(mode)} === "create-gjc-symlink") {
     const state = path.join(${JSON.stringify(root)}, "victim/.gjc");
     const link = path.join(${JSON.stringify(cwd)}, "x/.gjc");
@@ -550,6 +569,16 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(result.stderr).toBe("lazycodex-gjc: worker created forbidden workspace .gjc state\n");
     expect(existsSync(state)).toBe(false);
   });
+  test("removes forbidden workspace state before returning a read-only worker failure", () => {
+    const f = fixture("create-gjc-nonzero");
+    const state = join(f.cwd, "new/subtree/.gjc");
+
+    const result = run(f);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe("lazycodex-gjc: worker created forbidden workspace .gjc state\n");
+    expect(existsSync(state)).toBe(false);
+  });
   test("unlinks and rejects an external .gjc symlink without deleting its target", () => {
     const f = fixture("create-gjc-symlink");
     const victim = join(f.root, "victim/.gjc");
@@ -586,13 +615,94 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(existsSync(readFileSync(join(f.record, "temp"), "utf8"))).toBe(false);
     expect(existsSync(readFileSync(join(f.record, "codex-home"), "utf8"))).toBe(false);
   });
-  test.each(["oversized", "oversized-write"] as const)("preserves successful work and returns a bounded summary for %s final output", (mode) => {
+  test("rolls back worker writes when final output exceeds the relay limit", () => {
+    const f = fixture("oversized-write");
+    const dirty = join(f.cwd, "dirty-user-work.txt");
+    writeFileSync(dirty, "pre-existing dirty work");
+    const result = run(f, ["--sandbox", "workspace-write"]);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("lazycodex-gjc: worker output exceeded relay limit\n");
+    expect(existsSync(join(f.cwd, "worker-change.txt"))).toBe(false);
+    expect(readFileSync(dirty, "utf8")).toBe("pre-existing dirty work");
+  });
+  test("restores created, modified, and deleted files after a nonzero workspace-write worker", () => {
+    const f = fixture("nonzero");
+    const modified = join(f.cwd, "modified-by-worker.txt");
+    const deleted = join(f.cwd, "deleted-by-worker.txt");
+    writeFileSync(modified, "pre-existing modified content");
+    writeFileSync(deleted, "pre-existing deleted content");
+
+    const result = run(f, ["--sandbox", "workspace-write"]);
+
+    expect(result.status).toBe(23);
+    expect(existsSync(join(f.cwd, "worker-change.txt"))).toBe(false);
+    expect(readFileSync(modified, "utf8")).toBe("pre-existing modified content");
+    expect(readFileSync(deleted, "utf8")).toBe("pre-existing deleted content");
+  });
+  test("atomically swaps in the baseline and preserves hardlink topology on rollback", () => {
+    const f = fixture("nonzero");
+    const first = join(f.cwd, "hardlink-first.txt");
+    const second = join(f.cwd, "hardlink-second.txt");
+    const initialWorkspaceInode = lstatSync(f.cwd).ino;
+    writeFileSync(first, "hardlink baseline");
+    linkSync(first, second);
+
+    const result = run(f, ["--sandbox", "workspace-write"]);
+
+    expect(result.status).toBe(23);
+    expect(lstatSync(f.cwd).ino).not.toBe(initialWorkspaceInode);
+    expect(existsSync(join(f.cwd, "worker-change.txt"))).toBe(false);
+    expect(lstatSync(first).ino).toBe(lstatSync(second).ino);
+    writeFileSync(first, "after rollback");
+    expect(readFileSync(second, "utf8")).toBe("after rollback");
+  });
+
+  test.each([["empty", 1], ["invalid", 1], ["timeout", 124]] as const)("rolls back workspace writes after %s worker failure", (mode, status) => {
     const f = fixture(mode);
+    const result = run(f, ["--sandbox", "workspace-write", ...(mode === "timeout" ? ["--timeout-seconds", "1"] : [])]);
+    expect(result.status).toBe(status);
+    expect(existsSync(join(f.cwd, "worker-change.txt"))).toBe(false);
+  });
+
+  test("preserves successful workspace-write edits", () => {
+    const f = fixture("success-write");
     const result = run(f, ["--sandbox", "workspace-write"]);
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toBe("Worker completed successfully; its final summary exceeded the relay limit. Authorized workspace changes and worker verification were preserved.\n");
-    expect(result.stdout.length).toBeLessThan(1024);
-    if (mode === "oversized-write") expect(readFileSync(join(f.cwd, "worker-change.txt"), "utf8")).toBe("preserved");
+    expect(readFileSync(join(f.cwd, "worker-change.txt"), "utf8")).toBe("persisted");
+  });
+  test("fails before spawning oversized workspace-write snapshots without limiting read-only workers", () => {
+    const f = fixture();
+    writeFileSync(join(f.cwd, "snapshot-too-large.bin"), "");
+    truncateSync(join(f.cwd, "snapshot-too-large.bin"), 512 * 1024 * 1024 + 1);
+
+    const workspaceWrite = run(f, ["--sandbox", "workspace-write"]);
+    expect(workspaceWrite.status).toBe(78);
+    expect(workspaceWrite.stderr).toBe("lazycodex-gjc: workspace rollback snapshot exceeds byte limit\n");
+    expect(existsSync(join(f.record, "args.json"))).toBe(false);
+
+    const readOnly = run(f);
+    expect(readOnly.status, readOnly.stderr).toBe(0);
+  });
+
+  test("restores modes and symlinks without following external targets", () => {
+    const f = fixture("symlink-mutate");
+    const modeTarget = join(f.cwd, "mode-target.txt");
+    const externalTarget = join(f.root, "external-target.txt");
+    const link = join(f.cwd, "external-link");
+    writeFileSync(modeTarget, "mode baseline");
+    chmodSync(modeTarget, 0o640);
+    writeFileSync(externalTarget, "must-survive");
+    symlinkSync(externalTarget, link);
+
+    const result = run(f, ["--sandbox", "workspace-write"]);
+
+    expect(result.status).toBe(23);
+    expect(readFileSync(modeTarget, "utf8")).toBe("mode baseline");
+    expect(lstatSync(modeTarget).mode & 0o777).toBe(0o640);
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(realpathSync(link)).toBe(realpathSync(externalTarget));
+    expect(readFileSync(externalTarget, "utf8")).toBe("must-survive");
   });
   test("fails closed when completed final output exceeds the hard limit", () => {
     const f = fixture("hard-oversized");
@@ -600,6 +710,14 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe("lazycodex-gjc: worker output exceeded hard limit\n");
+    expect(existsSync(join(f.cwd, "worker-change.txt"))).toBe(false);
+  });
+  test.each([["stdout", 1], ["stderr-secret", 23]] as const)("rolls back workspace writes after %s failure", (mode, status) => {
+    const f = fixture(mode);
+    const result = run(f, ["--sandbox", "workspace-write"]);
+
+    expect(result.status).toBe(status);
+    expect(existsSync(join(f.cwd, "worker-change.txt"))).toBe(false);
   });
 
   test("kills the process group and cleans temporary output on timeout", () => {
@@ -620,10 +738,12 @@ describe("lazycodex-gjc isolated runner", () => {
     writeFileSync(failingSystemctl, "#!/bin/sh\nexit 1\n");
     chmodSync(failingSystemctl, 0o755);
     updateBinding(f, { 12: digest(failingSystemctl), 13: failingSystemctl });
-    const result = run(f, ["--timeout-seconds", "1"]);
+    const result = run(f, ["--sandbox", "workspace-write", "--timeout-seconds", "1"]);
     const pid = Number.parseInt(readFileSync(join(f.record, "descendant"), "utf8"), 10);
     expect(result.status).toBe(124);
-    expect(result.stderr).toContain("containment stop failed");
+    expect(result.stderr).toContain("containment stop was not confirmed");
+    expect(result.stderr).toContain("workspace may retain worker changes");
+    expect(readFileSync(join(f.cwd, "worker-change.txt"), "utf8")).toBe("created");
     // RuntimeMaxSec (timeout + 5s grace) force-reaps the transient unit and its descendants.
     let procState: string | undefined;
     for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -633,6 +753,20 @@ describe("lazycodex-gjc isolated runner", () => {
     }
     expect(procState === undefined || procState === "Z").toBe(true);
   }, 20_000);
+  test("treats a successful worker with an unconfirmed systemd unit as indeterminate", () => {
+    const f = fixture("success-write");
+    const unconfirmedSystemctl = join(f.root, "unconfirmed-systemctl");
+    writeFileSync(unconfirmedSystemctl, "#!/bin/sh\nif [ \"$2\" = \"is-active\" ]; then exit 3; fi\nif [ \"$2\" = \"show\" ]; then printf '%s\\n' '/untrusted-control-group'; exit 0; fi\nexit 0\n");
+    chmodSync(unconfirmedSystemctl, 0o755);
+    updateBinding(f, { 12: digest(unconfirmedSystemctl), 13: unconfirmedSystemctl });
+
+    const result = run(f, ["--sandbox", "workspace-write"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("worker containment was not confirmed");
+    expect(result.stderr).toContain("workspace may retain worker changes");
+    expect(readFileSync(join(f.cwd, "worker-change.txt"), "utf8")).toBe("persisted");
+  });
 
   test("kills detached descendants after a successful worker result", () => {
     const f = fixture("success-descendant");
@@ -646,7 +780,7 @@ describe("lazycodex-gjc isolated runner", () => {
   test("terminates the systemd-contained worker and cleans state on SIGTERM", async () => {
     const f = fixture("timeout");
     mkdirSync(f.env.TMPDIR, { recursive: true });
-    const child = spawn(process.execPath, [runner, "--cwd", f.cwd, "--binding", f.binding, "--timeout-seconds", "30"], {
+    const child = spawn(process.execPath, [runner, "--cwd", f.cwd, "--binding", f.binding, "--sandbox", "workspace-write", "--timeout-seconds", "30"], {
       env: f.env,
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -664,18 +798,20 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(stderr).toBe("lazycodex-gjc: worker interrupted\n");
     expect(procState === undefined || procState === "Z").toBe(true);
     expect(existsSync(readFileSync(join(f.record, "temp"), "utf8"))).toBe(false);
+    expect(existsSync(join(f.cwd, "worker-change.txt"))).toBe(false);
   });
 
   test.each(["stdout-infinite", "final-infinite"] as const)("kills infinite %s overflow and its descendants promptly", (mode) => {
     const f = fixture(mode);
     const started = Date.now();
-    const result = run(f, ["--timeout-seconds", "4"]);
+    const result = run(f, ["--sandbox", "workspace-write", "--timeout-seconds", "4"]);
     const pid = Number.parseInt(readFileSync(join(f.record, "descendant"), "utf8"), 10);
     const procState = existsSync(`/proc/${pid}/stat`) ? readFileSync(`/proc/${pid}/stat`, "utf8").split(" ")[2] : undefined;
     expect(result.status).toBe(1);
     expect(Date.now() - started).toBeLessThan(2_000);
     expect(result.stderr).toBe("lazycodex-gjc: worker output exceeded hard limit\n");
     expect(procState === undefined || procState === "Z").toBe(true);
+    expect(existsSync(join(f.cwd, "worker-change.txt"))).toBe(false);
   });
 
   test("rejects invalid UTF-8 task bytes and exposes help without invoking codex", () => {
