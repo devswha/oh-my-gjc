@@ -1,6 +1,6 @@
 {
   "name": "oh-my-gjc",
-  "version": "0.17.1",
+  "version": "0.18.0",
   "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: gate-briefing, extragoal, insane-review, lazycodex-gjc. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc. LazyCodex surfaces always install; its read-only runtime binding is prerequisite-dependent and otherwise fail-closed. models.yml remains untouched; release governance stays per-repository.",
   "author": {
     "name": "devswha",
