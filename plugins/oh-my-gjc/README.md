@@ -1,6 +1,6 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.17.0 한 번 설치로 스킬 10개 + 커맨드 15개
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** v0.17.1 한 번 설치로 스킬 10개 + 커맨드 15개
 (`/omg` + `/omg:*` 14개)가 전부 들어오고, 모두 네이티브 `/omg:*` 커맨드와 트리거 스킬로 뜬다.
 전제조건이 있는 기능(ChatGPT 구독+크로미움 — insane-review; 설치·로그인된 Codex+
 LazyCodex/OMO — lazycodex-gjc)도 함께 설치되며, 없으면 실행 시 자기진단해
