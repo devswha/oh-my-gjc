@@ -53,7 +53,10 @@ if [ "$CAND_MODE" = 1 ]; then
   # fall through to a previously-registered (possibly stale) marketplace/cache.
   gjc plugin marketplace add "$MARKET" || die "candidate marketplace add failed — aborting (run provenance installs in a fresh HOME)."
 else
-  gjc plugin marketplace add "$MARKET" 2>&1 | tail -1 || warn "marketplace add non-zero (already added?) — continuing"
+  gjc plugin marketplace add "$MARKET" 2>&1 | tail -1 || warn "marketplace already registered — refreshing it"
+  say "marketplace update: $ENTRY"
+  gjc plugin marketplace update "$ENTRY" \
+    || die "marketplace update failed — refusing to install from a possibly-stale catalog."
 fi
 
 say "install $ENTRY@$ENTRY"
@@ -62,11 +65,12 @@ if [ "$CAND_MODE" = 1 ]; then
   # Fail closed — never fall through to install a possibly-stale cache as release evidence.
   gjc plugin install "$ENTRY@$ENTRY" --force || die "candidate install failed — refusing to proceed with a possibly-stale cache (provenance integrity)."
 else
-  # non-candidate rerun = upgrade path: --force refreshes the cache even when the
-  # version string didn't change; fall back to a plain install for older gjc.
+  # Published reruns are upgrade paths. The marketplace was refreshed above; --force now
+  # rebuilds the plugin cache from that current catalog. Fall back only for older gjc versions
+  # that do not accept --force, and fail closed if neither install form succeeds.
   gjc plugin install "$ENTRY@$ENTRY" --force 2>&1 | tail -1 \
     || gjc plugin install "$ENTRY@$ENTRY" 2>&1 | tail -1 \
-    || warn "install non-zero (already installed?) — continuing"
+    || die "install failed — refusing to run a native installer from a possibly-stale cache."
 fi
 
 # NATIVE install — newest cached version, plugin-scoped glob (cache is <market>___<entry>___<ver>;
