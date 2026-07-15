@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 const runner = join(import.meta.dir, "../bin/lazycodex-gjc.mjs");
 const sandboxes: string[] = [];
 
-type Mode = "success" | "success-descendant" | "create-gjc" | "nonzero" | "stderr-secret" | "empty" | "invalid" | "oversized" | "stdout" | "stdout-infinite" | "final-infinite" | "timeout";
+type Mode = "success" | "success-descendant" | "create-gjc" | "create-gjc-symlink" | "nonzero" | "stderr-secret" | "empty" | "invalid" | "oversized" | "stdout" | "stdout-infinite" | "final-infinite" | "timeout";
 
 type OmoMode = "valid" | "missing" | "stale" | "incompatible" | "symlinked" | "writable";
 
@@ -103,7 +103,7 @@ process.stdin.on("end", () => {
   }
   if (${JSON.stringify(mode)} === "invalid") fs.writeFileSync(out, Buffer.from([0xff]));
   else if (${JSON.stringify(mode)} === "oversized") fs.writeFileSync(out, Buffer.alloc(1024 * 1024 + 1, 65));
-  else if (["success", "success-descendant", "create-gjc"].includes(${JSON.stringify(mode)})) fs.writeFileSync(out, "worker-result");
+  else if (["success", "success-descendant", "create-gjc", "create-gjc-symlink"].includes(${JSON.stringify(mode)})) fs.writeFileSync(out, "worker-result");
   else if (${JSON.stringify(mode)} === "stdout") {
     fs.writeFileSync(out, "must-not-succeed");
     for (let index = 0; index < 2049; index += 1) process.stdout.write(Buffer.alloc(512, 65));
@@ -132,6 +132,12 @@ process.stdin.on("end", () => {
     const state = path.join(${JSON.stringify(cwd)}, "new/subtree/.gjc");
     fs.mkdirSync(state, { recursive: true });
     fs.writeFileSync(path.join(state, "config.toml"), "malicious = true\\n");
+  }
+  if (${JSON.stringify(mode)} === "create-gjc-symlink") {
+    const state = path.join(${JSON.stringify(root)}, "victim/.gjc");
+    const link = path.join(${JSON.stringify(cwd)}, "x/.gjc");
+    fs.mkdirSync(path.dirname(link), { recursive: true });
+    fs.symlinkSync(state, link);
   }
 });
 `;
@@ -539,6 +545,22 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toBe("lazycodex-gjc: worker created forbidden workspace .gjc state\n");
     expect(existsSync(state)).toBe(false);
+  });
+  test("unlinks and rejects an external .gjc symlink without deleting its target", () => {
+    const f = fixture("create-gjc-symlink");
+    const victim = join(f.root, "victim/.gjc");
+    const sentinel = join(victim, "sentinel");
+    const link = join(f.cwd, "x/.gjc");
+    mkdirSync(victim, { recursive: true });
+    writeFileSync(sentinel, "must-survive");
+
+    const result = run(f, ["--sandbox", "workspace-write"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe("lazycodex-gjc: worker created forbidden workspace .gjc state\n");
+    expect(existsSync(link)).toBe(false);
+    expect(existsSync(victim)).toBe(true);
+    expect(readFileSync(sentinel, "utf8")).toBe("must-survive");
   });
 
   test("never relays child stderr, task text, or file canaries", () => {
