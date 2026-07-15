@@ -21,12 +21,11 @@ Install oh-my-gjc by following https://raw.githubusercontent.com/devswha/oh-my-g
 <details>
 <summary>설치가 안되요</summary>
 
-원샷이 막히면 아래 세 줄을 수동으로 — 원샷이 대신 해주던 것:
+원샷이 막히면 저장소를 받아 같은 hardened installer를 실행한다:
 
 ```
-gjc plugin marketplace add devswha/oh-my-gjc
-gjc plugin install oh-my-gjc@oh-my-gjc
-bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
+git clone --depth 1 https://github.com/devswha/oh-my-gjc.git
+bash oh-my-gjc/install.sh
 ```
 
 v0.17.1 한 번 설치로 스킬 10개 + 커맨드 15개(`/omg` + `/omg:*` 14개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
