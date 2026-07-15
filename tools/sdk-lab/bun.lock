@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "@oh-my-gjc/sdk-lab",
+      "dependencies": {
+        "@gajae-code/bridge-client": "0.11.0",
+      },
+    },
+  },
+  "packages": {
+    "@gajae-code/bridge-client": ["@gajae-code/bridge-client@0.11.0", "", {}, "sha512-ojZjxd7869wFEwCYnhHoQeDDs8VcIMfgSX6DhPEF74L+VHhHRvap9Dun7Q90hRqbHCWnsqNvJPc+YqcQVRa2tA=="],
+  }
+}
