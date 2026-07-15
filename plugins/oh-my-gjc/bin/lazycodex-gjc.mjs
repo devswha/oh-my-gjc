@@ -2,7 +2,7 @@
 
 import { constants, accessSync, chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, delimiter, dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { delimiter, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 
@@ -177,7 +177,7 @@ function workspaceDirectory(cwd, input, visited) {
 function workspaceStateDenyPaths(cwd) {
   const pending = [cwd];
   const visited = new Set();
-  const state = { denyPaths: new Set(), denyBytes: 0, gjcRoots: 0 };
+  const state = { denyPaths: new Set(), lexicalGjcPaths: new Set(), denyBytes: 0, gjcRoots: 0 };
   try {
     while (pending.length > 0) {
       const input = pending.pop();
@@ -189,7 +189,9 @@ function workspaceStateDenyPaths(cwd) {
         if (entry.name === ".gjc") {
           state.gjcRoots += 1;
           if (state.gjcRoots > WORKSPACE_GJC_LIMIT) throw new CliError("workspace .gjc protection exceeds state-root limit", 78);
-          addWorkspaceDeny(state, resolve(entryPath));
+          const lexicalPath = resolve(entryPath);
+          addWorkspaceDeny(state, lexicalPath);
+          state.lexicalGjcPaths.add(lexicalPath);
           try { addWorkspaceDeny(state, realpathSync(entryPath)); } catch { /* lexical deny still protects dangling state links */ } // no-excuse-ok: catch
           continue;
         }
@@ -209,12 +211,12 @@ function workspaceStateDenyPaths(cwd) {
     if (error instanceof CliError) throw error;
     throw new CliError("workspace .gjc protection could not be established", 78);
   } // no-excuse-ok: catch
-  return [...state.denyPaths];
+  return { denyPaths: [...state.denyPaths], lexicalGjcPaths: [...state.lexicalGjcPaths] };
 }
 
 function rejectNewWorkspaceState(cwd, initialPaths) {
-  const currentPaths = workspaceStateDenyPaths(cwd);
-  const created = currentPaths.filter((path) => basename(path) === ".gjc" && !initialPaths.has(path));
+  const currentState = workspaceStateDenyPaths(cwd);
+  const created = currentState.lexicalGjcPaths.filter((path) => within(path, cwd) && !initialPaths.has(path));
   for (const path of created) rmSync(path, { recursive: true, force: true });
   if (created.length > 0) throw new CliError("worker created forbidden workspace .gjc state", 1);
 }
@@ -455,9 +457,9 @@ async function main() {
   const task = readTask();
   const binding = readBinding(config.binding);
   const codexHome = binding.codexHome;
-  const workspaceDenies = workspaceStateDenyPaths(config.cwd);
-  const initialWorkspaceState = new Set(workspaceDenies.filter((path) => basename(path) === ".gjc"));
-  const protectedPaths = [...new Set([...protectedStatePaths(config.cwd, binding.accountHome, codexHome), ...workspaceDenies])];
+  const workspaceState = workspaceStateDenyPaths(config.cwd);
+  const initialWorkspaceState = new Set(workspaceState.lexicalGjcPaths);
+  const protectedPaths = [...new Set([...protectedStatePaths(config.cwd, binding.accountHome, codexHome), ...workspaceState.denyPaths])];
   const omo = resolveOmoSkill(codexHome);
   let temp;
   let childCodexHome;

@@ -20,12 +20,18 @@
 set -euo pipefail
 
 MARKET_DEFAULT="devswha/oh-my-gjc"
-ENTRY="oh-my-gjc"            # marketplace entry name (kept for cache/compat)
+ENTRY="oh-my-gjc"
+PLUGIN_ID="${ENTRY}@${ENTRY}"
 CACHE="$HOME/.gjc/plugins/cache/plugins"
+INSTALL_STDERR=""
 
 say()  { printf '\033[1;36m▸ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
+cleanup() {
+  [ -z "$INSTALL_STDERR" ] || rm -f "$INSTALL_STDERR"
+}
+trap cleanup EXIT
 
 command -v gjc >/dev/null 2>&1 || die "gjc not found on PATH. Install Gajae Code first, then re-run."
 
@@ -33,10 +39,28 @@ command -v gjc >/dev/null 2>&1 || die "gjc not found on PATH. Install Gajae Code
 MARKET="$MARKET_DEFAULT"; CAND_MODE=0; LEGACY=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --candidate-ref)   shift; [ $# -gt 0 ] || die "--candidate-ref needs a path or ref"; MARKET="$1"; CAND_MODE=1 ;;
-    --candidate-ref=*) MARKET="${1#*=}"; CAND_MODE=1 ;;
-    --*)               LEGACY+=("$1") ;;
-    *)                 LEGACY+=("$1") ;;
+    --candidate-ref)
+      shift
+      [ $# -gt 0 ] || die "--candidate-ref needs a path or ref"
+      case "$1" in --*) die "--candidate-ref needs a path or ref" ;; esac
+      MARKET="$1"
+      CAND_MODE=1
+      ;;
+    --candidate-ref=*)
+      MARKET="${1#*=}"
+      [ -n "$MARKET" ] || die "--candidate-ref needs a path or ref"
+      case "$MARKET" in --*) die "--candidate-ref needs a path or ref" ;; esac
+      CAND_MODE=1
+      ;;
+    --core|tower|insane-review|codex-*|lazycodex|gjc-bugwatch)
+      LEGACY+=("$1")
+      ;;
+    --*)
+      die "unknown option: $1"
+      ;;
+    *)
+      die "unexpected argument: $1"
+      ;;
   esac
   shift
 done
@@ -46,6 +70,54 @@ if [ "${#LEGACY[@]}" -gt 0 ]; then
 fi
 
 # ── run ────────────────────────────────────────────────────────────────────────
+resolve_native_installer() {
+  local cache_name cache_physical entry_version home_physical line match_count native native_parent
+  local output root root_physical semver_re success_line_re success_prefix_re ansi_sgr
+
+  output="$1"
+  semver_re='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+)(\.[0-9A-Za-z-]+)*)?(\+([0-9A-Za-z-]+)(\.[0-9A-Za-z-]+)*)?'
+  # GJC's current CLI applies chalk.green to the complete success line. Accept at
+  # most one harmless SGR wrapper on either edge, never control codes inside it.
+  ansi_sgr=$'\033''\[[0-9;]*m'
+  success_line_re="^(${ansi_sgr})?✔ Installed oh-my-gjc from oh-my-gjc \\((${semver_re})\\)(${ansi_sgr})?$"
+  success_prefix_re="^(${ansi_sgr})?✔ Installed oh-my-gjc from oh-my-gjc"
+  match_count=0
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [[ "$line" =~ $success_line_re ]]; then
+      match_count=$((match_count + 1))
+      [ "$match_count" -eq 1 ] || return 1
+      entry_version="${BASH_REMATCH[2]}"
+    elif [[ "$line" =~ $success_prefix_re ]]; then
+      return 1
+    fi
+  done <<<"$output"
+
+  [ "$match_count" -eq 1 ] || return 1
+
+  cache_name="oh-my-gjc___oh-my-gjc___${entry_version}"
+  root="${CACHE}/${cache_name}"
+
+  # Do not follow cache or native-installer symlinks. Canonical paths must describe the
+  # exact derived root and its bin directory; install output cannot redirect native handoff.
+  [ -d "$CACHE" ] && [ ! -L "$CACHE" ] && [ ! -L "$root" ] && [ ! -L "$root/bin" ] \
+    && [ -f "$root/bin/install-skill.sh" ] && [ ! -L "$root/bin/install-skill.sh" ] || return 1
+  home_physical="$(cd "$HOME" && pwd -P)" || return 1
+  cache_physical="$(cd "$CACHE" && pwd -P)" || return 1
+  root_physical="$(cd "$root" && pwd -P)" || return 1
+  native_parent="$(cd "$root/bin" && pwd -P)" || return 1
+  [ "$cache_physical" = "$home_physical/.gjc/plugins/cache/plugins" ] \
+    && [ "$root_physical" = "$cache_physical/$cache_name" ] \
+    && [ "$native_parent" = "$root_physical/bin" ] || return 1
+
+  native="$root/bin/install-skill.sh"
+  printf '%s\n' "$native"
+}
+
+relay_install_output() {
+  [ -z "$1" ] || printf '%s\n' "$1"
+}
+
 say "marketplace add: $MARKET"
 if [ "$CAND_MODE" = 1 ]; then
   # candidate/provenance mode is fail-closed end-to-end: a fresh HOME is expected, so a
@@ -53,32 +125,52 @@ if [ "$CAND_MODE" = 1 ]; then
   # fall through to a previously-registered (possibly stale) marketplace/cache.
   gjc plugin marketplace add "$MARKET" || die "candidate marketplace add failed — aborting (run provenance installs in a fresh HOME)."
 else
-  gjc plugin marketplace add "$MARKET" 2>&1 | tail -1 || warn "marketplace already registered — refreshing it"
+  gjc plugin marketplace add "$MARKET" || warn "marketplace already registered — refreshing it"
   say "marketplace update: $ENTRY"
   gjc plugin marketplace update "$ENTRY" \
     || die "marketplace update failed — refusing to install from a possibly-stale catalog."
 fi
 
-say "install $ENTRY@$ENTRY"
+say "install $PLUGIN_ID"
+# mktemp creates this diagnostic capture with mode 600; the EXIT trap removes it.
+# Raw install diagnostics remain private; only the exact compatibility diagnostic is inspected.
+INSTALL_STDERR="$(mktemp "${TMPDIR:-/tmp}/omg-install.XXXXXX")" \
+  || die "could not safely capture the plugin install diagnostic."
 if [ "$CAND_MODE" = 1 ]; then
-  # candidate/provenance mode: force reinstall so the cache is the candidate, not a stale copy.
+  # Candidate/provenance mode: force reinstall so the cache is the candidate, not a stale copy.
   # Fail closed — never fall through to install a possibly-stale cache as release evidence.
-  gjc plugin install "$ENTRY@$ENTRY" --force || die "candidate install failed — refusing to proceed with a possibly-stale cache (provenance integrity)."
+  if INSTALL_OUTPUT="$(gjc plugin install "$PLUGIN_ID" --force 2>"$INSTALL_STDERR")"; then
+    relay_install_output "$INSTALL_OUTPUT"
+  else
+    die "candidate install failed — refusing to proceed with a possibly-stale cache (provenance integrity)."
+  fi
 else
   # Published reruns are upgrade paths. The marketplace was refreshed above; --force now
-  # rebuilds the plugin cache from that current catalog. Fall back only for older gjc versions
-  # that do not accept --force, and fail closed if neither install form succeeds.
-  gjc plugin install "$ENTRY@$ENTRY" --force 2>&1 | tail -1 \
-    || gjc plugin install "$ENTRY@$ENTRY" 2>&1 | tail -1 \
-    || die "install failed — refusing to run a native installer from a possibly-stale cache."
+  # rebuilds the plugin cache from that current catalog. Only the exact unsupported-option
+  # diagnostic permits a compatibility retry; every other failure remains fail-closed.
+  if force_output="$(gjc plugin install "$PLUGIN_ID" --force 2>"$INSTALL_STDERR")"; then
+    INSTALL_OUTPUT="$force_output"
+    relay_install_output "$INSTALL_OUTPUT"
+  else
+    force_status=$?
+    force_stderr="$(<"$INSTALL_STDERR")"
+    if [[ "$force_stderr" =~ ^[[:space:]]*([Ee]rror:[[:space:]]*)?[Uu]nknown[[:space:]]+option:?[[:space:]]*[\'\"]?--force[\'\"]?[[:space:]]*[\.\!]?[[:space:]]*$ ]]; then
+      warn "installed gjc does not support --force; retrying the published install without it."
+      if INSTALL_OUTPUT="$(gjc plugin install "$PLUGIN_ID" 2>"$INSTALL_STDERR")"; then
+        relay_install_output "$INSTALL_OUTPUT"
+      else
+        die "install failed after the proven --force compatibility retry — refusing native handoff."
+      fi
+    else
+      die "forced install failed (exit $force_status); refusing an unforced fallback. Re-run '$0' after resolving the gjc install error."
+    fi
+  fi
 fi
 
-# NATIVE install — newest cached version, plugin-scoped glob (cache is <market>___<entry>___<ver>;
-# marketplace name == entry name, so anchor to oh-my-gjc___oh-my-gjc___* — a bare *oh-my-gjc* glob
-# would match nothing else now but the anchored form stays correct if more entries ever appear).
-NAT="$(ls -d "$CACHE/oh-my-gjc___${ENTRY}___"*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)"
-[ -n "$NAT" ] || die "native installer not found ($CACHE/oh-my-gjc___${ENTRY}___*/bin/install-skill.sh). Plugin install may have failed."
-bash "$NAT" all
+if ! NAT="$(resolve_native_installer "$INSTALL_OUTPUT")"; then
+  die "could not identify the just-installed $PLUGIN_ID cache root from its install success output; refusing native handoff."
+fi
+"${BASH:-bash}" "$NAT" all
 
 cat <<DONE
 
