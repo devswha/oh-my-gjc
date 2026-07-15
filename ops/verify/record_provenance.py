@@ -23,6 +23,7 @@ import re
 import secrets
 import stat
 import subprocess
+import shutil
 import sys
 
 
@@ -328,6 +329,37 @@ def validate_marketplace(marketplace, plugin_manifest):
     }
 
 
+def trusted_git_binary():
+    """Resolve Git from fixed system locations and reject writable executable chains."""
+    search_directories = ["/usr/bin", "/bin", "/usr/local/bin", "/opt/homebrew/bin"]
+    candidate = shutil.which("git", path=os.pathsep.join(search_directories))
+    if not candidate:
+        fail("trusted git executable was not found in fixed system locations")
+    resolved = os.path.realpath(candidate)
+    try:
+        information = os.stat(resolved, follow_symlinks=False)
+    except OSError as exc:
+        fail("trusted git executable cannot be inspected: {}".format(exc))
+    if not stat.S_ISREG(information.st_mode) or not os.access(resolved, os.X_OK):
+        fail("trusted git executable must be an executable regular file")
+    allowed_owners = {0}
+    if hasattr(os, "getuid"):
+        allowed_owners.add(os.getuid())
+    current = resolved
+    while True:
+        component = os.stat(current, follow_symlinks=False)
+        if component.st_uid not in allowed_owners or component.st_mode & 0o022:
+            fail("trusted git path has unsafe ownership or permissions: {}".format(current))
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    return resolved
+
+
+GIT_BINARY = trusted_git_binary()
+
+
 def git_environment():
     """Do not let caller-selected Git repository/worktree state redirect commands."""
     return {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
@@ -348,7 +380,7 @@ def run_git(candidate, candidate_descriptor, arguments, purpose, text=True):
     if text:
         options.update({"text": True, "encoding": "utf-8", "errors": "replace"})
     try:
-        result = subprocess.run(["git", "-C", candidate] + arguments, **options)
+        result = subprocess.run([GIT_BINARY, "-C", candidate] + arguments, **options)
     except OSError as exc:
         fail("cannot run git to {}: {}".format(purpose, exc))
     assert_path_matches_descriptor(candidate, candidate_descriptor, "candidate root")

@@ -72,15 +72,18 @@ fi
 # ── run ────────────────────────────────────────────────────────────────────────
 resolve_native_installer() {
   local cache_name cache_physical entry_version home_physical line match_count native native_parent
-  local output root root_physical semver_re success_line_re success_prefix_re ansi_sgr
+  local output root root_physical semver_re status_token success_line_re success_prefix_re ansi_sgr
 
   output="$1"
   semver_re='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+)(\.[0-9A-Za-z-]+)*)?(\+([0-9A-Za-z-]+)(\.[0-9A-Za-z-]+)*)?'
-  # GJC's current CLI applies chalk.green to the complete success line. Accept at
-  # most one harmless SGR wrapper on either edge, never control codes inside it.
+  # GJC themes vary the status token (Unicode, Nerd Font, or ASCII) while the
+  # machine-relevant suffix is stable. Accept one bounded, printable token and
+  # at most one harmless SGR wrapper on either edge; never accept whitespace or
+  # control bytes inside the token.
   ansi_sgr=$'\033''\[[0-9;]*m'
-  success_line_re="^(${ansi_sgr})?✔ Installed oh-my-gjc from oh-my-gjc \\((${semver_re})\\)(${ansi_sgr})?$"
-  success_prefix_re="^(${ansi_sgr})?✔ Installed oh-my-gjc from oh-my-gjc"
+  status_token='[^[:space:][:cntrl:]]{1,16}'
+  success_line_re="^(${ansi_sgr})?${status_token} Installed oh-my-gjc from oh-my-gjc \\((${semver_re})\\)(${ansi_sgr})?$"
+  success_prefix_re="^(${ansi_sgr})?${status_token} Installed oh-my-gjc from oh-my-gjc"
   match_count=0
 
   while IFS= read -r line || [ -n "$line" ]; do

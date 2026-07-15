@@ -15,17 +15,15 @@ Do exactly the following in a terminal. Do not improvise other steps.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
-One install brings the whole v0.17.0 suite (10 skills + 15 commands: `/omg` + 14 `/omg:*`). There are no separate/optional plugins to add.
+One install brings the whole v0.17.1 suite (10 skills + 15 commands: `/omg` + 14 `/omg:*`). There are no separate/optional plugins to add.
 
 ## Manual path (equivalent, if curl|bash is disallowed)
 ```sh
-gjc plugin marketplace add devswha/oh-my-gjc
-gjc plugin install oh-my-gjc@oh-my-gjc
-# NATIVE install — gjc never loads plugin SKILLs into a session, and plugin commands would
-# only auto-expose under a wrong namespace; copy both in natively as /omg:*.
-# Plugin-scoped glob (cache is <marketplace>___<plugin>___<ver>; a bare *oh-my-gjc* glob hits every plugin), newest version:
-bash "$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)" all
+git clone --depth 1 https://github.com/devswha/oh-my-gjc.git
+bash oh-my-gjc/install.sh
 ```
+This invokes the same hardened installer as the one-shot path: it refreshes the marketplace, binds native handoff to the plugin version reported by the current install operation, and fails closed on stale or ambiguous cache state. Do not reproduce the old manual `marketplace add` → plain install → newest-cache glob sequence; it is not upgrade-safe.
+
 The native installer copies every bundled skill + command in one shot and fails loudly (with a missing list) if anything expected is absent — never a partial install.
 
 ## Gajae app migration

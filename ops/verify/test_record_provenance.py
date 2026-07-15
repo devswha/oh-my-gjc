@@ -274,6 +274,25 @@ class RecordProvenanceTest(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_inherited_path_cannot_select_a_fake_git(self):
+        fake_bin = self.root / "fake-bin"
+        fake_bin.mkdir()
+        canary = self.root / "fake-git-used"
+        fake_git = fake_bin / "git"
+        fake_git.write_text(
+            "#!/bin/sh\nprintf used > \"$FAKE_GIT_CANARY\"\nexit 0\n",
+            encoding="utf-8",
+        )
+        fake_git.chmod(0o755)
+        result = self._invoke(
+            environment={
+                "PATH": "{}{}{}".format(fake_bin, os.pathsep, os.environ.get("PATH", "")),
+                "FAKE_GIT_CANARY": str(canary),
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse(canary.exists())
     def test_candidate_root_replacement_between_git_checks_leaves_output_untouched(self):
         output = self.root / "provenance.json"
         output.write_text("previous attestation must survive\n", encoding="utf-8")

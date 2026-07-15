@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 type ForceOutcome = "success" | "unsupported" | "operational" | "near-miss";
-type InstallOutput = "success" | "missing" | "duplicate" | "malformed" | "ansi" | "ansi-near-miss";
+type InstallOutput = "success" | "nerd" | "ascii" | "missing" | "duplicate" | "malformed" | "ansi" | "ansi-near-miss";
 type InstallStderr = "none" | "stale-success";
 
 interface RunInstallerOptions {
@@ -80,6 +80,8 @@ printf '%s\\n' "$*" >> "$GJC_TEST_LOG"
 emit_success() {
   case "$INSTALL_OUTPUT" in
     success) printf '✔ Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION" ;;
+    nerd) printf '󰄬 Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION" ;;
+    ascii) printf '[ok] Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION" ;;
     missing) ;;
     duplicate)
       printf '✔ Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION"
@@ -333,6 +335,15 @@ describe("one-shot installer", () => {
     expect(result.status, result.stderr).toBe(0);
     expect(calls.at(-1)).toBe(nativeCall(selectedRoot));
   });
+
+  for (const installOutput of ["nerd", "ascii"] as const) {
+    test(`accepts the ${installOutput} theme success token`, () => {
+      const { calls, result, selectedRoot } = runInstaller({ installOutput });
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(calls.at(-1)).toBe(nativeCall(selectedRoot));
+    });
+  }
 
   test("rejects a symlinked cache root", () => {
     const { calls, result } = runInstaller({ cacheSymlink: true });
