@@ -33,8 +33,8 @@ for _a in "$@"; do
   case "$_a" in
     */*|*install-skill.sh)
       echo "❌ '$_a' looks like a path, not an argument — a glob likely matched the wrong plugin folder." >&2
-      echo "   Use a plugin-scoped, newest-version path:" >&2
-      echo "   bash \"\$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/install-skill.sh 2>/dev/null | sort -V | tail -1)\" all" >&2
+      echo "   Repair or upgrade through the hardened suite installer instead:" >&2
+      echo "   curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash" >&2
       exit 2 ;;
   esac
 done

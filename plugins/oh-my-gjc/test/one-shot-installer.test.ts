@@ -18,6 +18,7 @@ type InstallStderr = "none" | "stale-success";
 
 interface RunInstallerOptions {
   addFails?: boolean;
+  addDuplicate?: boolean;
   args?: string[];
   cacheSymlink?: boolean;
   forceOutcome?: ForceOutcome;
@@ -109,7 +110,17 @@ create_native() {
 
 case "$*" in
   plugin\\ marketplace\\ add\\ *)
-    if [ "$ADD_FAILS" = "1" ]; then exit 1; fi
+    if [ "$ADD_DUPLICATE" = "1" ] && [ ! -e "$GJC_DUPLICATE_SEEN" ]; then
+      : > "$GJC_DUPLICATE_SEEN"
+      printf '%s\n' '✗ Failed to add marketplace: Marketplace "oh-my-gjc" already exists' >&2
+      exit 1
+    fi
+    if [ "$ADD_FAILS" = "1" ]; then
+      printf '%s\n' 'network unavailable' >&2
+      exit 9
+    fi
+    ;;
+  "plugin marketplace remove oh-my-gjc")
     ;;
   "plugin marketplace update oh-my-gjc")
     if [ "$UPDATE_FAILS" = "1" ]; then exit 9; fi
@@ -144,8 +155,10 @@ esac
     env: {
       ...process.env,
       ADD_FAILS: options.addFails ? "1" : "0",
+      ADD_DUPLICATE: options.addDuplicate ? "1" : "0",
       FORCE_OUTCOME: options.forceOutcome ?? "success",
       GJC_TEST_LOG: log,
+      GJC_DUPLICATE_SEEN: join(sandbox, "duplicate-seen"),
       HOME: home,
       INSTALL_OUTPUT: options.installOutput ?? "success",
       INSTALL_STDERR_OUTPUT: options.installStderr ?? "none",
@@ -184,16 +197,26 @@ describe("one-shot installer", () => {
     expect(calls.at(-1)).toBe(nativeCall(selectedRoot));
   });
 
-  test("refreshes an existing published marketplace before installing", () => {
-    const { calls, result, selectedRoot } = runInstaller({ addFails: true });
+  test("rebinds an existing marketplace name to the official published source", () => {
+    const { calls, result, selectedRoot } = runInstaller({ addDuplicate: true });
 
     expect(result.status, result.stderr).toBe(0);
     expect(calls).toEqual([
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace remove oh-my-gjc",
       "plugin marketplace add devswha/oh-my-gjc",
       "plugin marketplace update oh-my-gjc",
       "plugin install oh-my-gjc@oh-my-gjc --force",
       nativeCall(selectedRoot),
     ]);
+  });
+
+  test("fails closed on a non-duplicate marketplace add failure", () => {
+    const { calls, result } = runInstaller({ addFails: true });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("refusing to use an unverified existing source");
+    expect(calls).toEqual(["plugin marketplace add devswha/oh-my-gjc"]);
   });
 
   test("fails closed when the mandatory marketplace refresh fails", () => {

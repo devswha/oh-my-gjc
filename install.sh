@@ -24,12 +24,14 @@ ENTRY="oh-my-gjc"
 PLUGIN_ID="${ENTRY}@${ENTRY}"
 CACHE="$HOME/.gjc/plugins/cache/plugins"
 INSTALL_STDERR=""
+MARKET_STDERR=""
 
 say()  { printf '\033[1;36m▸ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 cleanup() {
   [ -z "$INSTALL_STDERR" ] || rm -f "$INSTALL_STDERR"
+  [ -z "$MARKET_STDERR" ] || rm -f "$MARKET_STDERR"
 }
 trap cleanup EXIT
 
@@ -128,7 +130,23 @@ if [ "$CAND_MODE" = 1 ]; then
   # fall through to a previously-registered (possibly stale) marketplace/cache.
   gjc plugin marketplace add "$MARKET" || die "candidate marketplace add failed — aborting (run provenance installs in a fresh HOME)."
 else
-  gjc plugin marketplace add "$MARKET" || warn "marketplace already registered — refreshing it"
+  MARKET_STDERR="$(mktemp "${TMPDIR:-/tmp}/omg-marketplace.XXXXXX")" \
+    || die "could not safely capture the marketplace registration diagnostic."
+  if market_output="$(gjc plugin marketplace add "$MARKET" 2>"$MARKET_STDERR")"; then
+    relay_install_output "$market_output"
+  else
+    market_status=$?
+    market_stderr="$(<"$MARKET_STDERR")"
+    if [[ "$market_stderr" =~ Marketplace[[:space:]]+[\"\']?${ENTRY}[\"\']?[[:space:]]+already[[:space:]]+exists ]]; then
+      warn "marketplace name already exists — replacing its source with $MARKET"
+      gjc plugin marketplace remove "$ENTRY" \
+        || die "could not remove the existing marketplace — refusing an unbound source."
+      gjc plugin marketplace add "$MARKET" \
+        || die "could not bind marketplace $ENTRY to $MARKET."
+    else
+      die "marketplace add failed (exit $market_status) — refusing to use an unverified existing source."
+    fi
+  fi
   say "marketplace update: $ENTRY"
   gjc plugin marketplace update "$ENTRY" \
     || die "marketplace update failed — refusing to install from a possibly-stale catalog."
