@@ -1,5 +1,5 @@
 ---
-description: oh-my-gajaecode 초기 설정 — 설치 상태 확인, 전제조건 점검, gate 상시 토글 안내. 여러 번 실행해도 안전(멱등).
+description: oh-my-gajaecode 초기 설정 — 설치 상태 확인, 전제조건 점검, 응답 보정 + gate 상시 토글 안내. 여러 번 실행해도 안전(멱등).
 argument-hint: "(인자 없음)"
 ---
 
@@ -80,12 +80,12 @@ payload를 실행할 수 있으므로 금지한다. 설치 후 **새 세션**을
 | Chrome + ChatGPT | 크롬 프로필 존재 | `/omg:insane-review` |
 | Codex + LazyCodex | `codex`가 PATH에 있고 호환 OMO + user-scope runtime binding 설치됨 | `/omg:lazycodex-gjc` (읽기 전용) |
 
-## Step 3 — 상시 모드 안내 (선택)
+## Step 3 — 응답 보정 + 게이트 브리핑 상시 모드 안내 (선택)
 
 마지막으로 남은 세마포어 토글을 소개한다 (실행은 사용자 몫):
 
 ```
-/omg:gate-always on          # 모든 승인 게이트에 비전문가 브리핑 자동 첨부
+/omg:gate-always on          # 프로젝트 SYSTEM.md가 덮지 않는 새 세션의 응답 보정 + 게이트 브리핑
 ```
 
 ## 출력 형식
