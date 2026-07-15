@@ -48,15 +48,47 @@ Unknown model profile로 깨진다. 사용자가 이전을 거부하면 해당 �
 - 자격증명(로그인)이 없어도 병합은 진행한다 — 활성화 때 gjc가 하드블록한다.
 
 ## Step 0 — 프리셋 원본 경로 해석 (`$OMG`)
-
-`${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않으므로 실제 경로를 잡는다:
+`${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않는다. 네이티브 설치가 기록한 정확한
+suite root binding만 사용한다. 프로젝트 binding을 우선하고, 없을 때만 user binding을 쓰며,
+둘 다 없을 때만 현재 checkout의 정확한 asset으로 fallback한다:
 ```bash
-OMG="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/presets.yml 2>/dev/null | sort -V | tail -1)"
-[ -z "$OMG" ] && OMG="$(ls -d ./.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/presets.yml 2>/dev/null | sort -V | tail -1)"
-[ -z "$OMG" ] && [ -f plugins/oh-my-gjc/references/presets.yml ] && OMG="plugins/oh-my-gjc/references/presets.yml"
+resolve_omg_asset() (
+  fail() { echo "oh-my-gjc runtime binding is missing or invalid; rerun hardened install.sh." >&2; exit 1; }
+  local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir
+  for binding in "$PWD/.gjc/runtimes/oh-my-gjc/root" "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"; do
+    if [ -e "$binding" ] || [ -L "$binding" ]; then
+      [ -f "$binding" ] && [ ! -L "$binding" ] || fail
+      bytes="$(LC_ALL=C od -An -v -tu1 "$binding")" || fail
+      for byte in $bytes; do
+        case "$byte" in 0|[1-9]|1[1-9]|2[0-9]|3[01]|127) fail ;; esac
+      done
+      exec 3< "$binding" || fail
+      IFS= read -r root <&3 || { exec 3<&-; fail; }
+      if IFS= read -r -n 1 _ <&3; then exec 3<&-; fail; fi
+      exec 3<&-
+      case "$root" in ""|*[[:cntrl:]]*) fail ;; /*) ;; *) fail ;; esac
+      canonical_root="$(cd -P -- "$root" 2>/dev/null && pwd -P)" || fail
+      [ "$root" = "$canonical_root" ] || fail
+      asset="$canonical_root/$expected_asset"
+      asset_dir="${asset%/*}"
+      canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
+      [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
+      printf '%s\n' "$asset"
+      exit 0
+    fi
+  done
+  [ -f "plugins/oh-my-gjc/$expected_asset" ] && [ ! -L "plugins/oh-my-gjc/$expected_asset" ] || fail
+  canonical_root="$(cd -P -- "plugins/oh-my-gjc" 2>/dev/null && pwd -P)" || fail
+  asset="$canonical_root/$expected_asset"
+  asset_dir="${asset%/*}"
+  canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
+  [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
+  printf '%s\n' "$asset"
+)
+OMG="$(resolve_omg_asset "references/presets.yml")" || exit 1
 echo "OMG=$OMG"
 ```
-`$OMG`가 비면 oh-my-gjc 플러그인 설치 여부를 안내하고 멈춘다.
+A malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing binding stops here; rerun hardened `install.sh` rather than selecting a cache.
 
 ## Step 1 — 대상 파일 준비
 

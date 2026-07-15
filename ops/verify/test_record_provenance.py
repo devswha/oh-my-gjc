@@ -36,6 +36,14 @@ MARKERS = [
     "references/presets.yml",
     "skills/plain-layer/SKILL.md",
 ]
+NON_MARKER_PAYLOADS = [
+    "bin/pack_and_ask.py",
+    "bin/collect.ts",
+    "templates/non-marker-template.md",
+    "skills/non-marker-skill/SKILL.md",
+    "references/non-marker-reference.md",
+]
+TRACKED_PLUGIN_FILES = frozenset(MARKERS + NON_MARKER_PAYLOADS)
 
 
 class RecordProvenanceTest(unittest.TestCase):
@@ -97,7 +105,8 @@ class RecordProvenanceTest(unittest.TestCase):
         candidate_manifest = candidate / "plugins" / PLUGIN_NAME / ".claude-plugin" / "plugin.json"
         self._write_json(marketplace_path, self._marketplace_document())
         self._write_json(candidate_manifest, self._plugin_document())
-        for relative_path in MARKERS:
+        (candidate / "install.sh").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        for relative_path in MARKERS + NON_MARKER_PAYLOADS:
             candidate_path = candidate / "plugins" / PLUGIN_NAME / relative_path
             cache_path = cache / relative_path
             candidate_path.parent.mkdir(parents=True, exist_ok=True)
@@ -105,10 +114,9 @@ class RecordProvenanceTest(unittest.TestCase):
             if relative_path == ".claude-plugin/plugin.json":
                 payload = candidate_manifest.read_bytes()
             else:
-                payload = ("fixture marker: " + relative_path + "\n").encode("utf-8")
+                payload = ("fixture payload: " + relative_path + "\n").encode("utf-8")
             candidate_path.write_bytes(payload)
             cache_path.write_bytes(payload)
-        (candidate / ".gitignore").write_text("ignored.tmp\n", encoding="utf-8")
 
     def _commit_candidate_changes(self):
         self._git("add", "-A")
@@ -220,6 +228,44 @@ class RecordProvenanceTest(unittest.TestCase):
             self.assertEqual(evidence["candidate_head"], evidence["candidate"])
             self.assertEqual(evidence["candidate"], evidence["installed"])
             self.assertRegex(evidence["candidate"], r"^sha256:[0-9a-f]{64}$")
+        expected_payloads = {
+            relative_path: self._candidate_marker(relative_path).read_bytes()
+            for relative_path in TRACKED_PLUGIN_FILES
+        }
+        expected_aggregate_digest = PROVENANCE.payload_aggregate_digest(expected_payloads)
+        payload_identity = record["plugin_payload_identity"]
+        self.assertEqual(
+            payload_identity["tracked_inventory"]["file_count"], len(TRACKED_PLUGIN_FILES)
+        )
+        self.assertEqual(
+            payload_identity["tracked_inventory"]["aggregate_digest"], expected_aggregate_digest
+        )
+        self.assertEqual(
+            payload_identity["candidate"]["aggregate_digest"], expected_aggregate_digest
+        )
+        self.assertEqual(
+            payload_identity["installed_cache"]["aggregate_digest"], expected_aggregate_digest
+        )
+        self.assertEqual(
+            payload_identity["candidate"]["file_count"], len(TRACKED_PLUGIN_FILES)
+        )
+        self.assertEqual(
+            payload_identity["installed_cache"]["file_count"], len(TRACKED_PLUGIN_FILES)
+        )
+        self.assertTrue(payload_identity["candidate_file_set_matches_tracked_head"])
+        self.assertTrue(payload_identity["installed_file_set_matches_tracked_head"])
+        self.assertTrue(payload_identity["candidate_bytes_match_tracked_head"])
+        self.assertTrue(payload_identity["installed_bytes_match_tracked_head"])
+        self.assertTrue(record["local_vs_installed_payload_match"])
+        bootstrap = record["bootstrap_evidence"]
+        self.assertEqual(bootstrap["path"], "install.sh")
+        self.assertEqual(
+            bootstrap["head"], PROVENANCE.sha256_bytes((self.candidate / "install.sh").read_bytes())
+        )
+        self.assertEqual(bootstrap["head"], bootstrap["candidate"])
+        self.assertTrue(bootstrap["candidate_matches_head"])
+        self.assertNotIn("installed", bootstrap)
+        self.assertIn("not a member of the installed plugin-cache", bootstrap["scope"])
         self.assertIn("informational only", record["marketplace_ref_status"])
         self.assertIn("Gate 2 and Gate 3 remain separate", record["marketplace_ref_status"])
         self.assertIn("exclusive control", record["threat_model"])
@@ -229,11 +275,17 @@ class RecordProvenanceTest(unittest.TestCase):
         self.assertTrue(record["final_revalidation"]["payload_digest_snapshot_matches_first_pass"])
         self.assertTrue(record["final_revalidation"]["root_descriptor_identities_rechecked"])
         self.assertTrue(record["final_revalidation"]["both_snapshots_match_resolved_head"])
+        self.assertTrue(record["final_revalidation"]["marketplace_manifest_rechecked"])
         self.assertTrue(record["final_revalidation"]["plugin_subtree_identity_rechecked"])
+        self.assertTrue(record["final_revalidation"]["full_plugin_tree_file_set_rechecked"])
+        self.assertTrue(record["final_revalidation"]["full_plugin_tree_directory_shape_rechecked"])
+        self.assertTrue(record["final_revalidation"]["full_plugin_tree_bytes_rechecked"])
+        self.assertTrue(record["final_revalidation"]["bootstrap_install_sh_rechecked"])
         self.assertTrue(record["final_revalidation"]["pre_replace_full_revalidation"])
         self.assertIn("os.replace is the publication boundary", record["output_durability"])
         self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
         self.assertEqual(json.loads(result.stdout), record)
+        self.assertIn("complete plugin-tree payload bytes match", result.stderr)
 
     def test_uppercase_full_commit_is_normalized(self):
         result = self._invoke(commit=self.head.upper())
@@ -479,6 +531,30 @@ class RecordProvenanceTest(unittest.TestCase):
             ):
                 self.assertEqual(PROVENANCE.main(self._direct_arguments(output)), 1)
         self.assertEqual(output.read_text(encoding="utf-8"), "previous attestation must survive\n")
+    def test_final_revalidation_rejects_plugin_inventory_drift_before_output(self):
+        output = self.root / "provenance.json"
+        output.write_text("previous attestation must survive\n", encoding="utf-8")
+        original_snapshot = PROVENANCE.payload_digest_snapshot
+        snapshot_calls = 0
+
+        def add_cache_file_after_first_snapshot(*arguments):
+            nonlocal snapshot_calls
+            result = original_snapshot(*arguments)
+            snapshot_calls += 1
+            if snapshot_calls == 1:
+                (self.cache / "inventory-drift.txt").write_text(
+                    "extra after baseline\n", encoding="utf-8"
+                )
+            return result
+
+        with mock.patch.dict(os.environ, {"HOME": str(self.home)}, clear=False):
+            with mock.patch.object(
+                PROVENANCE,
+                "payload_digest_snapshot",
+                side_effect=add_cache_file_after_first_snapshot,
+            ):
+                self.assertEqual(PROVENANCE.main(self._direct_arguments(output)), 1)
+        self.assertEqual(output.read_text(encoding="utf-8"), "previous attestation must survive\n")
 
     def test_parent_fsync_failure_reports_post_publication_durability_state(self):
         output = self.root / "provenance.json"
@@ -603,6 +679,16 @@ class RecordProvenanceTest(unittest.TestCase):
         marker.write_text("substituted despite clean status\n", encoding="utf-8")
 
         self._assert_failure_untouched("candidate marker 'templates/omg.md' bytes differ from the tracked candidate HEAD blob")
+    def test_skip_worktree_bootstrap_installer_substitution_is_rejected_against_head(self):
+        installer = self.candidate / "install.sh"
+        self._git(
+            "update-index", "--skip-worktree", str(installer.relative_to(self.candidate))
+        )
+        installer.write_text("#!/bin/sh\nexit 99\n", encoding="utf-8")
+
+        self._assert_failure_untouched(
+            "candidate bootstrap install.sh bytes differ from the tracked candidate HEAD blob"
+        )
 
     def test_marketplace_requires_exactly_one_entry(self):
         marketplace_path = self.candidate / ".claude-plugin" / "marketplace.json"
@@ -740,6 +826,81 @@ class RecordProvenanceTest(unittest.TestCase):
         self._cache_marker(self.cache, marker).unlink()
         os.symlink(self._cache_marker(self.cache, "templates/setup.md"), self._cache_marker(self.cache, marker))
         self._assert_failure_untouched("cache marker 'templates/omg.md' is missing, a symlink, or cannot be safely opened")
+    def test_unlisted_extra_cache_payload_file_leaves_existing_output_untouched(self):
+        (self.cache / "unlisted-extra.txt").write_text("unexpected\n", encoding="utf-8")
+
+        self._assert_failure_untouched(
+            "cache plugin payload file inventory differs from candidate HEAD"
+        )
+        self.temporary_directory.cleanup()
+        self.setUp()
+        (self.cache / "unexpected-empty-directory").mkdir()
+        self._assert_failure_untouched(
+            "cache plugin payload directory shape differs from candidate HEAD"
+        )
+
+    def test_candidate_and_cache_extra_or_missing_payload_files_are_rejected(self):
+        ignored_extra = self._candidate_marker("candidate-extra.txt")
+        (self.candidate / ".gitignore").write_text(
+            "plugins/oh-my-gjc/candidate-extra.txt\n", encoding="utf-8"
+        )
+        self._commit_candidate_changes()
+        ignored_extra.write_text("unexpected\n", encoding="utf-8")
+        self._assert_failure_untouched(
+            "candidate plugin payload file inventory differs from candidate HEAD"
+        )
+
+        self.temporary_directory.cleanup()
+        self.setUp()
+        missing_candidate = self._candidate_marker("bin/collect.ts")
+        self._git(
+            "update-index",
+            "--skip-worktree",
+            str(missing_candidate.relative_to(self.candidate)),
+        )
+        missing_candidate.unlink()
+        self._assert_failure_untouched(
+            "candidate plugin payload file inventory differs from candidate HEAD"
+        )
+
+        self.temporary_directory.cleanup()
+        self.setUp()
+        self._cache_marker(self.cache, "references/non-marker-reference.md").unlink()
+        self._assert_failure_untouched(
+            "cache plugin payload file inventory differs from candidate HEAD"
+        )
+
+    def test_non_marker_payload_bytes_are_compared_to_head(self):
+        for relative_path in NON_MARKER_PAYLOADS:
+            with self.subTest(relative_path=relative_path):
+                self._replace_cache_with_candidate_plugin()
+                self._cache_marker(self.cache, relative_path).write_text(
+                    "non-marker cache substitution\n", encoding="utf-8"
+                )
+                self._assert_failure_untouched(
+                    "cache plugin payload file {!r} bytes differ from the tracked candidate HEAD blob".format(
+                        relative_path
+                    )
+                )
+
+    def test_nested_payload_symlink_and_special_file_are_rejected_without_blocking(self):
+        symlink = self._cache_marker(
+            self.cache, "skills/non-marker-skill/unexpected-link"
+        )
+        os.symlink(self.root / "outside", symlink)
+        self._assert_failure_untouched(
+            "cache plugin payload contains symlink 'skills/non-marker-skill/unexpected-link'"
+        )
+
+        self.temporary_directory.cleanup()
+        self.setUp()
+        special_directory = self._cache_marker(self.cache, "references/nested")
+        special_directory.mkdir()
+        special_file = special_directory / "payload.fifo"
+        os.mkfifo(special_file)
+        self._assert_failure_untouched(
+            "cache plugin payload entry 'references/nested/payload.fifo' must be a regular file or directory"
+        )
     def test_output_is_rejected_inside_candidate_or_cache_without_mutating_inputs(self):
         aliases = (
             (

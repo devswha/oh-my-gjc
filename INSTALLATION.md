@@ -22,7 +22,7 @@ One install brings the whole v0.17.1 suite (10 skills + 15 commands: `/omg` + 14
 git clone --depth 1 https://github.com/devswha/oh-my-gjc.git
 bash oh-my-gjc/install.sh
 ```
-This invokes the same hardened installer as the one-shot path: it refreshes the marketplace, binds native handoff to the plugin version reported by the current install operation, and fails closed on stale or ambiguous cache state. Do not reproduce the old manual `marketplace add` → plain install → newest-cache glob sequence; it is not upgrade-safe.
+This invokes the same hardened installer as the one-shot path: it refreshes the marketplace, binds native handoff to the plugin version reported by the current install operation, then writes one exact mode-0600 suite-root binding for the selected scope (`.gjc/runtimes/oh-my-gjc/root` for project scope or `~/.gjc/agent/runtimes/oh-my-gjc/root` for user scope). Asset consumers resolve project first, then user, then this checkout only; missing or malformed bindings fail closed. The former newest-cache sequence is historical and non-executable; never reproduce it.
 
 The native installer copies every bundled skill + command in one shot and fails loudly (with a missing list) if anything expected is absent — never a partial install.
 
@@ -35,11 +35,12 @@ gjc plugin list                                   # oh-my-gjc@oh-my-gjc listed
 ls ~/.gjc/agent/skills/                            # 10 skills (easy-answer, gate-briefing, plain-layer, release-gate, lazycodex-gjc, …)
 ls ~/.gjc/agent/commands/ | grep '^omg'            # 15 commands: omg.md + 14 omg:<name>.md
 grep -A1 '^  sol:' ~/.gjc/agent/models.yml          # sol preset auto-merged at install (custom picker entry)
-ls -l ~/.gjc/agent/runtimes/lazycodex-gjc/binding    # mode-0600 runtime binding (only when Codex CLI + systemd + Codex home were present at install; otherwise the bridge is skipped fail-closed)
+ls -l ~/.gjc/agent/runtimes/oh-my-gjc/root             # -rw------- exact user-scope suite-root binding (if installed with user scope)
+ls -l ~/.gjc/agent/runtimes/lazycodex-gjc/binding      # mode-0600 sensitive runtime binding (only when Codex CLI + systemd + Codex home were present at install; otherwise the bridge is skipped fail-closed)
 ```
 
 ## Finish
 Tell the human: open a **new** gjc session (or `/move .`) so the command palette rebuilds, then run `/omg` for the catalog and `/omg:setup` to finish (model-preset merge + always-on toggles — all optional). Commands are `/omg:<name>`.
 
 ## Safety
-Idempotent — re-running only re-copies. This installs a documented plugin suite; it does not send code anywhere or change model/provider credentials. Prerequisite-gated features install with the suite but only run when their tools are present: ChatGPT subscription + Chromium for insane-review; an already installed and logged-in Codex CLI + LazyCodex/OMO for lazycodex-gjc. The installer does not install or log in to those tools. The bridge defaults to read-only, requires explicit workspace-write authorization, runs external `codex exec --ephemeral`, and does not create a child GJC session or mutate GJC config/credentials. Its sensitive runner requires the private mode-0600 SHA-256 runtime binding produced by native user-scope install (skipped fail-closed when Codex is absent — re-run `install-skill.sh lazycodex-gjc user` after installing Codex); project-scope installs remain valid for the rest of the suite but cannot supply this bridge binding.
+Idempotent — re-running only re-copies. This installs a documented plugin suite; it does not send code anywhere or change model/provider credentials. Prerequisite-gated features install with the suite but only run when their tools are present: ChatGPT subscription + Chromium for insane-review; an already installed and logged-in Codex CLI + LazyCodex/OMO for lazycodex-gjc. The installer does not install or log in to those tools. The bridge defaults to read-only, requires explicit workspace-write authorization, runs external `codex exec --ephemeral`, and does not create a child GJC session or mutate GJC config/credentials. Its sensitive runner requires the private mode-0600 SHA-256 runtime binding produced by native user-scope install; when Codex is absent it is skipped fail-closed. After installing Codex, rerun the hardened root `install.sh` to repair the binding. Project-scope installs remain valid for the rest of the suite but cannot supply this bridge binding.

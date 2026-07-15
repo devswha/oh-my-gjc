@@ -11,18 +11,50 @@ argument-hint: "<리뷰 대상/질문>  예) review the auth flow in src/auth"
 > **원칙: 사용자에게 CLI 타이핑을 시키지 않는다.** 환경이 안 갖춰졌으면 gjc가 `--check-env`/`--ensure-env`로 감지하고,
 > 필요한 결정은 gjc **`ask` 도구 선택지**로 물어본 뒤 gjc가 대신 실행한다. 초보자도 클릭만으로 따라올 수 있어야 한다.
 
-> **자동활성화 스킬 포함.** 단일 스위트 설치(`install-skill.sh all`)가 이 커맨드와 함께
+> **자동활성화 스킬 포함.** hardened `install.sh`로 단일 스위트를 설치하면 이 커맨드와 함께
 > `insane-review` 스킬도 네이티브로 깔아준다 — "GPT한테 물어봐" 같은 자연어 트리거로도 뜬다.
 ## Step 0 — 엔진 경로 해석 (`$IR`)
-
-`${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않으므로 실제 경로를 잡아 `$IR`에 담는다:
+`${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않는다. 네이티브 설치가 기록한 정확한
+suite root binding만 사용한다. 프로젝트 binding을 우선하고, 없을 때만 user binding을 쓰며,
+둘 다 없을 때만 현재 checkout의 정확한 asset으로 fallback한다:
 ```bash
-IR="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/pack_and_ask.py 2>/dev/null | sort -V | tail -1)"
-[ -z "$IR" ] && IR="$(ls -d ./.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/bin/pack_and_ask.py 2>/dev/null | sort -V | tail -1)"
-[ -z "$IR" ] && [ -f plugins/oh-my-gjc/bin/pack_and_ask.py ] && IR="plugins/oh-my-gjc/bin/pack_and_ask.py"
+resolve_omg_asset() (
+  fail() { echo "oh-my-gjc runtime binding is missing or invalid; rerun hardened install.sh." >&2; exit 1; }
+  local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir
+  for binding in "$PWD/.gjc/runtimes/oh-my-gjc/root" "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"; do
+    if [ -e "$binding" ] || [ -L "$binding" ]; then
+      [ -f "$binding" ] && [ ! -L "$binding" ] || fail
+      bytes="$(LC_ALL=C od -An -v -tu1 "$binding")" || fail
+      for byte in $bytes; do
+        case "$byte" in 0|[1-9]|1[1-9]|2[0-9]|3[01]|127) fail ;; esac
+      done
+      exec 3< "$binding" || fail
+      IFS= read -r root <&3 || { exec 3<&-; fail; }
+      if IFS= read -r -n 1 _ <&3; then exec 3<&-; fail; fi
+      exec 3<&-
+      case "$root" in ""|*[[:cntrl:]]*) fail ;; /*) ;; *) fail ;; esac
+      canonical_root="$(cd -P -- "$root" 2>/dev/null && pwd -P)" || fail
+      [ "$root" = "$canonical_root" ] || fail
+      asset="$canonical_root/$expected_asset"
+      asset_dir="${asset%/*}"
+      canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
+      [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
+      printf '%s\n' "$asset"
+      exit 0
+    fi
+  done
+  [ -f "plugins/oh-my-gjc/$expected_asset" ] && [ ! -L "plugins/oh-my-gjc/$expected_asset" ] || fail
+  canonical_root="$(cd -P -- "plugins/oh-my-gjc" 2>/dev/null && pwd -P)" || fail
+  asset="$canonical_root/$expected_asset"
+  asset_dir="${asset%/*}"
+  canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
+  [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
+  printf '%s\n' "$asset"
+)
+IR="$(resolve_omg_asset "bin/pack_and_ask.py")" || exit 1
 echo "IR=$IR"
 ```
-`$IR`가 비면 insane-review 설치 여부를 안내하고 멈춘다.
+A malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing binding stops here; rerun hardened `install.sh` rather than selecting a cache.
 
 ## Step 0.5 — 환경 온보딩 (브라우저·로그인; 선택지 기반, 막힌 단계만)
 

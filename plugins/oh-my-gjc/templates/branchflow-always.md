@@ -14,15 +14,46 @@ argument-hint: "[on|off|status]  (기본: on)"
 입력 인자: `$ARGUMENTS` → 비었거나 `on`=켜기, `off`=끄기, `status`=상태만.
 
 ## Step 0 — 경로 해석
-
 ```bash
+resolve_omg_asset() (
+  fail() { echo "oh-my-gjc runtime binding is missing or invalid; rerun hardened install.sh." >&2; exit 1; }
+  local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir
+  for binding in "$PWD/.gjc/runtimes/oh-my-gjc/root" "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"; do
+    if [ -e "$binding" ] || [ -L "$binding" ]; then
+      [ -f "$binding" ] && [ ! -L "$binding" ] || fail
+      bytes="$(LC_ALL=C od -An -v -tu1 "$binding")" || fail
+      for byte in $bytes; do
+        case "$byte" in 0|[1-9]|1[1-9]|2[0-9]|3[01]|127) fail ;; esac
+      done
+      exec 3< "$binding" || fail
+      IFS= read -r root <&3 || { exec 3<&-; fail; }
+      if IFS= read -r -n 1 _ <&3; then exec 3<&-; fail; fi
+      exec 3<&-
+      case "$root" in ""|*[[:cntrl:]]*) fail ;; /*) ;; *) fail ;; esac
+      canonical_root="$(cd -P -- "$root" 2>/dev/null && pwd -P)" || fail
+      [ "$root" = "$canonical_root" ] || fail
+      asset="$canonical_root/$expected_asset"
+      asset_dir="${asset%/*}"
+      canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
+      [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
+      printf '%s\n' "$asset"
+      exit 0
+    fi
+  done
+  [ -f "plugins/oh-my-gjc/$expected_asset" ] && [ ! -L "plugins/oh-my-gjc/$expected_asset" ] || fail
+  canonical_root="$(cd -P -- "plugins/oh-my-gjc" 2>/dev/null && pwd -P)" || fail
+  asset="$canonical_root/$expected_asset"
+  asset_dir="${asset%/*}"
+  canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
+  [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
+  printf '%s\n' "$asset"
+)
 REPO="$(git rev-parse --show-toplevel 2>/dev/null)"
 [ -z "$REPO" ] && { echo "git 레포가 아니다 — 레포 루트에서 실행해라."; exit 1; }
-# WORKFLOW.md 원본(플러그인 references) 해석 — 코어 고유 파일로 anchor
-P="$(ls -d ~/.gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___*/references/WORKFLOW.md 2>/dev/null | sort -V | tail -1)"
-[ -z "$P" ] && [ -f plugins/oh-my-gjc/references/WORKFLOW.md ] && P="plugins/oh-my-gjc/references/WORKFLOW.md"
+P="$(resolve_omg_asset "references/WORKFLOW.md")" || exit 1
 echo "REPO=$REPO  WORKFLOW_SRC=$P"
 ```
+A malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing binding stops here; rerun hardened `install.sh` rather than selecting a cache.
 
 ## 관리 대상 블록 (구분자 고정)
 

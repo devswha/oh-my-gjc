@@ -39,7 +39,7 @@ for _a in "$@"; do
   esac
 done
 
-PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PLUGIN_ROOT="$(cd -P "$(dirname "$0")/.." && pwd -P)"
 
 # ── EXPECTED manifest (the single source of truth for a complete install) ────────────
 EXPECTED_SKILLS=(easy-answer gate-briefing multivendor-presets branch-flow extragoal \
@@ -73,6 +73,86 @@ LEGACY_COMMANDS=('codex-app-control:ask' 'codex-app-control:launch' 'codex-cli-c
 skills_dir()   { if [ "$1" = project ]; then echo "$PWD/.gjc/skills";   else echo "$HOME/.gjc/agent/skills";   fi; }
 commands_dir() { if [ "$1" = project ]; then echo "$PWD/.gjc/commands"; else echo "$HOME/.gjc/agent/commands"; fi; }
 runner_runtime() { echo "$HOME/.gjc/agent/runtimes/lazycodex-gjc"; }
+suite_runtime_dir() {
+  case "$1" in
+    user)    printf '%s\n' "$HOME/.gjc/agent/runtimes/oh-my-gjc" ;;
+    project) printf '%s\n' "$PWD/.gjc/runtimes/oh-my-gjc" ;;
+    *)       return 2 ;;
+  esac
+}
+reject_symlinked_components() { # $1=absolute path — never follow a binding path component
+  local path="$1" current="/" component
+  local -a components
+  case "$path" in
+    /*) ;;
+    *) echo "❌ install FAILED — suite runtime binding path is not absolute: $path" >&2; return 1 ;;
+  esac
+  IFS=/ read -r -a components <<<"${path#/}"
+  for component in "${components[@]}"; do
+    [ -n "$component" ] || continue
+    current="${current%/}/$component"
+    if [ -L "$current" ]; then
+      echo "❌ install FAILED — suite runtime binding path contains a symlink: $current" >&2
+      return 1
+    fi
+  done
+}
+prepare_suite_runtime_parent() { # $1=scope
+  local parent
+  parent="$(suite_runtime_dir "$1")" || return 1
+  reject_symlinked_components "$parent" || return 1
+  if ! mkdir -p "$parent"; then
+    echo "❌ install FAILED — cannot create suite runtime binding parent: $parent" >&2
+    return 1
+  fi
+  reject_symlinked_components "$parent" || return 1
+  if [ ! -d "$parent" ] || [ -L "$parent" ]; then
+    echo "❌ install FAILED — suite runtime binding parent is not a directory: $parent" >&2
+    return 1
+  fi
+  if [ -O "$parent" ] && ! chmod 700 "$parent"; then
+    echo "❌ install FAILED — cannot make suite runtime binding parent private: $parent" >&2
+    return 1
+  fi
+  printf '%s\n' "$parent"
+}
+install_suite_root_binding() { # $1=scope — atomically bind native assets to this exact installed suite root
+  local parent root temp
+  parent="$(prepare_suite_runtime_parent "$1")" || return 1
+  root="$parent/root"
+  reject_symlinked_components "$root" || return 1
+  if [ -e "$root" ] && { [ ! -f "$root" ] || [ -L "$root" ]; }; then
+    echo "❌ install FAILED — suite runtime binding is malformed: $root" >&2
+    return 1
+  fi
+  temp="$(mktemp "$parent/.root.XXXXXX")" || {
+    echo "❌ install FAILED — cannot create suite runtime binding temp file: $parent" >&2
+    return 1
+  }
+  if ! printf '%s\n' "$PLUGIN_ROOT" > "$temp" || ! chmod 600 "$temp" || [ "$(<"$temp")" != "$PLUGIN_ROOT" ]; then
+    rm -f "$temp"
+    echo "❌ install FAILED — cannot write exact suite runtime binding: $root" >&2
+    return 1
+  fi
+  if ! mv -f "$temp" "$root"; then
+    rm -f "$temp"
+    echo "❌ install FAILED — cannot atomically install suite runtime binding: $root" >&2
+    return 1
+  fi
+  echo "✓ bound suite assets ($1): $root"
+}
+uninstall_suite_root_binding() { # $1=scope — remove only this suite's root binding
+  local parent root
+  parent="$(suite_runtime_dir "$1")" || return 1
+  root="$parent/root"
+  reject_symlinked_components "$root" || return 1
+  if [ -L "$root" ] || { [ -e "$root" ] && [ ! -f "$root" ]; }; then
+    echo "❌ uninstall FAILED — suite runtime binding is malformed: $root" >&2
+    return 1
+  fi
+  rm -f "$root"
+  echo "✓ removed suite runtime binding ($1): $root"
+}
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'; return; fi
@@ -113,7 +193,7 @@ normalize_trusted_path() { # $1=absolute canonical path pinned by the runtime bi
 # lazycodex-gjc runtime prerequisite is ABSENT, `all` skips the binding — the runner
 # fails closed without a binding, so the bridge stays dead-until-bound. A PRESENT but
 # broken runtime still hard-fails inside prepare_runtime_binding (real error, surface it).
-# Explicit `install-skill.sh lazycodex-gjc user` keeps the hard requirement.
+# A targeted lazycodex-gjc install remains hard-failing; user repair runs the hardened root install.sh.
 lazycodex_runtime_available() {
   local entry
   for entry in node codex systemd-run systemctl env; do command -v "$entry" >/dev/null 2>&1 || return 1; done
@@ -386,6 +466,7 @@ case "$mode" in
       for c in "${EXPECTED_COMMANDS[@]}";   do uninstall_command   "$c" "$scope"; done
       cleanup_legacy_commands "$scope"
       cleanup_removed "$scope"
+      uninstall_suite_root_binding "$scope"
       if [ "$scope" = "user" ]; then uninstall_runtime_binding; fi
     else
       if [ -d "$PLUGIN_ROOT/skills/$target" ];       then uninstall_skill   "$target" "$scope"; fi
@@ -400,11 +481,12 @@ case "$mode" in
       if [ "$mode" = "user" ]; then
         if lazycodex_runtime_available; then prepare_runtime_binding; LAZYCODEX_BIND=1
         else
-          echo "! lazycodex-gjc runtime not bound (Codex CLI / systemd / Codex home missing) — the bridge stays disabled (fail-closed). After installing+logging in Codex, re-run: install-skill.sh lazycodex-gjc user" >&2
+          echo "! lazycodex-gjc runtime not bound (Codex CLI / systemd / Codex home missing) — the bridge stays disabled (fail-closed). After installing+logging in Codex, re-run the hardened root installer: curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash" >&2
           # A stale binding from a previous install must not stay executable across upgrades.
           if [ -d "$(runner_runtime)" ]; then uninstall_runtime_binding; fi
         fi
       fi
+      install_suite_root_binding "$mode"
       for s in "${EXPECTED_SKILLS[@]}";     do install_skill     "$s" "$mode"; done
       for c in "${EXPECTED_COMMANDS[@]}";   do install_command   "$c" "$mode"; done
       if [ "$LAZYCODEX_BIND" = 1 ]; then install_runtime_binding; fi
@@ -418,6 +500,7 @@ case "$mode" in
         report_missing
         if [ "$mode" = "user" ]; then prepare_runtime_binding; fi
       fi
+      install_suite_root_binding "$mode"
       if [ -d "$PLUGIN_ROOT/skills/$target" ];       then install_skill   "$target" "$mode"; fi
       if [ -f "$PLUGIN_ROOT/templates/$target.md" ]; then install_command "$target" "$mode"; fi
       if [ "$target" = "lazycodex-gjc" ] && [ "$mode" = "user" ]; then install_runtime_binding; fi

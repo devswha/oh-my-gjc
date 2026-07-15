@@ -6,10 +6,10 @@ independently verifiable binding, so Gate 2 and Gate 3 remain separate release
 gates.
 
 Threat model: the caller must retain exclusive control of the candidate and
-cache paths for this bounded gate. Descriptor and repeated identity/content
-checks detect persistent mutation, but cannot cryptographically lock paths
-against a malicious same-UID process that deliberately swaps and restores state
-between syscalls.
+cache paths for this bounded gate. Descriptor-walked full plugin-tree
+inventory and repeated identity/content checks detect persistent mutation, but
+cannot cryptographically lock paths against a malicious same-UID process that
+deliberately swaps and restores state between syscalls.
 
 Usage:
   record_provenance.py --candidate <repo> --cache <cache-root> --commit <sha> \
@@ -39,6 +39,7 @@ SEMVER_RE = re.compile(
 )
 
 # Candidate stores the plugin below plugins/oh-my-gjc; cache root IS plugin root.
+# MARKERS remain independently reported critical surfaces; the full inventory is the payload proof.
 MARKERS = [
     "bin/install-skill.sh",
     "bin/lazycodex-gjc.mjs",
@@ -53,6 +54,8 @@ MARKERS = [
 ]
 MARKETPLACE_MANIFEST = ".claude-plugin/marketplace.json"
 PLUGIN_MANIFEST = "plugins/{}/.claude-plugin/plugin.json".format(PLUGIN_NAME)
+PLUGIN_TREE = "plugins/{}".format(PLUGIN_NAME)
+ROOT_INSTALLER = "install.sh"
 
 
 class GateError(Exception):
@@ -166,7 +169,7 @@ def open_directory_chain(path, label):
     path = os.path.abspath(path)
     if not os.path.isabs(path):
         fail("{} must be an absolute directory path".format(label))
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
     if hasattr(os, "O_CLOEXEC"):
         flags |= os.O_CLOEXEC
     try:
@@ -193,7 +196,7 @@ def open_directory_chain(path, label):
 def open_relative_directory(parent_descriptor, relative_path, label):
     """Open a descendant directory from an already trusted parent descriptor."""
     require_open_flags()
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
     if hasattr(os, "O_CLOEXEC"):
         flags |= os.O_CLOEXEC
     descriptor = os.dup(parent_descriptor)
@@ -218,7 +221,7 @@ def read_regular_file_at(root_descriptor, relative_path, label):
     """Read a regular file below root with no-follow traversal for every component."""
     require_open_flags()
     parts = split_relative_path(relative_path, label)
-    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
     file_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
     if hasattr(os, "O_CLOEXEC"):
         directory_flags |= os.O_CLOEXEC
@@ -251,6 +254,118 @@ def read_regular_file_at(root_descriptor, relative_path, label):
         if file_descriptor is not None:
             os.close(file_descriptor)
         os.close(directory_descriptor)
+def validate_payload_entry_name(name, label):
+    if not isinstance(name, str) or not name or name in (".", "..") or "/" in name or "\x00" in name:
+        fail("{} has an unsafe directory entry name {!r}".format(label, name))
+    try:
+        name.encode("utf-8")
+    except UnicodeEncodeError:
+        fail("{} has a non-UTF-8 directory entry name {!r}".format(label, name))
+
+
+def walk_payload_tree(root_descriptor, label):
+    """Descriptor-walk a payload tree without following symlinks or opening special files."""
+    require_open_flags()
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        directory_flags |= os.O_CLOEXEC
+    files = []
+    directories = []
+
+    def walk(directory_descriptor, prefix):
+        try:
+            names = os.listdir(directory_descriptor)
+        except OSError as exc:
+            fail("{} cannot be listed safely: {}".format(label, exc))
+        for name in sorted(names):
+            validate_payload_entry_name(name, label)
+            relative_path = "{}/{}".format(prefix, name) if prefix else name
+            split_relative_path(relative_path, "{} payload path".format(label))
+            try:
+                information = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+            except OSError as exc:
+                fail("{} payload entry {!r} cannot be inspected safely: {}".format(
+                    label, relative_path, exc
+                ))
+            mode = information.st_mode
+            if stat.S_ISLNK(mode):
+                fail("{} payload contains symlink {!r}".format(label, relative_path))
+            if stat.S_ISREG(mode):
+                files.append(relative_path)
+                continue
+            if not stat.S_ISDIR(mode):
+                fail("{} payload entry {!r} must be a regular file or directory".format(
+                    label, relative_path
+                ))
+            try:
+                child_descriptor = os.open(name, directory_flags, dir_fd=directory_descriptor)
+            except OSError as exc:
+                fail("{} payload directory {!r} cannot be opened without following symlinks: {}".format(
+                    label, relative_path, exc
+                ))
+            try:
+                if not stat.S_ISDIR(os.fstat(child_descriptor).st_mode):
+                    fail("{} payload directory {!r} changed while being opened".format(
+                        label, relative_path
+                    ))
+                directories.append(relative_path)
+                walk(child_descriptor, relative_path)
+            finally:
+                os.close(child_descriptor)
+
+    root = os.dup(root_descriptor)
+    try:
+        if not stat.S_ISDIR(os.fstat(root).st_mode):
+            fail("{} must be a directory".format(label))
+        walk(root, "")
+    finally:
+        os.close(root)
+    return {
+        "files": tuple(sorted(files)),
+        "directories": tuple(sorted(directories)),
+    }
+
+
+def expected_payload_directories(relative_paths):
+    directories = set()
+    for relative_path in relative_paths:
+        parts = split_relative_path(relative_path, "tracked plugin inventory")
+        for index in range(1, len(parts)):
+            directories.add("/".join(parts[:index]))
+    return tuple(sorted(directories))
+
+
+def require_payload_tree_matches_inventory(tree, expected_files, label):
+    actual_files = tree["files"]
+    expected_files = tuple(sorted(expected_files))
+    if actual_files != expected_files:
+        missing = sorted(set(expected_files) - set(actual_files))
+        extra = sorted(set(actual_files) - set(expected_files))
+        fail("{} payload file inventory differs from candidate HEAD: missing {}; extra {}".format(
+            label, missing, extra
+        ))
+    expected_directories = expected_payload_directories(expected_files)
+    actual_directories = tree["directories"]
+    if actual_directories != expected_directories:
+        missing = sorted(set(expected_directories) - set(actual_directories))
+        extra = sorted(set(actual_directories) - set(expected_directories))
+        fail("{} payload directory shape differs from candidate HEAD: missing {}; extra {}".format(
+            label, missing, extra
+        ))
+
+
+def payload_aggregate_digest(payloads):
+    """Hash sorted UTF-8 relative paths and raw bytes with unambiguous lengths."""
+    digest = hashlib.sha256()
+    digest.update(b"oh-my-gjc plugin payload v1\x00")
+    for relative_path in sorted(payloads):
+        path_bytes = relative_path.encode("utf-8")
+        payload = payloads[relative_path]
+        digest.update(len(path_bytes).to_bytes(8, "big"))
+        digest.update(path_bytes)
+        digest.update(len(payload).to_bytes(8, "big"))
+        digest.update(payload)
+    return "sha256:" + digest.hexdigest()
 
 
 def reject_duplicate_keys(pairs):
@@ -416,6 +531,55 @@ def git_head_blob(candidate, candidate_descriptor, head, relative_path, label):
     if result.returncode != 0:
         fail("could not read {} from candidate HEAD".format(label))
     return result.stdout
+def git_head_plugin_inventory(candidate, candidate_descriptor, head):
+    """Resolve every tracked plugin blob from trusted Git's NUL-delimited tree."""
+    result = run_git(
+        candidate,
+        candidate_descriptor,
+        ["ls-tree", "-r", "-z", "--full-tree", head, "--", PLUGIN_TREE],
+        "list tracked plugin payload at HEAD",
+        text=False,
+    )
+    if result.returncode != 0:
+        fail("could not list tracked plugin payload at candidate HEAD")
+    prefix = (PLUGIN_TREE + "/").encode("utf-8")
+    inventory = {}
+    entries = result.stdout.split(b"\x00")
+    if entries[-1]:
+        fail("trusted Git returned a malformed NUL-delimited plugin inventory")
+    for entry in entries[:-1]:
+        try:
+            metadata, repository_path_bytes = entry.split(b"\t", 1)
+            mode, object_type, _object_id = metadata.split(b" ", 2)
+        except ValueError:
+            fail("trusted Git returned a malformed plugin inventory entry")
+        if object_type != b"blob":
+            fail("tracked plugin inventory entry must be a blob")
+        if not mode:
+            fail("trusted Git returned a malformed plugin inventory mode")
+        if not repository_path_bytes.startswith(prefix):
+            fail("tracked plugin inventory path escapes the plugin tree")
+        try:
+            repository_path = repository_path_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            fail("tracked plugin inventory path is not valid UTF-8")
+        relative_path = repository_path[len(PLUGIN_TREE) + 1:]
+        parts = split_relative_path(relative_path, "tracked plugin inventory path")
+        normalized_path = "/".join(parts)
+        if relative_path != normalized_path:
+            fail("tracked plugin inventory path is not normalized: {!r}".format(relative_path))
+        if relative_path in inventory:
+            fail("tracked plugin inventory contains duplicate path {!r}".format(relative_path))
+        inventory[relative_path] = git_head_blob(
+            candidate,
+            candidate_descriptor,
+            head,
+            repository_path,
+            "tracked plugin payload {!r}".format(relative_path),
+        )
+    if not inventory:
+        fail("candidate HEAD tracked plugin inventory is empty")
+    return {relative_path: inventory[relative_path] for relative_path in sorted(inventory)}
 
 
 def verify_git_identity(candidate, candidate_descriptor, supplied_commit, expected_head=None):
@@ -548,63 +712,91 @@ def payload_digest_snapshot(
     candidate_fd,
     candidate_plugin_fd,
     cache_fd,
-    head_blobs,
+    head_plugin_blobs,
+    marketplace_head,
+    bootstrap_head,
     assert_candidate_identity,
     assert_candidate_plugin_identity,
     assert_cache_identity,
 ):
-    """Read every payload again and require each digest to equal its HEAD blob."""
-    def read_candidate(root_descriptor, relative_path, head_path, label):
+    """Require complete plugin-tree bytes and shape to equal HEAD without following links."""
+    expected_files = tuple(sorted(head_plugin_blobs))
+
+    def snapshot_candidate_payload():
         assert_candidate_identity()
         assert_candidate_plugin_identity()
-        payload = read_regular_file_at(root_descriptor, relative_path, label)
+        tree = walk_payload_tree(candidate_plugin_fd, "candidate plugin")
         assert_candidate_identity()
         assert_candidate_plugin_identity()
-        compare_bytes(head_blobs[head_path], payload, label)
-        return sha256_bytes(payload)
+        require_payload_tree_matches_inventory(tree, expected_files, "candidate plugin")
+        payloads = {}
+        for relative_path in expected_files:
+            assert_candidate_identity()
+            assert_candidate_plugin_identity()
+            payload = read_regular_file_at(
+                candidate_plugin_fd,
+                relative_path,
+                "candidate plugin payload file {!r}".format(relative_path),
+            )
+            assert_candidate_identity()
+            assert_candidate_plugin_identity()
+            compare_bytes(head_plugin_blobs[relative_path], payload, "candidate plugin payload file {!r}".format(
+                relative_path
+            ))
+            payloads[relative_path] = payload
+        return {
+            "files": tree["files"],
+            "directories": tree["directories"],
+            "file_count": len(payloads),
+            "aggregate_digest": payload_aggregate_digest(payloads),
+        }
 
-    def read_cache(relative_path, head_path, label):
+    def snapshot_cache_payload():
         assert_cache_identity()
-        payload = read_regular_file_at(cache_fd, relative_path, label)
+        tree = walk_payload_tree(cache_fd, "cache plugin")
         assert_cache_identity()
-        compare_bytes(head_blobs[head_path], payload, label)
-        return sha256_bytes(payload)
+        require_payload_tree_matches_inventory(tree, expected_files, "cache plugin")
+        payloads = {}
+        for relative_path in expected_files:
+            assert_cache_identity()
+            payload = read_regular_file_at(
+                cache_fd,
+                relative_path,
+                "cache plugin payload file {!r}".format(relative_path),
+            )
+            assert_cache_identity()
+            compare_bytes(head_plugin_blobs[relative_path], payload, "cache plugin payload file {!r}".format(
+                relative_path
+            ))
+            payloads[relative_path] = payload
+        return {
+            "files": tree["files"],
+            "directories": tree["directories"],
+            "file_count": len(payloads),
+            "aggregate_digest": payload_aggregate_digest(payloads),
+        }
 
-    candidate_markers = {}
-    cache_markers = {}
-    for relative_path in MARKERS:
-        head_path = "plugins/{}/{}".format(PLUGIN_NAME, relative_path)
-        candidate_markers[relative_path] = read_candidate(
-            candidate_plugin_fd,
-            relative_path,
-            head_path,
-            "candidate snapshot marker {!r}".format(relative_path),
-        )
-        cache_markers[relative_path] = read_cache(
-            relative_path,
-            head_path,
-            "cache snapshot marker {!r}".format(relative_path),
-        )
+    assert_candidate_identity()
+    marketplace_candidate = read_regular_file_at(
+        candidate_fd, MARKETPLACE_MANIFEST, "candidate snapshot marketplace manifest"
+    )
+    assert_candidate_identity()
+    compare_bytes(
+        marketplace_head, marketplace_candidate, "candidate snapshot marketplace manifest"
+    )
+    candidate_payload = snapshot_candidate_payload()
+    cache_payload = snapshot_cache_payload()
+    assert_candidate_identity()
+    bootstrap_candidate = read_regular_file_at(
+        candidate_fd, ROOT_INSTALLER, "candidate bootstrap install.sh"
+    )
+    assert_candidate_identity()
+    compare_bytes(bootstrap_head, bootstrap_candidate, "candidate bootstrap install.sh")
     return {
-        "candidate_marketplace_manifest": read_candidate(
-            candidate_fd,
-            MARKETPLACE_MANIFEST,
-            MARKETPLACE_MANIFEST,
-            "candidate snapshot marketplace manifest",
-        ),
-        "candidate_plugin_manifest": read_candidate(
-            candidate_plugin_fd,
-            ".claude-plugin/plugin.json",
-            PLUGIN_MANIFEST,
-            "candidate snapshot plugin manifest",
-        ),
-        "cache_plugin_manifest": read_cache(
-            ".claude-plugin/plugin.json",
-            PLUGIN_MANIFEST,
-            "cache snapshot plugin manifest",
-        ),
-        "candidate_markers": candidate_markers,
-        "cache_markers": cache_markers,
+        "candidate": candidate_payload,
+        "cache": cache_payload,
+        "candidate_marketplace_manifest": sha256_bytes(marketplace_candidate),
+        "candidate_bootstrap_install_sh": sha256_bytes(bootstrap_candidate),
     }
 
 
@@ -615,13 +807,15 @@ def final_revalidate(
     cache_fd,
     supplied_commit,
     first_head,
-    head_blobs,
+    head_plugin_blobs,
+    marketplace_head,
+    bootstrap_head,
     first_snapshot,
     assert_candidate_identity,
     assert_candidate_plugin_identity,
     assert_cache_identity,
 ):
-    """Require HEAD, cleanliness, root identities, and HEAD-grounded digests to persist."""
+    """Require HEAD, cleanliness, full plugin payload, and bootstrap evidence to persist."""
     assert_candidate_identity()
     assert_candidate_plugin_identity()
     assert_cache_identity()
@@ -637,13 +831,15 @@ def final_revalidate(
         candidate_fd,
         candidate_plugin_fd,
         cache_fd,
-        head_blobs,
+        head_plugin_blobs,
+        marketplace_head,
+        bootstrap_head,
         assert_candidate_identity,
         assert_candidate_plugin_identity,
         assert_cache_identity,
     )
     if final_snapshot != first_snapshot:
-        fail("candidate or cache payload bytes changed during provenance validation")
+        fail("candidate or cache plugin payload bytes or inventory changed during provenance validation")
     assert_candidate_identity()
     assert_candidate_plugin_identity()
     assert_cache_identity()
@@ -788,25 +984,33 @@ def build_attestation(arguments):
                 candidate_plugin_path, candidate_plugin_fd, "candidate plugin root"
             )
 
-        head_blobs = {}
-        for relative_path, label in (
-            (MARKETPLACE_MANIFEST, "candidate marketplace manifest"),
-            (PLUGIN_MANIFEST, "candidate plugin manifest"),
-        ):
-            head_blobs[relative_path] = git_head_blob(
-                candidate, candidate_fd, resolved_head, relative_path, label
-            )
+        head_blobs = {
+            MARKETPLACE_MANIFEST: git_head_blob(
+                candidate,
+                candidate_fd,
+                resolved_head,
+                MARKETPLACE_MANIFEST,
+                "candidate marketplace manifest",
+            ),
+            ROOT_INSTALLER: git_head_blob(
+                candidate,
+                candidate_fd,
+                resolved_head,
+                ROOT_INSTALLER,
+                "candidate bootstrap install.sh",
+            ),
+        }
+        head_plugin_blobs = git_head_plugin_inventory(
+            candidate, candidate_fd, resolved_head
+        )
+        for relative_path, payload in head_plugin_blobs.items():
+            head_blobs["{}/{}".format(PLUGIN_TREE, relative_path)] = payload
         for relative_path in MARKERS:
-            repository_path = "plugins/{}/{}".format(PLUGIN_NAME, relative_path)
-            if repository_path not in head_blobs:
-                head_blobs[repository_path] = git_head_blob(
-                    candidate,
-                    candidate_fd,
-                    resolved_head,
-                    repository_path,
-                    "candidate marker {!r}".format(relative_path),
-                )
-
+            if relative_path not in head_plugin_blobs:
+                fail("candidate marker {!r} is not a tracked blob at candidate HEAD".format(
+                    relative_path
+                ))
+        head_payload_digest = payload_aggregate_digest(head_plugin_blobs)
         marketplace_head = head_blobs[MARKETPLACE_MANIFEST]
         plugin_head = head_blobs[PLUGIN_MANIFEST]
         assert_candidate_identity()
@@ -868,7 +1072,9 @@ def build_attestation(arguments):
             candidate_fd,
             candidate_plugin_fd,
             cache_fd,
-            head_blobs,
+            head_plugin_blobs,
+            head_blobs[MARKETPLACE_MANIFEST],
+            head_blobs[ROOT_INSTALLER],
             assert_candidate_identity,
             assert_candidate_plugin_identity,
             assert_cache_identity,
@@ -889,9 +1095,9 @@ def build_attestation(arguments):
             },
             "threat_model": (
                 "Caller retains exclusive control of candidate and cache for this bounded gate; "
-                "persistent mutation is detected by repeated descriptor, Git, and digest checks. "
-                "A malicious same-UID actor can still swap and restore state between syscalls; "
-                "this gate provides no cryptographic path lock."
+                "persistent mutation is detected by repeated descriptor, Git, complete plugin-tree "
+                "inventory, and byte checks. A malicious same-UID actor can still swap and restore "
+                "state between syscalls; this gate provides no cryptographic path lock."
             ),
             "marketplace_ref_used": arguments.marketplace_ref,
             "marketplace_ref_status": (
@@ -908,6 +1114,16 @@ def build_attestation(arguments):
                 "plugin_candidate_matches_head": True,
                 "plugin_cache_matches_head": True,
             },
+            "bootstrap_evidence": {
+                "path": ROOT_INSTALLER,
+                "head": sha256_bytes(head_blobs[ROOT_INSTALLER]),
+                "candidate": first_snapshot["candidate_bootstrap_install_sh"],
+                "candidate_matches_head": True,
+                "scope": (
+                    "tracked candidate root installer only; install.sh is not a member of the "
+                    "installed plugin-cache payload proof"
+                ),
+            },
             "version_parity": version_parity,
             "cache_identity": {
                 "root": cache,
@@ -919,16 +1135,42 @@ def build_attestation(arguments):
                 "inode": cache_inode,
                 "pathname_matches_descriptor": True,
             },
+            "plugin_payload_identity": {
+                "tracked_inventory": {
+                    "ordering": "lexicographic safe relative paths",
+                    "file_count": len(head_plugin_blobs),
+                    "aggregate_digest": head_payload_digest,
+                },
+                "candidate": {
+                    "file_count": first_snapshot["candidate"]["file_count"],
+                    "aggregate_digest": first_snapshot["candidate"]["aggregate_digest"],
+                },
+                "installed_cache": {
+                    "file_count": first_snapshot["cache"]["file_count"],
+                    "aggregate_digest": first_snapshot["cache"]["aggregate_digest"],
+                },
+                "candidate_file_set_matches_tracked_head": True,
+                "installed_file_set_matches_tracked_head": True,
+                "candidate_directory_shape_matches_tracked_head": True,
+                "installed_directory_shape_matches_tracked_head": True,
+                "candidate_bytes_match_tracked_head": True,
+                "installed_bytes_match_tracked_head": True,
+            },
             "content_markers": markers,
             "missing_markers": [],
-            "local_vs_installed_marker_match": True,
+            "local_vs_installed_payload_match": True,
             "final_revalidation": {
                 "head_matches_first_pass": True,
                 "clean_status_rechecked": True,
                 "payload_digest_snapshot_matches_first_pass": True,
                 "root_descriptor_identities_rechecked": True,
                 "both_snapshots_match_resolved_head": True,
+                "marketplace_manifest_rechecked": True,
                 "plugin_subtree_identity_rechecked": True,
+                "full_plugin_tree_file_set_rechecked": True,
+                "full_plugin_tree_directory_shape_rechecked": True,
+                "full_plugin_tree_bytes_rechecked": True,
+                "bootstrap_install_sh_rechecked": True,
                 "pre_replace_full_revalidation": True,
             },
             "output_durability": (
@@ -947,7 +1189,9 @@ def build_attestation(arguments):
             cache_fd,
             arguments.commit,
             resolved_head,
-            head_blobs,
+            head_plugin_blobs,
+            head_blobs[MARKETPLACE_MANIFEST],
+            head_blobs[ROOT_INSTALLER],
             first_snapshot,
             assert_candidate_identity,
             assert_candidate_plugin_identity,
@@ -961,7 +1205,9 @@ def build_attestation(arguments):
                 cache_fd,
                 arguments.commit,
                 resolved_head,
-                head_blobs,
+                head_plugin_blobs,
+                head_blobs[MARKETPLACE_MANIFEST],
+                head_blobs[ROOT_INSTALLER],
                 first_snapshot,
                 assert_candidate_identity,
                 assert_candidate_plugin_identity,
@@ -1009,7 +1255,7 @@ def main(argv=None):
         return 1
 
     print(json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True))
-    print("provenance OK: candidate HEAD, cache identity, manifests, and all markers match", file=sys.stderr)
+    print("provenance OK: candidate HEAD, cache identity, and complete plugin-tree payload bytes match", file=sys.stderr)
     return 0
 
 
