@@ -762,7 +762,7 @@ case "$mode" in
       report_missing
     fi
     if [ "$mode" = "user" ]; then
-      echo "  → skills auto-activate by trigger words; commands are /omg:<name>. Type /omg for the catalog."
+      echo "  → adaptive-response, no-english, and time-left require their explicit /omg:* commands; other skills keep their documented triggers."
       echo "  → open a NEW gjc session (or run /move .) to load newly installed commands. Re-run after upgrades."
     else
       echo "  → installed for this repo. A new gjc session in this dir will pick them up."
