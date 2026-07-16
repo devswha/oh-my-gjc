@@ -15,7 +15,7 @@ Do exactly the following in a terminal. Do not improvise other steps.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
-One install brings the whole suite (6 skills + 7 commands: `/omg` + 6 `/omg:*`). There are no separate/optional plugins to add.
+One install brings the whole suite (6 skills + 9 commands: `/omg` + 8 `/omg:*`). There are no separate/optional plugins to add.
 
 ## Manual path (equivalent, if curl|bash is disallowed)
 ```sh
@@ -36,7 +36,7 @@ root="$HOME/.gjc/agent"
 for skill in adaptive-response no-english time-left extragoal insane-review lazycodex-gjc; do
   test -f "$root/skills/$skill/SKILL.md" || exit 1
 done
-for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md; do
+for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:time-left.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md; do
   test -f "$root/commands/$command" || exit 1
 done
 for skill in workflow-eta easy-answer plain-layer branch-flow worktree gjc-bugwatch multivendor-presets release-gate; do
@@ -57,6 +57,6 @@ fi
 Tell the human: open a **new** gjc session (or `/move .`) so the command palette rebuilds, then run `/omg` for the catalog and `/omg:setup` for optional prerequisite checks and always-on toggles. Commands are `/omg:<name>`.
 
 ## Safety
-Idempotent — re-running re-copies the 6 skills and 7 commands, removes the retired `gate-briefing` native directory and other explicitly retired omj surfaces, then serially refreshes the private user-scope time-left SDK runtime from the exact integrity lockfile when Bun >=1.3.14 and `flock` are available. That refresh runs `bun install --frozen-lockfile --production --ignore-scripts` for exact `@gajae-code/bridge-client@0.11.0`; Bun may contact the configured package registry, so the user's registry credentials, proxy, and network policy apply. Set `OMG_TIME_LEFT_RUNTIME=0` to skip/remove this executable runtime; the installed skill then fails closed. It does not otherwise send code, change model/provider credentials, or modify `models.yml`. `time-left` sends only fixed read-only SDK v3 queries and fails closed without its runtime or a live exact top-level endpoint. `insane-review` needs ChatGPT+Chromium; `lazycodex-gjc` needs an existing logged-in Codex+compatible OMO and is read-only. When optional runtime prerequisites are absent, stale bindings are removed and the affected capability remains fail-closed. During user-scope upgrade, the installer also removes only well-formed retired `easy-always` blocks from `~/.gjc/agent/SYSTEM.md` and `AGENTS.md`, preserving unrelated content and `gate-always`.
+Idempotent — re-running re-copies the 6 skills and 9 commands, removes the retired `gate-briefing` native directory and other explicitly retired omj surfaces, then serially refreshes the private user-scope time-left SDK runtime from the exact integrity lockfile when Bun >=1.3.14 and `flock` are available. That refresh runs `bun install --frozen-lockfile --production --ignore-scripts` for exact `@gajae-code/bridge-client@0.11.0`; Bun may contact the configured package registry, proxy, and network policy apply. Set `OMG_TIME_LEFT_RUNTIME=0` to skip/remove this executable runtime; the installed skill then fails closed. It does not otherwise send code, change model/provider credentials, or modify `models.yml`. `adaptive-response` loads only through `/omg:gate` or `/omg:gate-always`; `no-english` loads only through session-local `/omg:no-english`; `time-left` runs only through explicit `/omg:time-left`. `time-left` sends only fixed read-only SDK v3 queries and fails closed without its runtime or a live exact top-level endpoint. `insane-review` needs ChatGPT+Chromium; `lazycodex-gjc` needs an existing logged-in Codex+compatible OMO and is read-only. When optional runtime prerequisites are absent, stale bindings are removed and the affected capability remains fail-closed. During user-scope upgrade, the installer also removes only well-formed retired `easy-always` blocks from `~/.gjc/agent/SYSTEM.md` and `AGENTS.md`, preserving unrelated content and `gate-always`.
 
 When run inside a git repository, upgrade/uninstall also backs up that repository's `AGENTS.md` and removes only one well-formed retired `oh-my-gjc:branchflow` marker block. It never deletes `docs/WORKFLOW.md`. Run the installer once from each repository where `/omg:branchflow-always on` was previously enabled, then review the preserved workflow document manually.

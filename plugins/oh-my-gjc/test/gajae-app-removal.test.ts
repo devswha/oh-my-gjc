@@ -65,7 +65,7 @@ describe("removed capability manifests", () => {
     const removedSkills = parseManifest("REMOVED_SKILLS");
     const removedCommands = parseManifest("REMOVED_COMMANDS");
     expect(expectedSkills).toHaveLength(6);
-    expect(expectedCommands).toHaveLength(7);
+    expect(expectedCommands).toHaveLength(9);
     expect(expectedSkills).not.toContain("gajae-app");
     expect(expectedCommands).not.toContain("gajae-app");
 
@@ -82,6 +82,8 @@ describe("removed capability manifests", () => {
       "setup",
       "gate",
       "gate-always",
+      "no-english",
+      "time-left",
       "fable",
       "insane-review",
       "lazycodex-gjc",

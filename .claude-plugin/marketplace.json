@@ -6,15 +6,15 @@
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gajaecode — focused Gajae Code suite: 6 skills + 7 commands. Adaptive and no-English responses, SDK-v3 workflow ETA, external review, and read-only Codex delegation; optional runtimes fail closed when prerequisites are absent.",
-    "version": "0.19.1"
+    "description": "oh-my-gajaecode — focused Gajae Code suite: 6 skills + 9 commands. Explicit adaptive, no-English, and SDK-v3 workflow ETA controls, external review, and read-only Codex delegation; optional runtimes fail closed when prerequisites are absent.",
+    "version": "0.20.0"
   },
   "plugins": [
     {
       "name": "oh-my-gjc",
       "source": "./plugins/oh-my-gjc",
-      "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc. time-left uses the read-only GJC SDK v3 bus; LazyCodex stays read-only and prerequisite-bound. models.yml remains untouched.",
-      "version": "0.19.1",
+      "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:time-left, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc. The three presentation/ETA skills require explicit commands; time-left uses the read-only GJC SDK v3 bus. LazyCodex stays read-only and prerequisite-bound. models.yml remains untouched.",
+      "version": "0.20.0",
       "category": "core"
     }
   ]

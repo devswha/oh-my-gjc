@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 const pluginRoot = join(import.meta.dir, "..");
 const skillPath = join(pluginRoot, "skills/no-english/SKILL.md");
+const commandPath = join(pluginRoot, "templates/no-english.md");
 const installerPath = join(pluginRoot, "bin/install-skill.sh");
 
 function read(path: string): string {
@@ -11,13 +12,18 @@ function read(path: string): string {
 }
 
 describe("no-english skill contract", () => {
-  test("activates for excessive English mixing in Korean responses", () => {
+  test("activates only through the explicit session command", () => {
     const skill = read(skillPath);
     expect(skill).toMatch(/^---\nname: no-english\ndescription: .*영어 혼용.*영어 전문용어 남발/m);
-    expect(skill).toContain("사용자가 한국어로 질문했거나 한국어 응답을 요청한 상황");
+    expect(skill).toContain("`/omg:no-english` 명령이 명시적으로 요청했을 때만");
     expect(skill).toContain("문장의 뼈대를 한국어로 유지");
     expect(skill).toContain("한국어(English)");
     expect(skill).toContain("사용자가 영어 답변이나 원문 용어 유지를 명시하면");
+    expect(skill).toContain("자연어 요청만으로는 자동 활성화하지 않는다");
+    const command = read(commandPath);
+    expect(command).toContain("# /omg:no-english");
+    expect(command).toContain("[on|off|status]");
+    expect(command).toContain("새 세션에는 상태를 넘기지 않는다");
   });
 
   test("preserves executable and exact technical strings", () => {

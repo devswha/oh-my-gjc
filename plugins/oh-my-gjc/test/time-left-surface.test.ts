@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 const pluginRoot = join(import.meta.dir, "..");
 const installer = join(pluginRoot, "bin/install-skill.sh");
 const skill = join(pluginRoot, "skills/time-left/SKILL.md");
+const command = join(pluginRoot, "templates/time-left.md");
 const sdkRoot = join(pluginRoot, "tools/sdk-lab");
 const sandboxes: string[] = [];
 
@@ -53,6 +54,16 @@ describe("time-left public skill", () => {
     }
     expect(content).toContain("transcript, private memory, 다른 세션");
     expect(content).toContain("완료 **시각**을 단정하지 않는다");
+  });
+
+  test("requires the explicit slash command", () => {
+    const skillContent = read(skill);
+    const commandContent = read(command);
+    expect(skillContent).toContain("`/omg:time-left` 명령이 명시적으로 요청했을 때만");
+    expect(skillContent).toContain("자연어 질문만으로는 활성화하지 않는다");
+    expect(commandContent).toContain("# /omg:time-left");
+    expect(commandContent).toContain("이 명령이 명시적으로 호출된 경우에만");
+    expect(read(installer)).toContain("EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc)");
   });
 
   test("pins the official bridge client and installer runtime contract", () => {
