@@ -69,7 +69,7 @@ describe("removed capability manifests", () => {
 
     expect(expectedSkills).toEqual([
       "adaptive-response",
-      "korean-first",
+      "no-english",
       "workflow-eta",
       "extragoal",
       "insane-review",

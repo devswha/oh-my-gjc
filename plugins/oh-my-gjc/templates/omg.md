@@ -21,7 +21,7 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 > 위의 `/omg:*`가 현재 공개 커맨드 전부다.
 
 ## 스킬 (6 · 트리거로 자동 활성)
-- `adaptive-response`(일반·인터뷰·스킬 응답 보정 + 승인 브리핑) · `korean-first`(한국어 우선 표현) · `workflow-eta`(SDK 기반 ralplan/ultragoal 남은 시간) · `extragoal`(외부 최종 리뷰 게이트) · `insane-review` · `lazycodex-gjc`(읽기 전용)
+- `adaptive-response`(일반·인터뷰·스킬 응답 보정 + 승인 브리핑) · `no-english`(한국어 우선 표현) · `workflow-eta`(SDK 기반 ralplan/ultragoal 남은 시간) · `extragoal`(외부 최종 리뷰 게이트) · `insane-review` · `lazycodex-gjc`(읽기 전용)
 
 ## 문서
 - 설치·자세히: 저장소 README. 원샷 설치: `install.sh`(curl 한 줄) / 에이전트용 `INSTALLATION.md`.

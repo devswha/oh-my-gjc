@@ -36,7 +36,7 @@ bash oh-my-gjc/install.sh
 ## 2. 있는것
 
 - `adaptive-response` — 일반 대화·인터뷰·스킬 응답 수준 보정 + 승인 게이트 맞춤 브리핑(`/omg:gate-always`)
-- `korean-first` — 한국어 응답의 불필요한 영어 혼용을 줄이고 코드·명령·정식 이름은 보존
+- `no-english` — 한국어 응답의 불필요한 영어 혼용을 줄이고 코드·명령·정식 이름은 보존
 - `workflow-eta` — GJC SDK v3로 실행 중인 ralplan·ultragoal의 남은 시간 범위 추정 · **Bun 1.3.14+ 필요**
 - `extragoal` — 외부 최종 리뷰 게이트(무공유·교차패밀리 리뷰 후 머지)
 - `/omg:fable` — 안전-크리티컬 코드 적대적 감사(돈·데이터·보안 코드) · **Fable 5 모델 필요**
@@ -62,7 +62,7 @@ bash oh-my-gjc/install.sh
 - 켜기: `/omg:gate` (이번 세션의 모든 응답) / `/omg:gate-always on` (프로젝트 `.gjc/SYSTEM.md`가 우선하지 않는 새 세션의 기본값)
 - 원문: [`plugins/oh-my-gjc/skills/adaptive-response/SKILL.md`](./plugins/oh-my-gjc/skills/adaptive-response/SKILL.md)
 
-### `korean-first` — 한국어 우선 표현
+### `no-english` — 한국어 우선 표현
 
 한국어 대화에서 문장의 뼈대를 한국어로 유지하고, 안정된 번역이 있는 영어 명사는 자연스러운 한국어로
 바꾼다. 코드 식별자·명령·경로·파일명·API 이름·오류 원문·정확한 라벨은 그대로 보존하며,
@@ -72,7 +72,7 @@ bash oh-my-gjc/install.sh
   `workflow-eta`, `adaptive-response`, `/omg:fable`을 그대로 쓴다.
 - 따라서 “울트라고울”, “울트라골”, “랄플랜”, “딥 인터뷰”처럼 바꾸지 않는다.
 
-- 원문: [`plugins/oh-my-gjc/skills/korean-first/SKILL.md`](./plugins/oh-my-gjc/skills/korean-first/SKILL.md)
+- 원문: [`plugins/oh-my-gjc/skills/no-english/SKILL.md`](./plugins/oh-my-gjc/skills/no-english/SKILL.md)
 
 ### `extragoal` — 외부 최종 리뷰 게이트
 

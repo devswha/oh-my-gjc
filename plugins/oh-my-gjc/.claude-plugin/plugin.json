@@ -1,7 +1,7 @@
 {
   "name": "oh-my-gjc",
   "version": "0.19.0",
-  "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: adaptive-response, korean-first, workflow-eta, extragoal, insane-review, lazycodex-gjc. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc. workflow-eta uses the read-only GJC SDK v3 bus; LazyCodex stays read-only and prerequisite-bound. models.yml remains untouched.",
+  "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: adaptive-response, no-english, workflow-eta, extragoal, insane-review, lazycodex-gjc. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc. workflow-eta uses the read-only GJC SDK v3 bus; LazyCodex stays read-only and prerequisite-bound. models.yml remains untouched.",
   "author": {
     "name": "devswha",
     "email": "devswha@gmail.com",

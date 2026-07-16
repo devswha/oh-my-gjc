@@ -3,17 +3,17 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const pluginRoot = join(import.meta.dir, "..");
-const skillPath = join(pluginRoot, "skills/korean-first/SKILL.md");
+const skillPath = join(pluginRoot, "skills/no-english/SKILL.md");
 const installerPath = join(pluginRoot, "bin/install-skill.sh");
 
 function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-describe("korean-first skill contract", () => {
+describe("no-english skill contract", () => {
   test("activates for excessive English mixing in Korean responses", () => {
     const skill = read(skillPath);
-    expect(skill).toMatch(/^---\nname: korean-first\ndescription: .*영어 혼용.*영어 전문용어 남발/m);
+    expect(skill).toMatch(/^---\nname: no-english\ndescription: .*영어 혼용.*영어 전문용어 남발/m);
     expect(skill).toContain("사용자가 한국어로 질문했거나 한국어 응답을 요청한 상황");
     expect(skill).toContain("문장의 뼈대를 한국어로 유지");
     expect(skill).toContain("한국어(English)");
@@ -76,7 +76,8 @@ describe("korean-first skill contract", () => {
   test("is part of the exact native skill manifest", () => {
     const installer = read(installerPath);
     expect(installer).toContain(
-      "EXPECTED_SKILLS=(adaptive-response korean-first workflow-eta extragoal insane-review lazycodex-gjc)",
+      "EXPECTED_SKILLS=(adaptive-response no-english workflow-eta extragoal insane-review lazycodex-gjc)",
     );
+    expect(installer).toContain("REMOVED_SKILLS=(gate-briefing korean-first ");
   });
 });

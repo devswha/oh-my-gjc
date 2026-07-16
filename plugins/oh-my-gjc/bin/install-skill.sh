@@ -42,7 +42,7 @@ done
 PLUGIN_ROOT="$(cd -P "$(dirname "$0")/.." && pwd -P)"
 
 # ── EXPECTED manifest (the single source of truth for a complete install) ────────────
-EXPECTED_SKILLS=(adaptive-response korean-first workflow-eta extragoal insane-review lazycodex-gjc)
+EXPECTED_SKILLS=(adaptive-response no-english workflow-eta extragoal insane-review lazycodex-gjc)
 EXPECTED_COMMANDS=(omg setup gate gate-always fable insane-review lazycodex-gjc)
 EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs tools/sdk-lab/package.json tools/sdk-lab/bun.lock tools/sdk-lab/src/inspect.ts tools/sdk-lab/src/eta.ts)
 # Capabilities REMOVED (관제탑 발주, 하코 승인). 0.11.0: codex-deepwork(실사용 0회, lazycodex와 중복) +
@@ -52,9 +52,9 @@ EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs tools/sdk-lab/package.json tools/sdk-la
 # 0.12.0: obsolete control/worker surfaces; 0.14.0: gajae-app ownership transfer.
 # Post-v0.17.1 prune: multivendor-presets, release-gate, easy-answer, plain-layer,
 # branch-flow/worktree, and public gjc-bugwatch. lazycodex-gjc remains supported.
-# The gate-briefing skill was renamed to adaptive-response; upgrades remove only the retired native directory.
+# gate-briefing was renamed to adaptive-response, and korean-first to no-english; upgrades remove retired native directories.
 # Upgrades sweep only their native skill/command files plus explicitly owned retired state.
-REMOVED_SKILLS=(gate-briefing codex-deepwork codex-app-launch codex-app-cdp codex-cli-ask lazycodex tower worktree gajae-app multivendor-presets release-gate easy-answer plain-layer branch-flow gjc-bugwatch)
+REMOVED_SKILLS=(gate-briefing korean-first codex-deepwork codex-app-launch codex-app-cdp codex-cli-ask lazycodex tower worktree gajae-app multivendor-presets release-gate easy-answer plain-layer branch-flow gjc-bugwatch)
 REMOVED_COMMANDS=(codex-run codex-app-launch codex-app-ask codex-ask lazycodex-setup lazycodex-work tower-setup gajae-app presets release easy easy-always plain branchflow-always worktree bugwatch-scan)
 # Pre-0.8.1 native files that upgrades must sweep away: the 17 one-release deprecation
 # tombstones shipped by 0.8.0 (removed in 0.8.1). Old `oh-my-gjc:<name>.md` aliases are

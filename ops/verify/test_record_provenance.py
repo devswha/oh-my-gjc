@@ -37,7 +37,7 @@ MARKERS = [
     "bin/lazycodex-gjc.mjs",
     "skills/insane-review/SKILL.md",
     "skills/adaptive-response/SKILL.md",
-    "skills/korean-first/SKILL.md",
+    "skills/no-english/SKILL.md",
     "skills/workflow-eta/SKILL.md",
     "skills/extragoal/SKILL.md",
     "skills/lazycodex-gjc/SKILL.md",

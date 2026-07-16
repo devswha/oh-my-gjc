@@ -33,7 +33,7 @@ The self-hosted web UI now lives in [`devswha/claudecodeui`'s canonical SELF-HOS
 ```sh
 gjc plugin list  # must list oh-my-gjc@oh-my-gjc
 root="$HOME/.gjc/agent"
-for skill in adaptive-response korean-first workflow-eta extragoal insane-review lazycodex-gjc; do
+for skill in adaptive-response no-english workflow-eta extragoal insane-review lazycodex-gjc; do
   test -f "$root/skills/$skill/SKILL.md" || exit 1
 done
 for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md; do

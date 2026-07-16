@@ -59,7 +59,7 @@ describe("workflow-eta public skill", () => {
     const packageJson = JSON.parse(read(join(sdkRoot, "package.json"))) as { dependencies: Record<string, string> };
     const installScript = read(installer);
     expect(packageJson.dependencies["@gajae-code/bridge-client"]).toBe("0.11.0");
-    expect(installScript).toContain("EXPECTED_SKILLS=(adaptive-response korean-first workflow-eta extragoal insane-review lazycodex-gjc)");
+    expect(installScript).toContain("EXPECTED_SKILLS=(adaptive-response no-english workflow-eta extragoal insane-review lazycodex-gjc)");
     expect(installScript).toContain("REMOVED_SKILLS=(gate-briefing ");
     expect(installScript).toContain("bun install --frozen-lockfile --production --ignore-scripts");
     expect(installScript).toContain("OMG_WORKFLOW_ETA_RUNTIME");
