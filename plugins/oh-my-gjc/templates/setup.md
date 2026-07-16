@@ -88,7 +88,7 @@ payload를 실행할 수 있으므로 금지한다. 설치 후 **새 세션**을
 
 | 감지 | 확인 | 바로 쓸 수 있는 기능 |
 |---|---|---|
-| GJC SDK workflow ETA | Linux + Bun 1.3.14+ + private `oh-my-gjc/sdk-lab` runtime | `ralplan/ultragoal 언제 끝나?` 자연어 질문 |
+| GJC SDK workflow ETA | Linux + Bun 1.3.14+ + private `oh-my-gjc/sdk-lab` runtime | `/omg:time-left [ralplan\|ultragoal]` |
 | Chrome + ChatGPT | 크롬 프로필 존재 | `/omg:insane-review` |
 | Codex + LazyCodex | `codex`가 PATH에 있고 호환 OMO + user-scope runtime binding 설치됨 | `/omg:lazycodex-gjc` (읽기 전용) |
 

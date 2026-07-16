@@ -60,10 +60,15 @@ describe("time-left public skill", () => {
     const skillContent = read(skill);
     const commandContent = read(command);
     expect(skillContent).toContain("`/omg:time-left` 명령이 명시적으로 요청했을 때만");
-    expect(skillContent).toContain("자연어 질문만으로는 활성화하지 않는다");
+    expect(skillContent).toContain("다른 입력에서는 자동 활성화하지 않는다");
     expect(commandContent).toContain("# /omg:time-left");
     expect(commandContent).toContain("이 명령이 명시적으로 호출된 경우에만");
     expect(read(installer)).toContain("EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc)");
+    const description = skillContent.split("---", 3)[1];
+    expect(description).not.toContain("언제 끝나?");
+    expect(description).not.toContain("얼마나 남았어?");
+    expect(description).not.toContain("ETA 보여줘");
+    expect(read(join(pluginRoot, "templates/setup.md"))).toContain("/omg:time-left [ralplan\\|ultragoal]");
   });
 
   test("pins the official bridge client and installer runtime contract", () => {

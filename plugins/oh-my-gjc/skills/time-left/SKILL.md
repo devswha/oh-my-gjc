@@ -1,6 +1,6 @@
 ---
 name: time-left
-description: `/omg:time-left` 명령이 명시적으로 요청했을 때만 GJC v0.11 SDK의 현재 세션 텔레메트리로 실행 중인 ralplan 또는 ultragoal의 남은 시간을 추정한다. 일반적인 "언제 끝나?", "얼마나 남았어?", "ETA 보여줘" 같은 자연어 질문만으로는 활성화하지 않는다. 읽기 전용 SDK 상태와 현재 워크플로 상태만 사용하며 완료 시각을 보장하거나 제어 명령을 보내지 않는다.
+description: `/omg:time-left` 명령이 명시적으로 요청했을 때만 GJC v0.11 SDK의 현재 세션 텔레메트리로 실행 중인 ralplan 또는 ultragoal의 남은 시간을 추정한다. 다른 입력에서는 자동 활성화하지 않는다. 읽기 전용 SDK 상태와 현재 워크플로 상태만 사용하며 완료 시각을 보장하거나 제어 명령을 보내지 않는다.
 ---
 
 # Workflow ETA

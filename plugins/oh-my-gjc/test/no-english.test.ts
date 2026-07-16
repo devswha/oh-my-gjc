@@ -19,11 +19,13 @@ describe("no-english skill contract", () => {
     expect(skill).toContain("문장의 뼈대를 한국어로 유지");
     expect(skill).toContain("한국어(English)");
     expect(skill).toContain("사용자가 영어 답변이나 원문 용어 유지를 명시하면");
-    expect(skill).toContain("자연어 요청만으로는 자동 활성화하지 않는다");
+    expect(skill).toContain("다른 입력에서는 자동 활성화하지 않는다");
     const command = read(commandPath);
     expect(command).toContain("# /omg:no-english");
     expect(command).toContain("[on|off|status]");
     expect(command).toContain("새 세션에는 상태를 넘기지 않는다");
+    expect(skill.split("---", 3)[1]).not.toContain("영어를 줄여줘");
+    expect(skill.split("---", 3)[1]).not.toContain("한국어로 말해");
   });
 
   test("preserves executable and exact technical strings", () => {
