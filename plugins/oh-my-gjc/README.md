@@ -57,6 +57,10 @@ lockfile로 user-scope 전용 private runtime을 만들며 Bun/패키지 설치/
 user-scope private SHA-256 runtime binding이 일치해야 하며 child GJC 세션, config·credential
 변경, web/MCP/browser egress는 금지한다. 현재는 `read-only`만 허용하고,
 동시 편집 안전성이 해결될 때까지 `workspace-write`는 fail-closed다.
+선택 `LAZYCODEX_OBSERVE_LOG`로 레닥션된 이벤트 스트림을 리더 소유 로그(mode 0600)에 tee해
+실시간 관찰할 수 있고, 완주한 worker의 최종 출력이 1 MiB relay 한도를 넘으면 완료 작업을
+폐기하는 대신 고정 bounded summary를 exit 0으로 반환한다(#202 원자성). 발주는 통짜 대신
+조각 단위가 표준이며 시각 검수는 리더 browser 몫이다.
 ### 모델 프리셋
 
 omj는 커스텀 모델 프리셋을 설치하지 않고 `models.yml`도 수정하지 않는다. GJC의 기본 모델 구성과 내장 프리셋을 그대로 사용한다.

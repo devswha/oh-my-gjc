@@ -26,7 +26,7 @@ GJC의 **`bash` 도구를 정확히 한 번, 동기식으로만** 호출한다. 
 - `LAZYCODEX_GJC_TASK`: 사용자의 원문 작업. 셸 명령 문자열에 삽입하지 않는다.
 - `TARGET_CWD`: 대상 저장소의 절대 경로. 기본은 현재 `$PWD`.
 - `SANDBOX`: 항상 `read-only`.
-- 선택: `CODEX_MODEL`, `LAZYCODEX_TIMEOUT_SECONDS`.
+- 선택: `CODEX_MODEL`, `LAZYCODEX_TIMEOUT_SECONDS`, `LAZYCODEX_OBSERVE_LOG`(관찰 로그로 쓸 **새 파일**의 절대 경로).
 
 아래 스크립트를 그대로 실행한다. task는 mode `0600` 임시 파일을 거쳐 runner stdin으로만 들어가며,
 명령·stdout·stderr에 task나 자격증명을 echo하지 않는다.
@@ -83,16 +83,32 @@ secure_file "$RUNNER" "${BINDING_LINES[2]}" && secure_file "${BINDING_LINES[5]}"
 RUNNER_ARGS=(--cwd "$TARGET_CWD" --sandbox "$SANDBOX")
 [ -z "${CODEX_MODEL:-}" ] || RUNNER_ARGS+=(--model "$CODEX_MODEL")
 [ -z "${LAZYCODEX_TIMEOUT_SECONDS:-}" ] || RUNNER_ARGS+=(--timeout-seconds "$LAZYCODEX_TIMEOUT_SECONDS")
+[ -z "${LAZYCODEX_OBSERVE_LOG:-}" ] || RUNNER_ARGS+=(--observe-log "$LAZYCODEX_OBSERVE_LOG")
 "${BINDING_LINES[5]}" "$RUNNER" "${RUNNER_ARGS[@]}" --binding "$BINDING" < "$TASK_FILE"
 ```
 
 ## 결과
 
 - exit 0이면 runner stdout을 외부 LazyCodex 작업자의 최종 결과로 그대로 전달한다.
+- worker가 goal을 완수하고 exit 0인데 최종 출력이 1 MiB relay 한도를 넘으면, 완료된 작업을 실패로 폐기하지 않고 runner가 **고정 bounded summary**를 exit 0으로 대신 전달한다(이슈 #202 원자성 계약 — read-only 전용이라 workspace 부작용은 어느 경로에서도 존재하지 않는다). hard limit(8 MiB) 초과와 폭주 스트림은 조기 중단 후 실패 처리한다.
 - 실패하면 부분 결과를 성공처럼 사용하지 않는다. exit code와 runner의 한 줄 오류를 요약하고, 사용자가 직접 해결할 설치/PATH/로그인/timeout 조치만 안내한다.
 - child stderr는 원문 task나 파일 비밀을 포함할 수 있으므로 그대로 전달하지 않는다.
 - runner의 `--ephemeral`은 **외부 Codex 세션**을 저장하지 않는다는 뜻이다. 이 bash 호출과 결과는 현재 GJC 대화에 남지만, child GJC 세션은 생성되지 않는다.
 - `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`은 runner 내부의 외부 child와 그 shell에만 적용된다. 현재 GJC 알림·SDK 설정은 변경하지 않는다.
+
+## 관찰 — 리더 실시간 모니터링 (선택)
+
+- `LAZYCODEX_OBSERVE_LOG`에 새 파일의 절대 경로(예: `/tmp/lazycodex-observe-<타임스탬프>.log`)를 주면 runner **부모 프로세스**가 codex exec 이벤트 스트림을 **레닥션 후** 그 로그에 tee한다. child sandbox와 relay 계약은 그대로다 — raw child stdout/stderr는 여전히 launcher stdio로 중계되지 않는다.
+- 레닥션은 토큰·자격증명 할당·긴 opaque blob을 과잉 마스킹한다(fail-closed). 로그 생성 실패는 spawn 전에 중단하고, 실행 중 로그 쓰기 실패나 로그 상한(8 MiB) 도달은 관찰만 멈추며 worker에는 영향이 없다.
+- 리더는 동기 bash 호출을 시작하기 **전에** GJC monitor 도구로 로그 경로를 tail해 둔다. 관찰은 read-only다 — 로그로 판단만 하고 worker 프로세스·파일에 개입하지 않는다.
+- 로그 첫 `[observe]` 줄이 systemd 유닛명과 중단 명령을 알려준다. 이상 징후 시 리더는 `systemctl --user stop <unit>`으로 유닛을 중단한다. 격리 계약의 RuntimeMaxSec 상한은 백스톱으로 그대로 남는다.
+- 로그는 mode 0600 새 파일로 생성되며, 보호 상태 경로(`.gjc`, `~/.codex`, `CODEX_HOME`) 안을 지정하면 거부한다.
+
+## 오케스트레이션 표준
+
+- **조각 발주가 표준이다.** 통짜 태스크 대신 독립 검증 가능한 작은 조각으로 나눠 발주한다 — 실측 기준 조각당 약 6분. 조각 단위여야 실패 시 재발주 비용이 작고 oversized 출력·timeout 리스크가 줄어든다.
+- **시각 검수는 위임하지 않는다.** 렌더링·애니메이션·레이아웃 검수는 리더가 자신의 browser로 직접 실측한다. 정지 스크린샷 검수는 불충분하다 — 첫 paint 전 visible 부여로 전이가 생략되는 애니메이션 레이스가 실측됐고, running 애니메이션 카운트는 가시성 증거가 아니다.
+- **interactive 변종은 보류한다.** 이 스킬은 단발 동기 실행만 지원하며, 대화형/세션형 worker 변종은 도입하지 않는다.
 
 ## 절대 금지
 

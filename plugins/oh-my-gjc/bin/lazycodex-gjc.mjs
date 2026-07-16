@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, readlinkSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync, writeSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { basename, delimiter, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { spawn } from "node:child_process";
+import { StringDecoder } from "node:string_decoder";
 import { createHash } from "node:crypto";
 
 const TASK_LIMIT = 256 * 1024;
@@ -16,6 +17,22 @@ const WORKSPACE_DIRECTORY_LIMIT = 100000;
 const WORKSPACE_GJC_LIMIT = 256;
 const WORKSPACE_DENY_BYTES_LIMIT = 64 * 1024;
 const OMO_MIN = Object.freeze([4, 18, 0]);
+const OBSERVE_LOG_LIMIT = 8 * 1024 * 1024;
+const OBSERVE_FLUSH_BYTES = 64 * 1024;
+// Observation redaction is deliberately over-broad (fail-closed): opaque token shapes,
+// credential assignments, and long blobs are masked before any byte reaches the log.
+const OBSERVE_REDACTIONS = Object.freeze([
+  [/(authorization\s*[:=]\s*).+/gi, "$1[redacted]"],
+  [/\b(bearer\s+)\S+/gi, "$1[redacted]"],
+  [/\b((?:api[_-]?key|access[_-]?key|client[_-]?secret|token|secret|password|passwd|credential)s?["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|\S+)/gi, "$1[redacted]"],
+  [/\b(?:sk|rk|pk)-[A-Za-z0-9_-]{8,}\b/g, "[redacted]"],
+  [/\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{8,}\b/g, "[redacted]"],
+  [/\bxox[baprs]-[A-Za-z0-9-]{8,}\b/g, "[redacted]"],
+  [/\b(?:AKIA|ASIA)[A-Z0-9]{12,}\b/g, "[redacted]"],
+  [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{4,}(?:\.[A-Za-z0-9_-]+)?/g, "[redacted]"],
+  [/\b[A-Za-z0-9+/_-]{64,}={0,2}\b/g, "[redacted]"],
+]);
+const OVERSIZED_OUTPUT_SUMMARY = "Worker completed and verified its goal, but the final summary exceeded the 1 MiB relay limit and was withheld. The worker ran read-only, so no workspace changes exist. Re-dispatch a smaller piece or request a shorter summary for details.\n";
 const HELP = `Usage: lazycodex-gjc [options] < task.txt
 
 Options:
@@ -24,6 +41,7 @@ Options:
   --model MODEL                        Codex model selector
   --timeout-seconds N                  timeout from 1 to 3600 (default: 1800)
   --binding PATH                       private install-time runtime binding
+  --observe-log PATH                   tee a redacted worker event stream to a new log file
   --help                               show this help
 `;
 
@@ -41,7 +59,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 2) {
     const name = argv[index];
     const value = argv[index + 1];
-    if (!["--cwd", "--sandbox", "--model", "--timeout-seconds", "--binding"].includes(name)) throw new CliError(`unknown argument: ${name ?? ""}`);
+    if (!["--cwd", "--sandbox", "--model", "--timeout-seconds", "--binding", "--observe-log"].includes(name)) throw new CliError(`unknown argument: ${name ?? ""}`);
     if (value === undefined || value.startsWith("--")) throw new CliError(`missing value for ${name}`);
     if (values.has(name)) throw new CliError(`duplicate argument: ${name}`);
     values.set(name, value);
@@ -61,7 +79,9 @@ function parseArgs(argv) {
   if (timeoutSeconds > TIMEOUT_LIMIT) throw new CliError("invalid --timeout-seconds");
   const binding = values.get("--binding");
   if (binding === undefined || !isAbsolute(binding)) throw new CliError("--binding must be an absolute path");
-  return { help: false, cwd, sandbox, model, timeoutSeconds, binding };
+  const observeLog = values.get("--observe-log");
+  if (observeLog !== undefined && !isAbsolute(observeLog)) throw new CliError("--observe-log must be an absolute path");
+  return { help: false, cwd, sandbox, model, timeoutSeconds, binding, observeLog };
 }
 
 function readTask() {
@@ -425,7 +445,72 @@ async function stopAndConfirmUnit(systemctl, unit) {
   return unitDrained(systemctl, unit);
 }
 
-function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor) {
+function redactObserved(text) {
+  let redacted = text;
+  for (const [pattern, replacement] of OBSERVE_REDACTIONS) redacted = redacted.replace(pattern, replacement);
+  return redacted;
+}
+
+// Read-only observation tap: the launcher (never the child) tees the redacted codex exec
+// event stream to a leader-owned log so `gjc monitor`/tail can watch a live run. Observation
+// is best-effort — a failing log write disables the tap without touching the worker — while
+// log *creation* fails closed before any spawn. The relay contract is unchanged: raw child
+// stderr/stdout still never reach the launcher's own stdio.
+function createObserver(path, protectedPaths) {
+  if (path === undefined) return undefined;
+  const lexical = resolve(path);
+  let canonical;
+  try { canonical = join(realpathSync(dirname(lexical)), basename(lexical)); } catch { throw new CliError("--observe-log parent directory must exist"); } // no-excuse-ok: catch
+  if (protectedPaths.some((root) => within(lexical, root) || within(canonical, root))) throw new CliError("--observe-log cannot be inside protected GJC or Codex state");
+  let fd;
+  try { fd = openSync(canonical, "wx", 0o600); } catch { throw new CliError("--observe-log must be a new writable file"); } // no-excuse-ok: catch
+  const decoders = { out: new StringDecoder("utf8"), err: new StringDecoder("utf8") };
+  const buffers = { out: "", err: "" };
+  let bytes = 0;
+  let open = true;
+  const append = (text) => {
+    if (!open) return;
+    const payload = redactObserved(text);
+    bytes += Buffer.byteLength(payload, "utf8");
+    if (bytes > OBSERVE_LOG_LIMIT) {
+      open = false;
+      try { writeSync(fd, "[observe] log limit reached; observation stopped, worker unaffected\n"); } catch { /* observation is best-effort */ } // no-excuse-ok: catch
+      return;
+    }
+    try { writeSync(fd, payload); } catch { open = false; } // no-excuse-ok: catch
+  };
+  const flushLines = (stream) => {
+    let index = buffers[stream].indexOf("\n");
+    while (index >= 0) {
+      append(`${stream} ${buffers[stream].slice(0, index)}\n`);
+      buffers[stream] = buffers[stream].slice(index + 1);
+      index = buffers[stream].indexOf("\n");
+    }
+    if (buffers[stream].length > OBSERVE_FLUSH_BYTES) {
+      append(`${stream} ${buffers[stream]}\n`);
+      buffers[stream] = "";
+    }
+  };
+  return {
+    note: (text) => append(`[observe] ${text}\n`),
+    ingest: (stream, chunk) => {
+      if (!open) return;
+      buffers[stream] += decoders[stream].write(chunk);
+      flushLines(stream);
+    },
+    close: () => {
+      for (const stream of ["out", "err"]) {
+        const tail = buffers[stream] + decoders[stream].end();
+        buffers[stream] = "";
+        if (tail.length > 0) append(`${stream} ${tail}\n`);
+      }
+      open = false;
+      try { closeSync(fd); } catch { /* already closed */ } // no-excuse-ok: catch
+    },
+  };
+}
+
+function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor, observer) {
   return new Promise((resolveResult, reject) => {
     if (process.platform !== "linux") {
       reject(new CliError("systemd user-service containment is required", 78));
@@ -437,6 +522,7 @@ function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor)
     // whole unit cgroup at RuntimeMaxSec. The grace only matters on the failure path — normal
     // flow kills at `timeoutSeconds` via our own timer, well before this cap.
     const runtimeMaxSec = timeoutSeconds + CONTAINMENT_GRACE_SECONDS;
+    observer?.note(`unit=${unit} runtime-max-sec=${runtimeMaxSec} stop-command="systemctl --user stop ${unit}"`);
     const supervisorArgs = ["--user", "--wait", "--pipe", "--quiet", `--unit=${unit}`, "--property=KillMode=control-group", "--property=TimeoutStopSec=1s", `--property=RuntimeMaxSec=${runtimeMaxSec}`, "--", supervisor.env, "-i"];
     for (const [name, value] of Object.entries(env)) supervisorArgs.push(`${name}=${value}`);
     supervisorArgs.push(binary, ...args);
@@ -478,8 +564,8 @@ function runChild(binary, args, prompt, env, output, timeoutSeconds, supervisor)
       })();
     };
     const failOverflow = () => stop("overflow");
-    child.stdout.on("data", (chunk) => { stdoutBytes += chunk.length; if (stdoutBytes > OUTPUT_LIMIT) failOverflow(); });
-    child.stderr.on("data", (chunk) => { stderrBytes += chunk.length; if (stderrBytes > OUTPUT_LIMIT) failOverflow(); });
+    child.stdout.on("data", (chunk) => { stdoutBytes += chunk.length; observer?.ingest("out", chunk); if (stdoutBytes > OUTPUT_LIMIT) failOverflow(); });
+    child.stderr.on("data", (chunk) => { stderrBytes += chunk.length; observer?.ingest("err", chunk); if (stderrBytes > OUTPUT_LIMIT) failOverflow(); });
     child.once("error", () => { if (settled) return; settled = true; clearInterval(outputMonitor); clearTimeout(timer); process.off("SIGINT", interrupt); process.off("SIGTERM", interrupt); reject(new CliError("worker failed to start", 127)); });
     outputMonitor = setInterval(() => { try { if (statSync(output).size > OUTPUT_HARD_LIMIT) failOverflow(); } catch { /* close handles missing output */ } }, 10); // no-excuse-ok: catch
     timer = setTimeout(() => stop("timeout"), timeoutSeconds * 1000);
@@ -507,6 +593,7 @@ async function main() {
   const workspaceState = workspaceStateDenyPaths(config.cwd);
   const protectedPaths = [...new Set([...protectedStatePaths(config.cwd, binding.accountHome, codexHome), ...workspaceState.denyPaths])];
   const omo = resolveOmoSkill(codexHome);
+  const observer = createObserver(config.observeLog, protectedPaths);
   let temp;
   let childCodexHome;
   let result;
@@ -518,7 +605,8 @@ async function main() {
     const output = join(temp, "final.txt");
     writeFileSync(output, "", { mode: 0o600 });
     const env = childEnvironment(runtime, childCodexHome, temp);
-    result = await runChild(runtime.core, childArgs({ ...config, protectedStatePaths: protectedPaths }, env, runtime, output), workerPrompt(task, omo, config.sandbox), env, output, config.timeoutSeconds, binding);
+    result = await runChild(runtime.core, childArgs({ ...config, protectedStatePaths: protectedPaths }, env, runtime, output), workerPrompt(task, omo, config.sandbox), env, output, config.timeoutSeconds, binding, observer);
+    observer?.note(`worker closed failure=${result.failure ?? "none"} code=${result.code ?? "null"} signal=${result.signal ?? "none"}`);
     if (result.failure === "input") throw new CliError("worker input failed", 1);
     if (result.failure === "interrupted") throw new CliError("worker interrupted", 130);
     if (result.failure === "timeout") throw new CliError("worker timed out", 124);
@@ -526,15 +614,22 @@ async function main() {
     if (result.code !== 0) throw new CliError(result.code === null ? `worker terminated by signal ${result.signal ?? "unknown"}` : `worker exited with code ${result.code}`, result.code ?? 1);
     if (result.containmentStopFailed) throw new CliError("worker containment was not confirmed", 1);
     const bytes = readFileSync(output);
+    if (bytes.length > OUTPUT_HARD_LIMIT) throw new CliError("worker output exceeded hard limit", 1);
+    if (bytes.length > OUTPUT_LIMIT) {
+      // Atomicity contract (#202): a verified, completed worker must never be reported as a
+      // failure just because its final summary is oversized. The worker is read-only, so no
+      // workspace side effects exist either way; relay a bounded fixed summary instead.
+      process.stdout.write(OVERSIZED_OUTPUT_SUMMARY);
+      return;
+    }
     let finalOutput;
     try { finalOutput = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { throw new CliError("final output is not valid UTF-8", 1); } // no-excuse-ok: catch
-    if (bytes.length > OUTPUT_HARD_LIMIT) throw new CliError("worker output exceeded hard limit", 1);
-    if (bytes.length > OUTPUT_LIMIT) throw new CliError("worker output exceeded relay limit", 1);
     if (finalOutput.trim().length === 0) throw new CliError("final output is empty", 1);
     process.stdout.write(finalOutput);
   } catch (error) {
     throw error;
   } finally {
+    observer?.close();
     if (temp !== undefined) rmSync(temp, { recursive: true, force: true });
     if (childCodexHome !== undefined) rmSync(childCodexHome, { recursive: true, force: true });
   }

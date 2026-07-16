@@ -18,7 +18,8 @@ argument-hint: "<읽기 전용 조사·리뷰 작업> [대상 cwd]"
 
 GJC `bash` 도구의 `env` 파라미터에 task를 `LAZYCODEX_GJC_TASK`로, 대상 절대 경로를
 `TARGET_CWD`로 전달한다. task를 아래 셸 문자열에 붙여 넣지 않는다. 선택적으로
-`CODEX_MODEL`, `LAZYCODEX_TIMEOUT_SECONDS`만 env에 추가한다.
+`CODEX_MODEL`, `LAZYCODEX_TIMEOUT_SECONDS`, `LAZYCODEX_OBSERVE_LOG`(관찰 로그로 쓸
+**새 파일**의 절대 경로)만 env에 추가한다.
 
 ```bash
 [ -n "${LAZYCODEX_GJC_TASK:-}" ] || { echo "lazycodex-gjc task is empty" >&2; exit 2; }
@@ -72,14 +73,27 @@ secure_file "$RUNNER" "${BINDING_LINES[2]}" && secure_file "${BINDING_LINES[5]}"
 RUNNER_ARGS=(--cwd "$TARGET_CWD" --sandbox "$SANDBOX")
 [ -z "${CODEX_MODEL:-}" ] || RUNNER_ARGS+=(--model "$CODEX_MODEL")
 [ -z "${LAZYCODEX_TIMEOUT_SECONDS:-}" ] || RUNNER_ARGS+=(--timeout-seconds "$LAZYCODEX_TIMEOUT_SECONDS")
+[ -z "${LAZYCODEX_OBSERVE_LOG:-}" ] || RUNNER_ARGS+=(--observe-log "$LAZYCODEX_OBSERVE_LOG")
 "${BINDING_LINES[5]}" "$RUNNER" "${RUNNER_ARGS[@]}" --binding "$BINDING" < "$TASK_FILE"
 ```
 
 이 호출은 **GJC bash 한 번을 동기 실행**한다. GJC `task`, goal, team, move, write/edit,
 background job을 사용하지 않으며 install/update/doctor/setup/login도 실행하지 않는다.
 성공하면 stdout을 그대로 반환하고, 실패하면 부분 결과 없이 오류와 수동 해결책만 짧게 알린다.
+worker가 완수했는데 최종 출력만 1 MiB relay 한도를 넘긴 경우 runner가 고정 bounded summary를
+exit 0으로 대신 반환한다 — 완료 작업을 실패로 폐기하지 않는다(#202 원자성 계약).
 child stderr는 task나 파일 비밀을 포함할 수 있으므로 그대로 전달하지 않는다.
 
 runner의 `--ephemeral`은 외부 Codex 세션에만 적용된다. 현재 GJC 대화에는 이 명령과 결과가
 남지만 child GJC 세션은 생기지 않는다. child와 그 shell의 `GJC_NOTIFICATIONS=0
 GJC_SDK_DISABLE=1`도 현재 GJC 설정을 바꾸지 않는다.
+
+## 관찰과 오케스트레이션
+
+- `LAZYCODEX_OBSERVE_LOG`를 주면 runner 부모 프로세스가 레닥션된 codex exec 이벤트 스트림을
+  그 새 로그 파일(mode 0600)에 tee한다. 리더는 동기 bash 호출 **전에** GJC monitor 도구로
+  로그를 tail하고, 이상 시 로그 첫 `[observe]` 줄의 유닛명으로 `systemctl --user stop <unit>`을
+  실행한다. 관찰은 read-only이며 로그 실패는 worker에 영향이 없다.
+- 통짜 대신 **조각 발주**가 표준이다(실측 조각당 약 6분). 시각 검수는 리더 browser 몫이며
+  정지 스크린샷 검수는 불충분하다(애니메이션 레이스 실측 — running 카운트는 가시성 증거가 아님).
+  interactive 변종은 보류한다.

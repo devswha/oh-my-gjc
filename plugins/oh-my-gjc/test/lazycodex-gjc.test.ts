@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 const runner = join(import.meta.dir, "../bin/lazycodex-gjc.mjs");
 const sandboxes: string[] = [];
 
-type Mode = "success" | "success-write" | "success-descendant" | "create-gjc" | "create-gjc-nonzero" | "create-gjc-symlink" | "nonzero" | "symlink-mutate" | "stderr-secret" | "empty" | "invalid" | "oversized" | "oversized-write" | "hard-oversized" | "stdout" | "stdout-infinite" | "final-infinite" | "timeout";
+type Mode = "success" | "success-write" | "success-descendant" | "create-gjc" | "create-gjc-nonzero" | "create-gjc-symlink" | "nonzero" | "symlink-mutate" | "stderr-secret" | "empty" | "invalid" | "oversized" | "oversized-write" | "hard-oversized" | "stdout" | "stdout-infinite" | "final-infinite" | "timeout" | "observe-tokens";
 
 type OmoMode = "valid" | "missing" | "stale" | "incompatible" | "symlinked" | "writable";
 
@@ -129,6 +129,12 @@ process.stdin.on("end", () => {
   else if (${JSON.stringify(mode)} === "stdout") {
     fs.writeFileSync(out, "must-not-succeed");
     for (let index = 0; index < 2049; index += 1) process.stdout.write(Buffer.alloc(512, 65));
+  }
+  else if (${JSON.stringify(mode)} === "observe-tokens") {
+    process.stdout.write("event: Authorization: Bearer bearer-canary-raw\\n");
+    process.stdout.write("progress token=ghp_ABCDEFGHIJ0123456789 step ok\\n");
+    process.stdout.write("plain progress line survives\\n");
+    fs.writeFileSync(out, "worker-result");
   }
   if (${JSON.stringify(mode)} === "stdout-infinite") {
     const child = cp.spawn("/bin/sleep", ["30"]);
@@ -607,6 +613,66 @@ describe("lazycodex-gjc isolated runner", () => {
     expect(result.stdout).toBe("");
     expect(existsSync(readFileSync(join(f.record, "temp"), "utf8"))).toBe(false);
     expect(existsSync(readFileSync(join(f.record, "codex-home"), "utf8"))).toBe(false);
+  });
+
+  test("relays a bounded summary when a completed worker's final output exceeds the relay limit", () => {
+    const f = fixture("oversized");
+    const result = run(f);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("exceeded the 1 MiB relay limit");
+    expect(result.stdout).toContain("read-only");
+    expect(result.stdout.length).toBeLessThan(1024);
+    expect(existsSync(readFileSync(join(f.record, "temp"), "utf8"))).toBe(false);
+    expect(existsSync(readFileSync(join(f.record, "codex-home"), "utf8"))).toBe(false);
+  });
+
+  test("still fails closed when the final output exceeds the hard limit", () => {
+    const f = fixture("hard-oversized");
+    const result = run(f);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("lazycodex-gjc: worker output exceeded hard limit\n");
+  });
+
+  test("tees a redacted event stream to a new private observe log without touching the relay", () => {
+    const f = fixture("observe-tokens");
+    const log = join(f.root, "observe.log");
+    const result = run(f, ["--observe-log", log]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toBe("worker-result");
+    expect(statSync(log).mode & 0o777).toBe(0o600);
+    const observed = readFileSync(log, "utf8");
+    expect(observed).toContain("[observe] unit=lazycodex-gjc-");
+    expect(observed).toContain('stop-command="systemctl --user stop lazycodex-gjc-');
+    expect(observed).toContain("[observe] worker closed failure=none code=0");
+    expect(observed).toContain("plain progress line survives");
+    expect(observed).toContain("[redacted]");
+    expect(observed).not.toContain("bearer-canary-raw");
+    expect(observed).not.toContain("ghp_ABCDEFGHIJ0123456789");
+  });
+
+  test("observes child stderr in the log while never relaying it to the launcher stdio", () => {
+    const f = fixture("stderr-secret");
+    const log = join(f.root, "observe.log");
+    const result = run(f, ["--observe-log", log], "TASK-CANARY-a83fb");
+    expect(result.status).toBe(23);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("lazycodex-gjc: worker exited with code 23\n");
+    expect(`${result.stdout}${result.stderr}`).not.toContain("FILE-CANARY-7d321");
+    expect(readFileSync(log, "utf8")).toContain("FILE-CANARY-7d321");
+  });
+
+  test.each([
+    ["an existing file", (f: Fixture) => { const log = join(f.root, "observe.log"); writeFileSync(log, "stale"); return log; }],
+    ["a relative path", () => "observe.log"],
+    ["a missing parent directory", (f: Fixture) => join(f.root, "missing-parent/observe.log")],
+    ["protected GJC state", (f: Fixture) => join(f.cwd, ".gjc/observe.log")],
+  ])("fails closed before spawning when the observe log is %s", (_label, logPath) => {
+    const f = fixture();
+    const result = run(f, ["--observe-log", logPath(f)]);
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(existsSync(join(f.record, "args.json"))).toBe(false);
   });
   test("rejects workspace-write before spawning a worker", () => {
     const f = fixture();
