@@ -42,9 +42,9 @@ done
 PLUGIN_ROOT="$(cd -P "$(dirname "$0")/.." && pwd -P)"
 
 # ── EXPECTED manifest (the single source of truth for a complete install) ────────────
-EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding)
-EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc deep-onboarding)
-EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs tools/sdk-lab/package.json tools/sdk-lab/bun.lock tools/sdk-lab/src/inspect.ts tools/sdk-lab/src/eta.ts)
+EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer)
+EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc deep-onboarding session-observer)
+EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs bin/session-observer.ts tools/sdk-lab/package.json tools/sdk-lab/bun.lock tools/sdk-lab/src/inspect.ts tools/sdk-lab/src/eta.ts)
 # Capabilities REMOVED (관제탑 발주, 하코 승인). 0.11.0: codex-deepwork(실사용 0회, lazycodex와 중복) +
 # codex-app 짝(대상 앱 빌드 트랙 07-03 아카이브; Pro 리뷰는 insane-review 전담). 0.12.0: codex-cli-ask·
 # lazycodex·tower(명시 호출 0 — Codex 트래픽은 전량 제품 파이프라인 codex exec 직결로 스킬 미경유,
@@ -663,7 +663,7 @@ target="all"
 if [ $# -ge 1 ]; then
   if [ "$1" = "all" ]; then
     target="all"; shift
-  elif [ -d "$PLUGIN_ROOT/skills/$1" ] || [ -f "$PLUGIN_ROOT/templates/$1.md" ]; then
+  elif [ "$1" = "session-observer" ] || [ -d "$PLUGIN_ROOT/skills/$1" ] || [ -f "$PLUGIN_ROOT/templates/$1.md" ]; then
     target="$1"; shift
   fi
 fi
@@ -733,6 +733,12 @@ case "$mode" in
       cleanup_retired_branchflow_marker
       report_missing
     else
+      if [ "$target" = "session-observer" ]; then
+        for r in skills/session-observer/SKILL.md templates/session-observer.md bin/session-observer.ts; do
+          [ -f "$PLUGIN_ROOT/$r" ] && [ ! -L "$PLUGIN_ROOT/$r" ] || MISSING+=("$r")
+        done
+        report_missing
+      fi
       if [ "$target" = "lazycodex-gjc" ]; then
         [ -f "$PLUGIN_ROOT/bin/lazycodex-gjc.mjs" ] && [ ! -L "$PLUGIN_ROOT/bin/lazycodex-gjc.mjs" ] || MISSING+=("bin/lazycodex-gjc.mjs")
         report_missing

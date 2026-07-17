@@ -19,10 +19,10 @@ oh-my-gajaecode를 이 머신에 셋업한다. **모든 단계는 멱등** — �
 
 ```bash
 root="$HOME/.gjc/agent"
-for skill in adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding; do
+for skill in adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer; do
   test -f "$root/skills/$skill/SKILL.md" || exit 1
 done
-for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:time-left.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md omg:deep-onboarding.md; do
+for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:time-left.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md omg:deep-onboarding.md omg:session-observer.md; do
   test -f "$root/commands/$command" || exit 1
 done
 for skill in gate-briefing korean-first workflow-eta codex-deepwork codex-app-launch codex-app-cdp codex-cli-ask lazycodex tower worktree gajae-app multivendor-presets release-gate easy-answer plain-layer branch-flow gjc-bugwatch; do

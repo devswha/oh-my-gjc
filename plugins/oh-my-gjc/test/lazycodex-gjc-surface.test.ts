@@ -61,6 +61,13 @@ function runInstaller(f: Fixture, action: "install" | "uninstall", path = instal
     encoding: "utf8",
   });
 }
+function runTargetedInstaller(f: Fixture, path = installerPath) {
+  return spawnSync("bash", [path, "session-observer", f.scope], {
+    cwd: f.project,
+    env: { ...process.env, HOME: f.home, CODEX_HOME: join(f.root, "absent-codex-home"), OMG_TIME_LEFT_RUNTIME: "0" },
+    encoding: "utf8",
+  });
+}
 
 function ownedCommands(): readonly string[] {
   return parseManifest("EXPECTED_COMMANDS").map((name) => name === "omg" ? "omg.md" : `omg:${name}.md`);
@@ -187,7 +194,7 @@ describe("lazycodex-gjc skill and command contract", () => {
 });
 
 describe("lazycodex-gjc isolated native install", () => {
-  test.each(["user", "project"] as const)("installs exactly 7 skills and 10 commands in %s scope", (scope) => {
+  test.each(["user", "project"] as const)("installs exactly 8 skills and 11 commands in %s scope", (scope) => {
     const f = fixture(scope);
     writeSentinel(join(f.nativeRoot, "skills/sentinel/SKILL.md"), "keep skill");
     writeSentinel(join(f.nativeRoot, "commands/sentinel.md"), "keep command");
@@ -200,12 +207,14 @@ describe("lazycodex-gjc isolated native install", () => {
     expect(result.status, result.stderr).toBe(0);
     const expectedSkills = parseManifest("EXPECTED_SKILLS");
     const expectedCommands = ownedCommands();
-    expect(expectedSkills).toHaveLength(7);
-    expect(expectedCommands).toHaveLength(10);
+    expect(expectedSkills).toHaveLength(8);
+    expect(expectedCommands).toHaveLength(11);
     expect(expectedSkills).toContain("lazycodex-gjc");
     expect(expectedSkills).toContain("deep-onboarding");
+    expect(expectedSkills).toContain("session-observer");
     expect(expectedCommands).toContain("omg:lazycodex-gjc.md");
     expect(expectedCommands).toContain("omg:deep-onboarding.md");
+    expect(expectedCommands).toContain("omg:session-observer.md");
     expect(readdirSync(join(f.nativeRoot, "skills")).sort()).toEqual([...expectedSkills, "sentinel"].sort());
     expect(readdirSync(join(f.nativeRoot, "commands")).sort()).toEqual([...expectedCommands, "sentinel.md"].sort());
     expect(existsSync(join(f.nativeRoot, "skills/lazycodex"))).toBe(false);
@@ -224,6 +233,44 @@ describe("lazycodex-gjc isolated native install", () => {
       expect(existsSync(join(f.nativeRoot, "runtimes/lazycodex-gjc"))).toBe(false);
     }
   });
+  test.each(["user", "project"] as const)("installs only session-observer's native surfaces and suite binding in %s scope", (scope) => {
+    const f = fixture(scope);
+
+    const result = runTargetedInstaller(f);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(readdirSync(join(f.nativeRoot, "skills"))).toEqual(["session-observer"]);
+    expect(readdirSync(join(f.nativeRoot, "commands"))).toEqual(["omg:session-observer.md"]);
+    expect(read(join(f.nativeRoot, "skills/session-observer/SKILL.md"))).toBe(read(join(pluginRoot, "skills/session-observer/SKILL.md")));
+    expect(read(join(f.nativeRoot, "commands/omg:session-observer.md"))).toBe(read(join(pluginRoot, "templates/session-observer.md")));
+    expect(read(join(f.nativeRoot, "runtimes/oh-my-gjc/root"))).toBe(`${pluginRoot}\n`);
+  });
+
+  test.each(["user", "project"] as const)(
+    "rejects a %s targeted install when the session-observer runner is missing or symlinked before native mutation",
+    (scope) => {
+      for (const kind of ["missing", "symlink"] as const) {
+        const f = fixture(scope);
+        const candidate = join(f.root, `candidate-${kind}`);
+        const runner = join(candidate, "bin/session-observer.ts");
+        cpSync(pluginRoot, candidate, { recursive: true });
+        rmSync(runner);
+        if (kind === "symlink") {
+          const outsideRunner = join(f.root, "outside-runner");
+          writeFileSync(outsideRunner, "not a runner");
+          symlinkSync(outsideRunner, runner);
+        }
+
+        const result = runTargetedInstaller(f, join(candidate, "bin/install-skill.sh"));
+
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain("bin/session-observer.ts");
+        expect(existsSync(join(f.nativeRoot, "skills"))).toBe(false);
+        expect(existsSync(join(f.nativeRoot, "commands"))).toBe(false);
+        expect(existsSync(join(f.nativeRoot, "runtimes/oh-my-gjc/root"))).toBe(false);
+      }
+    },
+  );
 
   test("fails preflight before partial install when the runner is missing", () => {
     const f = fixture("project");
@@ -234,6 +281,27 @@ describe("lazycodex-gjc isolated native install", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("bin/lazycodex-gjc.mjs");
+    expect(existsSync(join(f.nativeRoot, "skills/adaptive-response/SKILL.md"))).toBe(false);
+    expect(existsSync(join(f.nativeRoot, "commands/omg.md"))).toBe(false);
+  });
+  test.each(["missing", "non-regular", "symlink"] as const)("fails preflight before partial install when the session-observer runner is %s", (kind) => {
+    const f = fixture("project");
+    const candidate = join(f.root, "candidate");
+    const runner = join(candidate, "bin/session-observer.ts");
+    cpSync(pluginRoot, candidate, { recursive: true });
+    rmSync(runner, { force: true });
+
+    if (kind === "non-regular") mkdirSync(runner);
+    if (kind === "symlink") {
+      const outsideRunner = join(f.root, "outside-runner");
+      writeFileSync(outsideRunner, "not a runner");
+      symlinkSync(outsideRunner, runner);
+    }
+
+    const result = runInstaller(f, "install", join(candidate, "bin/install-skill.sh"));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("bin/session-observer.ts");
     expect(existsSync(join(f.nativeRoot, "skills/adaptive-response/SKILL.md"))).toBe(false);
     expect(existsSync(join(f.nativeRoot, "commands/omg.md"))).toBe(false);
   });
