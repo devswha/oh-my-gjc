@@ -18,7 +18,8 @@ This capability activates **only** through `/omg:session-observer`. It never aut
 
 Before launching, resolve the user's requested settings into these safe Bash environment fields; do not interpolate request text into shell source:
 
-- Target only by exact `--tmux NAME` or exact `--session ID`: set `OBSERVER_TARGET_KIND` to `tmux` or `session` and `OBSERVER_TARGET_VALUE` to that exact value.
+- With no target argument, set `OBSERVER_TARGET_KIND` to `current` and leave `OBSERVER_TARGET_VALUE` empty; the runner resolves the invoking tmux session.
+- For an explicit target, use exact `--tmux NAME` or exact `--session ID`: set `OBSERVER_TARGET_KIND` to `tmux` or `session` and `OBSERVER_TARGET_VALUE` to that exact value.
 - `OBSERVER_MODE`: `conversation` (default) or `user-only`.
 - `OBSERVER_THINKING`: `0` (default) or `1`; thinking display is opt-in.
 - `OBSERVER_FOLLOW`: `1` (default) or `0`.
@@ -30,13 +31,17 @@ Use exactly one GJC Bash call with those fields in `env`. The Bash call must ret
 set -euo pipefail
 [ -n "${TMUX:-}" ] || { printf '%s\n' 'session-observer requires tmux' >&2; exit 1; }
 command -v bun >/dev/null 2>&1 || { printf '%s\n' 'session-observer requires Bun' >&2; exit 1; }
-: "${OBSERVER_TARGET_KIND:?session-observer target kind is required}"
-: "${OBSERVER_TARGET_VALUE:?session-observer target value is required}"
+: "${OBSERVER_TARGET_KIND:=current}"
+: "${OBSERVER_TARGET_VALUE:=}"
 : "${OBSERVER_MODE:=conversation}"
 : "${OBSERVER_THINKING:=0}"
 : "${OBSERVER_FOLLOW:=1}"
 : "${OBSERVER_HISTORY:=20}"
-case "$OBSERVER_TARGET_KIND" in tmux|session) ;; *) printf '%s\n' 'invalid session-observer target kind' >&2; exit 2 ;; esac
+case "$OBSERVER_TARGET_KIND" in current|tmux|session) ;; *) printf '%s\n' 'invalid session-observer target kind' >&2; exit 2 ;; esac
+case "$OBSERVER_TARGET_KIND" in
+  current) [ -z "$OBSERVER_TARGET_VALUE" ] || { printf '%s\n' 'current session target takes no value' >&2; exit 2; } ;;
+  tmux|session) [ -n "$OBSERVER_TARGET_VALUE" ] || { printf '%s\n' 'explicit session-observer target value is required' >&2; exit 2; } ;;
+esac
 case "$OBSERVER_MODE" in conversation|user-only) ;; *) printf '%s\n' 'invalid session-observer mode' >&2; exit 2 ;; esac
 case "$OBSERVER_THINKING" in 0|1) ;; *) printf '%s\n' 'invalid session-observer thinking setting' >&2; exit 2 ;; esac
 case "$OBSERVER_FOLLOW" in 0|1) ;; *) printf '%s\n' 'invalid session-observer follow setting' >&2; exit 2 ;; esac
@@ -64,6 +69,7 @@ argv=("$runner" --launch-window --mode "$OBSERVER_MODE" --history "$OBSERVER_HIS
 [ "$OBSERVER_THINKING" = 0 ] || argv+=(--thinking)
 [ "$OBSERVER_FOLLOW" = 0 ] || argv+=(--follow)
 case "$OBSERVER_TARGET_KIND" in
+  current) ;;
   tmux) argv+=(--tmux "$OBSERVER_TARGET_VALUE") ;;
   session) argv+=(--session "$OBSERVER_TARGET_VALUE") ;;
 esac
