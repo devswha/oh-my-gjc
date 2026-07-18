@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	arrived,
 	dailyDigestPrompt,
+	gateOpen,
 	injectTmux,
 	isHighTrigger,
 	liveTriagePrompt,
@@ -41,6 +42,29 @@ describe("shouldFire cooldown", () => {
 		expect(shouldFire("sig", 0, seen, 1000)).toBe(true);
 		expect(shouldFire("sig", 500, seen, 1000)).toBe(false);
 		expect(shouldFire("sig", 1500, seen, 1000)).toBe(true);
+	});
+});
+
+describe("gateOpen tower gate", () => {
+	it("passes without running tmux when no gate session is configured", () => {
+		const calls: string[][] = [];
+		const run = (cmd: string[]) => {
+			calls.push(cmd);
+			return { status: 0, stdout: "" };
+		};
+		expect(gateOpen("", run)).toBe(true);
+		expect(calls.length).toBe(0);
+	});
+
+	it("checks the exact-match tmux target and follows its verdict", () => {
+		const calls: string[][] = [];
+		const open = (cmd: string[]) => {
+			calls.push(cmd);
+			return { status: 0, stdout: "" };
+		};
+		expect(gateOpen("horcrux", open)).toBe(true);
+		expect(calls[0]).toEqual(["tmux", "has-session", "-t", "=horcrux"]);
+		expect(gateOpen("horcrux", () => ({ status: 1, stdout: "" }))).toBe(false);
 	});
 });
 

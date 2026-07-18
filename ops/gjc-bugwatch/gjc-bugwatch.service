@@ -17,6 +17,8 @@ Restart=on-failure
 RestartSec=5
 Environment=GJC_BUGWATCH_SESSION=gjc-pr
 Environment=GJC_BUGWATCH_MIN=medium
+# 관제탑 게이트: horcrux 세션이 열려 있을 때만 주입 (빈 값 = 게이트 없음)
+Environment=GJC_BUGWATCH_GATE_SESSION=horcrux
 
 [Install]
 WantedBy=default.target
