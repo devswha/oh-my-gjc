@@ -11,6 +11,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	buildLaunchPlan,
+	currentTmuxSession,
+	observerWindowName,
 	JsonlFollower,
 	launchCommand,
 	parseArgs,
@@ -87,6 +90,9 @@ describe("session observer capability surface", () => {
 		]) {
 			expect(command).toContain(field);
 		}
+		expect(command).toContain('OBSERVER_TARGET_KIND:=current');
+		expect(command).toContain("current) ;;");
+		expect(command).toContain("인자가 없으면 이 명령을 호출한 현재 tmux 세션");
 	});
 
 	it("keeps both documented launcher blocks valid Bash", () => {
@@ -211,11 +217,22 @@ describe("selection and command safety", () => {
 		);
 		expect(resolveSessionId(ID, root)).toBe(file);
 	});
-	it("validates target and bounded history", () => {
-		expect(() => parseArgs([])).toThrow("exactly one");
+	it("defaults a missing target while preserving mode, thinking, follow, and history defaults", () => {
+		expect(parseArgs([])).toMatchObject({
+			mode: "conversation",
+			thinking: false,
+			follow: false,
+			history: 20,
+			launchWindow: false,
+		});
 		expect(() => parseArgs(["--session", ID, "--tmux", "x"])).toThrow(
-			"exactly one",
+			"at most one",
 		);
+		expect(() => parseArgs(["--tmux", ""])).toThrow("non-empty");
+		expect(() => parseArgs(["--session", ""])).toThrow("non-empty");
+		expect(() =>
+			parseArgs(["--session", "", "--tmux", "work"]),
+		).toThrow("at most one");
 		expect(() => parseArgs(["--session", ID, "--history", "10001"])).toThrow(
 			"10000",
 		);
@@ -224,25 +241,83 @@ describe("selection and command safety", () => {
 			history: 0,
 		});
 	});
+	it("resolves the invoking tmux session without shell interpolation", () => {
+		const calls: string[][] = [];
+		expect(
+			currentTmuxSession(
+				(args) => {
+					calls.push(args);
+					return "omg\n";
+				},
+				"/tmp/tmux-1000/default,1,0",
+			),
+		).toBe("omg");
+		expect(calls).toEqual([["display-message", "-p", "#S"]]);
+		expect(() => currentTmuxSession(() => "omg", "")).toThrow(
+			"requires TMUX",
+		);
+	});
+	it("builds a no-target launch plan for the invoking session with a distinct window", () => {
+		const options = parseArgs(["--launch-window"]);
+		if (options === "help") throw new Error("unexpected help");
+		const plan = buildLaunchPlan(
+			["--launch-window", "--mode", "conversation"],
+			options,
+			() => "omg:dev",
+		);
+		expect(plan).toEqual({
+			argv: [
+				"--launch-window",
+				"--mode",
+				"conversation",
+				"--tmux",
+				"omg:dev",
+			],
+			target: "omg:dev",
+			windowName: "gjc-observer-omg_dev",
+		});
+		expect(observerWindowName("a/b c")).toBe("gjc-observer-a_b_c");
+	});
 	it("preserves launch arguments as argv values", () => {
 		expect(
 			launchCommand(
 				["--session", ID, "--launch-window", "--mode", "conversation;rm -rf /"],
 				"bun",
 				"/safe.ts",
+				"gjc-observer-session",
 			),
 		).toEqual([
 			"tmux",
 			"new-window",
 			"-d",
 			"-n",
-			"gjc-observer",
+			"gjc-observer-session",
 			"bun",
 			"/safe.ts",
 			"--session",
 			ID,
 			"--mode",
 			"conversation;rm -rf /",
+		]);
+	});
+	it("removes only the launcher flag and preserves an identical target value", () => {
+		expect(
+			launchCommand(
+				["--tmux", "--launch-window", "--launch-window"],
+				"bun",
+				"/safe.ts",
+				"gjc-observer-target",
+			),
+		).toEqual([
+			"tmux",
+			"new-window",
+			"-d",
+			"-n",
+			"gjc-observer-target",
+			"bun",
+			"/safe.ts",
+			"--tmux",
+			"--launch-window",
 		]);
 	});
 	it("selects the only active pane and prefers its main fd over a nested subagent fd", () => {

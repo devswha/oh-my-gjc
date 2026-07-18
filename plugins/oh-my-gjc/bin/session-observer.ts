@@ -72,14 +72,20 @@ export function parseArgs(argv: string[]): Options | "help" {
 			options.history = Number(value);
 		}
 	}
-	if (Boolean(options.session) === Boolean(options.tmux))
-		throw new Error("provide exactly one of --session <id> or --tmux <name>");
-	if (options.session && !SESSION_ID.test(options.session))
-		throw new Error("--session must be a UUID-like session id");
+	if (options.session !== undefined && options.tmux !== undefined)
+		throw new Error("provide at most one of --session <id> or --tmux <name>");
+	if (options.session !== undefined && !SESSION_ID.test(options.session))
+		throw new Error("--session must be a non-empty UUID-like session id");
+	if (
+		options.tmux !== undefined &&
+		(!options.tmux || /[\r\n]/.test(options.tmux))
+	)
+		throw new Error("--tmux must be a non-empty single-line session name");
 	return options;
 }
-export const HELP = `Usage: session-observer --session <uuid> | --tmux <name> [options]
+export const HELP = `Usage: session-observer [--session <uuid> | --tmux <name>] [options]
 
+With no target, use the invoking tmux session.
 Options:
   --mode conversation|user-only  Render both roles (default) or only user messages
   --thinking                     Include assistant thinking content
@@ -598,31 +604,89 @@ export class JsonlFollower {
 		this.rememberId(line);
 	}
 }
+export function currentTmuxSession(
+	runTmux: (args: string[]) => string = tmuxOutput,
+	tmuxEnvironment: string | undefined = process.env.TMUX,
+): string {
+	if (!tmuxEnvironment) throw new Error("no target requires TMUX");
+	const session = runTmux(["display-message", "-p", "#S"]).trim();
+	if (!session || /[\r\n]/.test(session))
+		throw new Error("could not resolve invoking tmux session");
+	return session;
+}
+
+export function observerWindowName(target: string): string {
+	const safe = target.replace(/[^A-Za-z0-9_.-]+/g, "_").slice(0, 48);
+	return `gjc-observer-${safe || "target"}`;
+}
+
+export interface LaunchPlan {
+	argv: string[];
+	target: string;
+	windowName: string;
+}
+
+export function buildLaunchPlan(
+	argv: string[],
+	options: Options,
+	invokingSession: () => string = () => currentTmuxSession(),
+): LaunchPlan {
+	const hasTmux = options.tmux !== undefined;
+	const hasSession = options.session !== undefined;
+	const target = hasTmux
+		? options.tmux!
+		: hasSession
+			? options.session!
+			: invokingSession();
+	return {
+		argv: hasTmux || hasSession ? argv : [...argv, "--tmux", target],
+		target,
+		windowName: observerWindowName(target),
+	};
+}
+
+function childArgv(argv: string[]): string[] {
+	const result: string[] = [];
+	for (let index = 0; index < argv.length; index += 1) {
+		const arg = argv[index]!;
+		if (["--session", "--tmux", "--mode", "--history"].includes(arg)) {
+			result.push(arg);
+			if (index + 1 < argv.length) result.push(argv[++index]!);
+		} else if (arg !== "--launch-window") result.push(arg);
+	}
+	return result;
+}
+
 export function launchCommand(
 	argv: string[],
 	executable: string = process.execPath,
 	script: string = import.meta.path,
+	windowName = "gjc-observer",
 ): string[] {
 	return [
 		"tmux",
 		"new-window",
 		"-d",
 		"-n",
-		"gjc-observer",
+		windowName,
 		executable,
 		script,
-		...argv.filter((arg) => arg !== "--launch-window"),
+		...childArgv(argv),
 	];
 }
-function launch(argv: string[]): void {
+function launch(argv: string[], options: Options): void {
 	if (!process.env.TMUX) throw new Error("--launch-window requires TMUX");
-	const child = Bun.spawnSync(launchCommand(argv), {
-		stdout: "pipe",
-		stderr: "pipe",
-	});
+	const plan = buildLaunchPlan(argv, options);
+	const child = Bun.spawnSync(
+		launchCommand(plan.argv, process.execPath, import.meta.path, plan.windowName),
+		{
+			stdout: "pipe",
+			stderr: "pipe",
+		},
+	);
 	if (child.exitCode !== 0)
 		throw new Error("could not launch tmux observer window");
-	process.stdout.write("launched tmux window gjc-observer\n");
+	process.stdout.write(`launched tmux window ${plan.windowName} for ${plan.target}\n`);
 }
 function run(): void {
 	let options: Options | "help";
@@ -639,12 +703,13 @@ function run(): void {
 	}
 	try {
 		if (options.launchWindow) {
-			launch(process.argv.slice(2));
+			launch(process.argv.slice(2), options);
 			return;
 		}
-		const path = options.session
-			? resolveSessionId(options.session)
-			: resolveTmuxSession(options.tmux!);
+		const path =
+			options.session !== undefined
+				? resolveSessionId(options.session)
+				: resolveTmuxSession(options.tmux ?? currentTmuxSession());
 		const follower = new JsonlFollower(path, (line) => {
 			const rendered = renderRecord(line, options);
 			if (rendered) process.stdout.write(`${rendered}\n\n`);

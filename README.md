@@ -148,9 +148,12 @@ steering은 활성 turn을 중단하므로 정말 긴급할 때만 쓴다. `/btw
 - transcript나 다른 세션을 읽지 않고 실행 기록을 사용자 속도 프로필로 저장하지 않는다.
 - 전제: Linux, Bun 1.3.14+, GJC SDK hosting이 켜진 현재 top-level 세션.
 - 원문: [`plugins/oh-my-gjc/skills/time-left/SKILL.md`](./plugins/oh-my-gjc/skills/time-left/SKILL.md)
-### `session-observer` — 다른 세션 대화 읽기 전용 관찰
+### `session-observer` — GJC 세션 대화 읽기 전용 관찰
 
-`/omg:session-observer --tmux omg` 또는 `/omg:session-observer --session <id>`로 연다. 기본은 conversation 보기와 follow이며, `--mode user-only`는 사용자 발화만, `--thinking`은 선택한 thinking도 보인다. `--no-follow`는 detached viewer를 snapshot으로 끝낸다.
+`/omg:session-observer`를 인자 없이 실행하면 호출한 현재 tmux 세션을 관찰하며, 다른 대상은
+`--tmux omg` 또는 `--session <id>`로 고른다. 기본은 conversation 보기와 follow이며,
+`--mode user-only`는 사용자 발화만, `--thinking`은 선택한 thinking도 보인다. `--no-follow`는
+detached viewer를 snapshot으로 끝낸다.
 
 runner는 `$HOME/.gjc/agent/sessions/...jsonl`을 tail해 user/assistant 텍스트와 선택한 thinking만 출력하고 tool-call noise는 출력하지 않는다. JSONL이 안전한 기본 경로이며 SDK 의존성이 없다. slash launcher에는 Linux, Bun, tmux가 필요하다.
 
