@@ -1,7 +1,7 @@
 # oh-my-gajaecode (plugin)
 
-**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치로 스킬 8개 + 커맨드 11개
-(`/omg` + `/omg:*` 10개)가 전부 들어온다. `/omg:time-left`는 Linux+Bun 1.3.14+와
+**Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치로 스킬 9개 + 커맨드 12개
+(`/omg` + `/omg:*` 11개)가 전부 들어온다. `/omg:time-left`는 Linux+Bun 1.3.14+와
 현재 top-level GJC SDK endpoint, `insane-review`는 ChatGPT+크로미움,
 `lazycodex-gjc`는 이미 설치·로그인된 Codex CLI+LazyCodex/OMO, `session-observer` slash launcher는 Linux+Bun+tmux가 필요하다.
 

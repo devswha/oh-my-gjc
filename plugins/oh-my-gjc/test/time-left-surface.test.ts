@@ -63,7 +63,7 @@ describe("time-left public skill", () => {
     expect(skillContent).toContain("다른 입력에서는 자동 활성화하지 않는다");
     expect(commandContent).toContain("# /omg:time-left");
     expect(commandContent).toContain("이 명령이 명시적으로 호출된 경우에만");
-    expect(read(installer)).toContain("EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc deep-onboarding session-observer)");
+    expect(read(installer)).toContain("EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc deep-onboarding session-observer orchestrator)");
     const description = skillContent.split("---", 3)[1];
     expect(description).not.toContain("언제 끝나?");
     expect(description).not.toContain("얼마나 남았어?");
@@ -75,7 +75,7 @@ describe("time-left public skill", () => {
     const packageJson = JSON.parse(read(join(sdkRoot, "package.json"))) as { dependencies: Record<string, string> };
     const installScript = read(installer);
     expect(packageJson.dependencies["@gajae-code/bridge-client"]).toBe("0.11.0");
-    expect(installScript).toContain("EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer)");
+    expect(installScript).toContain("EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer orchestrator)");
     expect(installScript).toContain("REMOVED_SKILLS=(gate-briefing ");
     expect(installScript).toContain("bun install --frozen-lockfile --production --ignore-scripts");
     expect(installScript).toContain("OMG_TIME_LEFT_RUNTIME");
