@@ -135,7 +135,7 @@ Content is discovered by **convention directories** above; explicit paths in
 
 ### `release-gate` (REMOVED after v0.17.1)
 - 하코 direct order (2026-07-15): 공개 플러그인 기능이 아니라 이 저장소의 릴리스 운영 규칙에 가깝고, 검증은 일반 테스트 절차·외부 리뷰는 `extragoal`과 중복되어 제거했다.
-- 스킬과 `/omg:release`는 제거하지만 아래 **Release governance**는 이 저장소의 강제 규칙으로 유지한다. 업그레이드는 네이티브 잔존물만 청소한다.
+- 스킬과 `/omg:release`는 제거하지만 아래 **Release rules**는 이 저장소의 강제 규칙으로 유지한다(2026-07-19 자율화 개편 반영). 업그레이드는 네이티브 잔존물만 청소한다.
 
 ### Public capability prune (REMOVED after v0.17.1)
 - `easy-answer`, `plain-layer`, and `branch-flow` were removed as redundant UX/policy layers; use concise direct answers and GJC native deep-interview/ralplan/team plus each repository's own `AGENTS.md`.
@@ -162,7 +162,7 @@ Content is discovered by **convention directories** above; explicit paths in
 
 ### `gjc-bugwatch` public surface (REMOVED after v0.17.1)
 - The trigger skill and `/omg:bugwatch-scan` command are retired. `bin/collect.ts`, `bin/follow.ts`, their tests, and `ops/gjc-bugwatch/` remain repository-owned operations tooling, not installed public capability.
-- Internal automation remains drafts-only/read-only with redaction and no automatic issue/PR creation. Human-directed upstream PRs target `Yeachan-Heo/gajae-code` base `dev`.
+- Internal automation remains drafts-only/read-only with redaction and no automatic issue/PR creation. Human-directed upstream PRs target `Yeachan-Heo/gajae-code` base `dev`. **의도적 유지(2026-07-19):** 상류 PR의 human 승인 게이트는 제3자 저장소에 하코 명의로 기여하는 외부 신원 경계라, 본 저장소 릴리스 자율화(승인 게이트 폐지)와 별개로 유지한다.
 
 
 ### `gajae-app` (REMOVED in 0.14.0)
