@@ -28,7 +28,7 @@ git clone --depth 1 https://github.com/devswha/oh-my-gjc.git
 bash oh-my-gjc/install.sh
 ```
 
-한 번 설치로 스킬 9개 + 커맨드 12개(`/omg` + `/omg:*` 11개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+한 번 설치로 스킬 8개 + 커맨드 11개(`/omg` + `/omg:*` 10개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -43,10 +43,9 @@ bash oh-my-gjc/install.sh
 - `insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰 · **ChatGPT 구독 + 크로미움 로그인 필요**
 - `lazycodex-gjc` — 설치된 Codex+LazyCodex/OMO를 격리 읽기 전용 외부 작업자로 실행(`/omg:lazycodex-gjc`)
 - `deep-onboarding` — 문서가 부족한 저장소를 읽기 전용 분석하고 인터뷰한 뒤, 확인된 경로에 프로젝트 맵·ADR 제안·인수인계를 생성(`/omg:deep-onboarding`)
-- `session-observer` — 다른 GJC 세션의 JSONL 대화를 읽기 전용으로 실시간 관찰(`/omg:session-observer`)
 - `preset-pack` — 검증된 최종 좌석표 프리셋(daily/deep/sec)을 백업 후 `models.yml`에 명시 병합(`/omg:preset-pack`) · **anthropic+openai-codex+kimi-code 로그인 필요, 명시 호출 시에만 수정**
 
-커맨드 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:time-left`, `/omg:fable`, `/omg:insane-review`, `/omg:lazycodex-gjc`, `/omg:deep-onboarding`, `/omg:session-observer`, `/omg:preset-pack`.
+커맨드 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:time-left`, `/omg:fable`, `/omg:insane-review`, `/omg:lazycodex-gjc`, `/omg:deep-onboarding`, `/omg:preset-pack`.
 
 모델 구성은 기본적으로 GJC 내장 프리셋을 쓴다. 설치 스크립트는 `models.yml`을 절대 수정하지 않으며, 커스텀 좌석표(daily/deep/sec)는 사용자가 `/omg:preset-pack`을 명시 호출했을 때만 백업 후 이름 단위로 병합된다.
 
@@ -149,23 +148,6 @@ steering은 활성 turn을 중단하므로 정말 긴급할 때만 쓴다. `/btw
 - transcript나 다른 세션을 읽지 않고 실행 기록을 사용자 속도 프로필로 저장하지 않는다.
 - 전제: Linux, Bun 1.3.14+, GJC SDK hosting이 켜진 현재 top-level 세션.
 - 원문: [`plugins/oh-my-gjc/skills/time-left/SKILL.md`](./plugins/oh-my-gjc/skills/time-left/SKILL.md)
-### `session-observer` — GJC 세션 대화 읽기 전용 관찰
-
-`/omg:session-observer`를 인자 없이 실행하면 호출한 현재 tmux 세션을 관찰하며, 다른 대상은
-`--tmux omg` 또는 `--session <id>`로 고른다. 기본은 conversation 보기와 follow이며,
-`--mode user-only`는 사용자 발화만, `--thinking`은 선택한 thinking도 보인다. `--no-follow`는
-detached viewer를 snapshot으로 끝낸다.
-
-runner는 `$HOME/.gjc/agent/sessions/...jsonl`을 tail해 user/assistant 텍스트와 선택한 thinking만 출력하고 tool-call noise는 출력하지 않는다. JSONL이 안전한 기본 경로이며 SDK 의존성이 없다. slash launcher에는 Linux, Bun, tmux가 필요하다.
-
-관찰자는 읽기 전용이다. 세션에 주입·제어·쓰기하지 않고, 네트워크·upstream 활동도 하지 않으며, 관찰한 텍스트를 GJC tool result로 되돌려 보내지 않는다. 터미널에서 runner를 직접 실행하면 완전히 token-free다. slash command의 `--no-follow`와 터미널 runner의 `--follow` 생략은 snapshot으로 끝난다. slash command는 viewer를 detached tmux window에 넣는 한 번의 launch turn만 쓰며, 그 뒤의 관찰은 token-free이고 관찰 텍스트가 GJC로 돌아오지 않는다.
-
-저장소 checkout에서 완전히 token-free로 직접 실행할 때는 다음처럼 쓴다.
-
-```sh
-bun plugins/oh-my-gjc/bin/session-observer.ts --tmux omg --follow
-```
-
 ### GJC 0.11 SDK lab
 
 `time-left`의 공식 `@gajae-code/bridge-client` 기반 읽기 전용 런타임이자 개발자용 검사 도구다.

@@ -19,16 +19,16 @@ oh-my-gajaecode를 이 머신에 셋업한다. **모든 단계는 멱등** — �
 
 ```bash
 root="$HOME/.gjc/agent"
-for skill in adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer preset-pack; do
+for skill in adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding preset-pack; do
   test -f "$root/skills/$skill/SKILL.md" || exit 1
 done
-for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:time-left.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md omg:deep-onboarding.md omg:session-observer.md omg:preset-pack.md; do
+for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:time-left.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md omg:deep-onboarding.md omg:preset-pack.md; do
   test -f "$root/commands/$command" || exit 1
 done
-for skill in gate-briefing korean-first workflow-eta codex-deepwork codex-app-launch codex-app-cdp codex-cli-ask lazycodex tower worktree gajae-app multivendor-presets release-gate easy-answer plain-layer branch-flow gjc-bugwatch; do
+for skill in gate-briefing korean-first workflow-eta codex-deepwork codex-app-launch codex-app-cdp codex-cli-ask lazycodex tower worktree gajae-app multivendor-presets release-gate easy-answer plain-layer branch-flow gjc-bugwatch session-observer; do
   test ! -e "$root/skills/$skill" && test ! -L "$root/skills/$skill" || exit 1
 done
-for command in codex-run codex-app-launch codex-app-ask codex-ask lazycodex-setup lazycodex-work tower-setup gajae-app presets release easy easy-always plain branchflow-always worktree bugwatch-scan; do
+for command in codex-run codex-app-launch codex-app-ask codex-ask lazycodex-setup lazycodex-work tower-setup gajae-app presets release easy easy-always plain branchflow-always worktree bugwatch-scan session-observer; do
   test ! -e "$root/commands/omg:$command.md" && test ! -L "$root/commands/omg:$command.md" || exit 1
   test ! -e "$root/commands/oh-my-gjc:$command.md" && test ! -L "$root/commands/oh-my-gjc:$command.md" || exit 1
 done
