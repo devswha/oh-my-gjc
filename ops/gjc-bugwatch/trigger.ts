@@ -24,6 +24,9 @@ import { createInterface } from "node:readline";
 export const SESSION = process.env.GJC_BUGWATCH_SESSION || "gjc-pr";
 const COOLDOWN_MS = Number(process.env.GJC_BUGWATCH_COOLDOWN_MS || 30 * 60_000);
 const DRYRUN = !!process.env.GJC_BUGWATCH_DRYRUN;
+// 관제탑 게이트(2026-07-18 하코 "관제탑 열때만 진행"): 이 tmux 세션이 열려 있을 때만 주입.
+// 빈 값이면 게이트 없음. '=' 접두 = tmux exact match(horcrux-dev 접두 오매치 방지).
+export const GATE_SESSION = process.env.GJC_BUGWATCH_GATE_SESSION || "";
 
 /** follow.ts emits `🔴 [gjc-internal] ...` for high severity. HIGH trigger = 🔴 or gjc-internal. */
 export function isHighTrigger(line: string): boolean {
@@ -227,6 +230,15 @@ function commandOk(run: Runner, cmd: string[]): boolean {
 	return run(cmd).status === 0;
 }
 
+/** 관제탑 게이트 판정 — gate 세션 미설정이면 항상 통과. */
+export function gateOpen(
+	session = GATE_SESSION,
+	run: Runner = defaultRunner,
+): boolean {
+	if (!session) return true;
+	return commandOk(run, ["tmux", "has-session", "-t", `=${session}`]);
+}
+
 function captureInput(session: string, run: Runner): string | undefined {
 	const result = run(["tmux", "capture-pane", "-p", "-t", session]);
 	return result.status === 0 ? inputArea(result.stdout) : undefined;
@@ -325,6 +337,12 @@ async function main(): Promise<void> {
 		}
 		const prompt = dailyDigestPrompt(Array.isArray(arr) ? (arr as Array<Record<string, unknown>>) : []);
 		if (prompt) {
+			if (!gateOpen()) {
+				process.stdout.write(
+					`[daily] gated — tower session '${GATE_SESSION}' closed, no injection\n`,
+				);
+				return;
+			}
 			const injected = attemptInjection(prompt);
 			if (DRYRUN)
 				process.stdout.write(
@@ -348,6 +366,12 @@ async function main(): Promise<void> {
 	const rl = createInterface({ input: process.stdin });
 	rl.on("line", line => {
 		if (!isHighTrigger(line)) return;
+		if (!gateOpen()) {
+			process.stdout.write(
+				`[live] gated — tower session '${GATE_SESSION}' closed: skipped\n`,
+			);
+			return;
+		}
 		const sig = triggerSignature(line);
 		if (!shouldFire(sig, Date.now(), seen)) return;
 		const injected = attemptInjection(liveTriagePrompt(line));
