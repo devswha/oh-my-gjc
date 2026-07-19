@@ -32,3 +32,9 @@ Fresh-context `openai-codex/gpt-5.5:xhigh`, tools read/search/find only, `GJC_NO
 ## Publication contract
 
 - Merge `dev` to `main`; tag `v0.23.0`; publish the GitHub Release (v0.22.0 release body에 "session-observer removed in v0.23.0" 주석 추가); post-publication control-tower report.
+
+## Published (사후 기록)
+
+- 실제 출하 dev tip: `19fc093` (066cc58 + 본 증거 문서 docs-only 갱신 1커밋) → main 병합 `0d93f12`, annotated tag `v0.23.0`(객체 `184641f`) peel == origin/main == `0d93f12` 확인.
+- GitHub Release: https://github.com/devswha/oh-my-gjc/releases/tag/v0.23.0 — draft=false, prerelease=false, target=main. v0.22.0 본문에 removal 주석 부착 확인.
+- 발행 후 검증: architect 발행 정합 감사(잔여 3건 리더 종결로 CLEAR 충족) + 공개 마켓플레이스 e2e(격리 HOME 신규 설치 0.23.0·8/11·observer 부재, red-team 잔존물 심기→업그레이드 sweep `cleaned 2` + 정상 파일 SHA-256 20개 불변). 관제탑 report id=334. 로컬 실머신 캐시 0.23.0 재바인딩 완료.
