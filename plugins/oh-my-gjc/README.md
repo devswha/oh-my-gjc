@@ -86,7 +86,7 @@ bun plugins/oh-my-gjc/bin/session-observer.ts --tmux omg --follow
 
 ### 모델 프리셋
 
-omj는 커스텀 모델 프리셋을 설치하지 않고 `models.yml`도 수정하지 않는다. GJC의 기본 모델 구성과 내장 프리셋을 그대로 사용한다.
+설치 스크립트는 커스텀 모델 프리셋을 자동 병합하지 않고 `models.yml`도 수정하지 않는다 — 기본은 GJC 내장 프리셋 그대로다. 검증된 좌석표 프리셋(daily/deep/sec)이 필요하면 사용자가 `/omg:preset-pack install`을 명시 호출했을 때만 백업 후 이름 단위로 `~/.gjc/agent/models.yml`에 병합된다(다른 프로파일·최상위 키 무접촉, `remove`로 되돌림).
 
 ## 세마포어 구조
 

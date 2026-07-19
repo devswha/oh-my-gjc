@@ -6,7 +6,7 @@
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gajaecode — focused Gajae Code suite: 10 skills + 13 commands. Explicit presentation and ETA controls, external review, read-only Codex delegation, confirmation-gated deep onboarding, repomix-measured preset fitting, and an explicit-install curated preset pack.",
+    "description": "oh-my-gajaecode — focused Gajae Code suite: 9 skills + 12 commands. Explicit presentation and ETA controls, external review, read-only Codex delegation, confirmation-gated deep onboarding, and an explicit-install curated preset pack.",
     "version": "0.22.0"
   },
   "plugins": [

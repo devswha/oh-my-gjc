@@ -15,7 +15,7 @@ Do exactly the following in a terminal. Do not improvise other steps.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
-One install brings the whole suite (10 skills + 13 commands: `/omg` + 12 `/omg:*`). There are no separate/optional plugins to add.
+One install brings the whole suite (9 skills + 12 commands: `/omg` + 11 `/omg:*`). There are no separate/optional plugins to add.
 
 ## Manual path (equivalent, if curl|bash is disallowed)
 ```sh
@@ -33,10 +33,10 @@ The self-hosted web UI now lives in [`devswha/claudecodeui`'s canonical SELF-HOS
 ```sh
 gjc plugin list  # must list oh-my-gjc@oh-my-gjc
 root="$HOME/.gjc/agent"
-for skill in adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer; do
+for skill in adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer preset-pack; do
   test -f "$root/skills/$skill/SKILL.md" || exit 1
 done
-for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:time-left.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md omg:deep-onboarding.md omg:session-observer.md; do
+for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:time-left.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md omg:deep-onboarding.md omg:session-observer.md omg:preset-pack.md; do
   test -f "$root/commands/$command" || exit 1
 done
 for skill in workflow-eta easy-answer plain-layer branch-flow worktree gjc-bugwatch multivendor-presets release-gate; do
