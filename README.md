@@ -28,7 +28,7 @@ git clone --depth 1 https://github.com/devswha/oh-my-gjc.git
 bash oh-my-gjc/install.sh
 ```
 
-한 번 설치로 스킬 8개 + 커맨드 11개(`/omg` + `/omg:*` 10개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+한 번 설치로 스킬 9개 + 커맨드 12개(`/omg` + `/omg:*` 11개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -44,8 +44,9 @@ bash oh-my-gjc/install.sh
 - `lazycodex-gjc` — 설치된 Codex+LazyCodex/OMO를 격리 읽기 전용 외부 작업자로 실행(`/omg:lazycodex-gjc`)
 - `deep-onboarding` — 문서가 부족한 저장소를 읽기 전용 분석하고 인터뷰한 뒤, 확인된 경로에 프로젝트 맵·ADR 제안·인수인계를 생성(`/omg:deep-onboarding`)
 - `session-observer` — 다른 GJC 세션의 JSONL 대화를 읽기 전용으로 실시간 관찰(`/omg:session-observer`)
+- `preset-fit` — 작업의 관련 파일 집합을 repomix로 토큰 실측해 GJC 빌트인 모델 프리셋을 추천(`/omg:preset-fit`) · **Node+`npx` 필요, 설정 무수정**
 
-커맨드 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:time-left`, `/omg:fable`, `/omg:insane-review`, `/omg:lazycodex-gjc`, `/omg:deep-onboarding`, `/omg:session-observer`.
+커맨드 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:time-left`, `/omg:fable`, `/omg:insane-review`, `/omg:lazycodex-gjc`, `/omg:deep-onboarding`, `/omg:session-observer`, `/omg:preset-fit`.
 
 모델 구성은 GJC 기본값과 내장 프리셋을 그대로 쓴다. omj는 커스텀 모델 프리셋을 설치하거나 `models.yml`을 수정하지 않는다.
 

@@ -42,8 +42,8 @@ done
 PLUGIN_ROOT="$(cd -P "$(dirname "$0")/.." && pwd -P)"
 
 # ── EXPECTED manifest (the single source of truth for a complete install) ────────────
-EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer)
-EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc deep-onboarding session-observer)
+EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer preset-fit)
+EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc deep-onboarding session-observer preset-fit)
 EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs bin/session-observer.ts tools/sdk-lab/package.json tools/sdk-lab/bun.lock tools/sdk-lab/src/inspect.ts tools/sdk-lab/src/eta.ts)
 # Capabilities REMOVED (관제탑 발주, 하코 승인). 0.11.0: codex-deepwork(실사용 0회, lazycodex와 중복) +
 # codex-app 짝(대상 앱 빌드 트랙 07-03 아카이브; Pro 리뷰는 insane-review 전담). 0.12.0: codex-cli-ask·
