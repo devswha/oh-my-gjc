@@ -44,10 +44,9 @@ bash oh-my-gjc/install.sh
 - `lazycodex-gjc` — 설치된 Codex+LazyCodex/OMO를 격리 읽기 전용 외부 작업자로 실행(`/omg:lazycodex-gjc`)
 - `deep-onboarding` — 문서가 부족한 저장소를 읽기 전용 분석하고 인터뷰한 뒤, 확인된 경로에 프로젝트 맵·ADR 제안·인수인계를 생성(`/omg:deep-onboarding`)
 - `session-observer` — 다른 GJC 세션의 JSONL 대화를 읽기 전용으로 실시간 관찰(`/omg:session-observer`)
-- `preset-fit` — 작업의 관련 파일 집합을 repomix로 토큰 실측해 GJC 빌트인 모델 프리셋을 추천(`/omg:preset-fit`) · **Node+`npx` 필요, 설정 무수정**
 - `preset-pack` — 검증된 최종 좌석표 프리셋(daily/deep/sec)을 백업 후 `models.yml`에 명시 병합(`/omg:preset-pack`) · **anthropic+openai-codex+kimi-code 로그인 필요, 명시 호출 시에만 수정**
 
-커맨드 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:time-left`, `/omg:fable`, `/omg:insane-review`, `/omg:lazycodex-gjc`, `/omg:deep-onboarding`, `/omg:session-observer`, `/omg:preset-fit`, `/omg:preset-pack`.
+커맨드 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:time-left`, `/omg:fable`, `/omg:insane-review`, `/omg:lazycodex-gjc`, `/omg:deep-onboarding`, `/omg:session-observer`, `/omg:preset-pack`.
 
 모델 구성은 기본적으로 GJC 내장 프리셋을 쓴다. 설치 스크립트는 `models.yml`을 절대 수정하지 않으며, 커스텀 좌석표(daily/deep/sec)는 사용자가 `/omg:preset-pack`을 명시 호출했을 때만 백업 후 이름 단위로 병합된다.
 

@@ -1,7 +1,7 @@
 {
   "name": "oh-my-gjc",
   "version": "0.22.0",
-  "description": "oh-my-gajaecode — focused Gajae Code suite with 10 skills and 13 commands. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc, deep-onboarding, session-observer, preset-fit, preset-pack. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:time-left, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc, /omg:deep-onboarding, /omg:session-observer, /omg:preset-fit, /omg:preset-pack. Preset-fit measures the task's relevant file set with pinned repomix in a temp dir and recommends a builtin model preset. Preset-pack merges the curated daily/deep/sec seat-map profiles into the user's models.yml only on explicit /omg:preset-pack invocation, after backup, name-scoped, leaving all other profiles and top-level keys untouched. The installer itself never modifies models.yml.",
+  "description": "oh-my-gajaecode — focused Gajae Code suite with 9 skills and 12 commands. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc, deep-onboarding, session-observer, preset-pack. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:time-left, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc, /omg:deep-onboarding, /omg:session-observer, /omg:preset-pack. Preset-pack merges the curated daily/deep/sec seat-map profiles into the user's models.yml only on explicit /omg:preset-pack invocation, after backup, name-scoped, leaving all other profiles and top-level keys untouched. The installer itself never modifies models.yml.",
   "author": {
     "name": "devswha",
     "email": "devswha@gmail.com",

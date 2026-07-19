@@ -135,7 +135,7 @@ describe("adaptive response contract", () => {
       .map((name) => name.slice(0, -3))
       .sort();
 
-    expect(skillNames).toEqual(["adaptive-response", "deep-onboarding", "extragoal", "insane-review", "lazycodex-gjc", "no-english", "preset-fit", "preset-pack", "session-observer", "time-left"]);
+    expect(skillNames).toEqual(["adaptive-response", "deep-onboarding", "extragoal", "insane-review", "lazycodex-gjc", "no-english", "preset-pack", "session-observer", "time-left"]);
     expect(commandNames).toEqual([
       "deep-onboarding",
       "fable",
@@ -145,7 +145,6 @@ describe("adaptive response contract", () => {
       "lazycodex-gjc",
       "no-english",
       "omg",
-      "preset-fit",
       "preset-pack",
       "session-observer",
       "setup",

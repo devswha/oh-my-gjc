@@ -13,7 +13,7 @@
     {
       "name": "oh-my-gjc",
       "source": "./plugins/oh-my-gjc",
-      "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc, deep-onboarding, session-observer, preset-fit, preset-pack. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:time-left, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc, /omg:deep-onboarding, /omg:session-observer, /omg:preset-fit, /omg:preset-pack. Preset-fit measures the task's working set with repomix and recommends a builtin preset. Preset-pack merges the curated daily/deep/sec profiles into the user's models.yml only on explicit command, after backup, name-scoped. The installer itself never modifies models.yml.",
+      "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc, deep-onboarding, session-observer, preset-pack. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:time-left, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc, /omg:deep-onboarding, /omg:session-observer, /omg:preset-pack. Preset-pack merges the curated daily/deep/sec profiles into the user's models.yml only on explicit command, after backup, name-scoped. The installer itself never modifies models.yml.",
       "version": "0.22.0",
       "category": "core"
     }
