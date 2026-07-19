@@ -27,7 +27,7 @@ Fresh-context `openai-codex/gpt-5.5:xhigh`, tools read/search/find only, `GJC_NO
 
 ## Gate 3 — human approval
 
-- PENDING — 관제탑 큐(`POST /queue/add`)로 하코 승인 요청 적재. 자기승인 없음.
+- **APPROVED** — 관제탑 큐 id=331 적재 후, 하코가 세션 내 직접 승인("ㄱㄱ", 2026-07-19). Gates 1–2 통과 증거 위 참조. 자기승인 아님.
 
 ## Publication contract
 
