@@ -21,11 +21,13 @@
 
 Fresh-context `openai-codex/gpt-5.5:xhigh`, tools read/search/find only, `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`, reviewing `/tmp/omg-v0.22.0-release.diff` (v0.20.0..dev) against the live repo.
 
-- Verdict: PENDING — 실행 중, 완료 시 본 절 갱신.
+- **Round 1 (`5ab2411`): REQUEST_CHANGES** — 4건: ① marketplace `metadata.description` 잔존 "10 skills + 13 commands"+preset-fit 문구 ② README.md:31·INSTALLATION.md:18 10/13 카운트 잔존 ③ INSTALLATION·templates/setup.md 설치 검증 목록에 preset-pack 누락 ④ plugin README "프리셋 미설치·models.yml 무수정" 단정이 `/omg:preset-pack`과 모순. 안전계약(preset-pack 명시 게이트, observer/lazycodex read-only)·시크릿은 클린 판정.
+- Fix-forward: `cd49158` — 4건 전부 수정(카운트 9/12 동기화, 검증 목록에 preset-pack 추가, README 문구를 "설치 스크립트 한정 무수정 + 명시 install 경로"로 정정). bun test 226/226 재확인.
+- **Round 2 (`cd49158`): VERDICT: APPROVE** — 라운드1 4건 전부 해결 확인(file:line 대조), 재스캔에서 신규 블로커 없음: 매니페스트·installer·템플릿 9/12 정합, preset-fit은 허용 위치(AGENTS 묘비·본 증거)만, preset-pack/session-observer/lazycodex-gjc 안전계약 확인, 시크릿은 합성 픽스처(allowlist)뿐. 비차단 1건(adaptive-response.test.ts:127 테스트 타이틀 "ten skills and thirteen commands" 잔존)은 판정 후 즉시 수정.
 
 ## Gate 3 — human approval
 
-- PENDING — Gate 2 통과 후 관제탑 큐로 하코 승인 요청. 자기승인 없음.
+- PENDING — 관제탑 큐(`POST /queue/add`)로 하코 승인 요청 적재. 자기승인 없음.
 
 ## Publication contract
 

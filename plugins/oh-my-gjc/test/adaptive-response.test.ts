@@ -124,7 +124,7 @@ describe("adaptive response contract", () => {
     expect(fable).not.toContain("사용자가 도메인을 모른다고 가정");
   });
 
-  test("keeps the exact public surface at ten skills and thirteen commands", () => {
+  test("keeps the exact public surface at nine skills and twelve commands", () => {
     const skillRoot = join(pluginRoot, "skills");
     const skillNames = readdirSync(skillRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(join(skillRoot, entry.name, "SKILL.md")))
