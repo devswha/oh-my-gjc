@@ -175,33 +175,28 @@ Content is discovered by **convention directories** above; explicit paths in
 ### `example-plugin`
 - Reference template: one command + one skill. Copy to bootstrap a new plugin.
 
-## Git autonomy (effective 2026-07-15, 하코 mandate)
+## Git autonomy (effective 2026-07-15, 하코 mandate; 확장 2026-07-19)
 
 - After completion criteria, focused verification, and any required independent review pass, the agent **MUST commit its own completed work to the current work branch and push it to that branch's remote without waiting for per-change approval**.
 - Stage only the intended task diff. Never absorb, revert, stash, or rewrite unrelated user work. Never force-push.
-- A successful branch push is not release approval. Merging to `main`, creating or moving tags, and publishing GitHub/npm releases remain separate approval boundaries governed below.
-- Report the pushed commit and verification evidence to the control tower as `kind=report`.
+- **2026-07-19 하코 direct order ("승인해야 하는 것들 전부 제거"): 발행도 자율이다.** Merging to `main`, tagging, and publishing GitHub Releases require no human approval — only the release verification below.
+- Report the pushed commit and verification evidence to the control tower as `kind=report` (통보 목적, 승인 요청 아님).
 
-## Release governance (effective 2026-07-08, 하코 mandate — survives session restart)
+## Release rules (자율 릴리스 — 2026-07-19 하코 지시로 승인 게이트 전면 폐지)
 
-Corrects the 2026-07-08 incident where 4 releases self-merged to `main` + tagged without review. **Every release to `main` (dev→main + tag + GitHub Release) MUST pass all 3 gates before publish. No self-merge releases.**
+> 2026-07-19 하코 direct order: "쓸데없는 규칙이랑 내가 승인해야 하는 것들 전부 제거."
+> 구 3-게이트 체제(하코 승인 게이트·관제탑 승인 큐·1일 1릴리스 빈도 캡·재서명 규정)는 폐지됐다.
+> 남는 것은 증거 기반 검증뿐이다. 과거 체제의 전문은 git 히스토리(≤v0.23.0 시점 AGENTS.md) 참조.
 
-1. **Verification gate.** Verification checklist done: JSON parse, `bash -n`/`py_compile` where relevant, **new-install reproduction with rc evidence** (isolated HOME, `gjc plugin marketplace add`→`install`→native), plus any relevant unit tests. Record the evidence.
-2. **External cross-review gate (dogfood `extragoal`).** Run the bundled `extragoal` external review on the **release diff** (`git diff <last-tag>..HEAD`): a fresh-context, **cross-family** reviewer (default lane `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1 gjc -p --no-session --model openai-codex/gpt-5.5:xhigh --tools read,search,find …`) issues `VERDICT: APPROVE|REQUEST_CHANGES`. Fail-closed: no verdict / REQUEST_CHANGES ⇒ fix-forward, do not publish. We dogfood our own gate on our own releases.
-3. **Approval gate (control tower → 하코).** After gates 1–2 pass, **request release approval** by enqueuing to the control tower (`horcrux queue add omj "release approval: …"`) with the verdict + evidence. The control tower queues it for 하코; **publish only after 하코 approves.** The agent never self-approves a release.
-4. **Escalation, never a dead end (2026-07-15 amendment, 하코 direct order — "릴리즈를 막지 마라").** Review findings always fix-forward on `dev` and the corrected HEAD is re-verified and re-signed; **release re-sign attempts have no numeric cap and may never block publication merely because a counter was exhausted.** Missing/malformed verdicts and real blockers remain fail-closed until corrected. Frequency-cap overflow may be overridden by 하코's explicit direction and recorded in evidence. When 하코 has explicitly ordered the release in-session, gates 1–2 still run in full and a clean candidate may publish while reporting; after publication the agent MUST enqueue a one-line control-tower `report` containing the released version, final candidate hash, and evidence path. The invariants that never bend are gates 1–2, no self-approval, evidence-backed publication, and the post-publication report receipt.
+A release to `main` (dev→main merge + tag + GitHub Release) requires only:
 
-**Frequency:** docs/patch-level changes are **bundled** — **max 1 release/day**. Exempt: urgent **security** or **install-breakage** fixes, or 하코's explicit direction (recorded in the evidence doc; gates 1–2 still run either way). Between releases, keep merging to `dev`; `main` advances only at an approved release.
+1. **Verification (mandatory, fail-closed).** JSON parse, `bash -n`/`py_compile` where relevant, relevant `bun test`/unittest suites, **new-install reproduction with rc evidence** (isolated HOME), and a `gitleaks` scan of the release range. Record the evidence in `docs/verification/`.
+2. **Cross-review (recommended, not blocking).** A fresh-context cross-family review of the release diff (`GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1 gjc -p --no-session --model openai-codex/gpt-5.5:xhigh --tools read,search,find …`) is the house dogfood lane — run it when the diff touches behavior or safety contracts; a REQUEST_CHANGES verdict is fixed forward before publish, but skipping the lane for trivial docs-only diffs is allowed and noted in evidence.
+3. **Publish + report.** Merge, tag, publish, then send one control-tower `report` line (version, candidate hash, evidence path). Reports inform; they never gate.
 
-**Rollback (명문화 2026-07-12, 하코 승인 릴리스 0.10.0에 동봉):** a bad release is
-rolled back **fix-forward on git**, never by deleting history: (1) `git revert` the
-offending commit(s) on `dev` (or revert the release merge on `main` for a broken-install
-emergency), (2) run gates 1–2 on the revert diff (fast lane: install repro + cross-review),
-(3) publish a new patch release (`vX.Y.Z+1`) through gate 3 as usual. Tags/Releases are
-never deleted or force-moved — a superseded release gets a "superseded by vX.Y.Z+1" note
-in its GitHub Release body. Installed users recover by re-running the one-shot installer.
+No approval boundaries, no frequency caps, no sign-off counters. Never fake evidence — a verification step that cannot run in the current environment is recorded as pending-environment, not skipped silently.
 
-**In-flight:** work continues on `dev`/branches; a release stops at PR/`dev` state until the 3 gates + 하코 approval. (`v0.7.0` omg rebrand shipped ~minutes before this mandate under the old self-merge pattern; retro-review + approval request filed — no unilateral rollback without explicit instruction.)
+**Rollback (fix-forward, unchanged):** a bad release is rolled back **fix-forward on git**, never by deleting history: `git revert` on `dev` (or revert the release merge on `main` for a broken-install emergency), re-verify, publish `vX.Y.Z+1`. Tags/Releases are never deleted or force-moved — a superseded release gets a "superseded by vX.Y.Z+1" note in its GitHub Release body. Installed users recover by re-running the one-shot installer.
 
 ## Verification expectations
 

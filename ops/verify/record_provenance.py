@@ -2,8 +2,8 @@
 """Fail-closed provenance gate for an installed ``oh-my-gjc`` cache payload.
 
 The marketplace reference is recorded only as operator context. It is not an
-independently verifiable binding, so Gate 2 and Gate 3 remain separate release
-gates.
+independently verifiable binding, so review and publication remain separate
+verification steps.
 
 Threat model: the caller must retain exclusive control of the candidate and
 cache paths for this bounded gate. Descriptor-walked full plugin-tree
@@ -1116,7 +1116,7 @@ def build_attestation(arguments):
             "marketplace_ref_used": arguments.marketplace_ref,
             "marketplace_ref_status": (
                 "informational only; no independently verifiable binding was supplied; "
-                "Gate 2 and Gate 3 remain separate."
+                "review and publication remain separate."
             ),
             "manifest_identity": {
                 "marketplace_head": sha256_bytes(marketplace_head),

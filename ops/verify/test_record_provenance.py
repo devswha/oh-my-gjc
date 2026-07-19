@@ -281,7 +281,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self.assertNotIn("installed", bootstrap)
         self.assertIn("not a member of the installed plugin-cache", bootstrap["scope"])
         self.assertIn("informational only", record["marketplace_ref_status"])
-        self.assertIn("Gate 2 and Gate 3 remain separate", record["marketplace_ref_status"])
+        self.assertIn("review and publication remain separate", record["marketplace_ref_status"])
         self.assertIn("exclusive control", record["threat_model"])
         self.assertIn("same-UID actor", record["threat_model"])
         self.assertTrue(record["final_revalidation"]["head_matches_first_pass"])
