@@ -1,0 +1,4 @@
+# Synthetic redaction-test fixture token (sequential alphabet, not a real credential).
+# The live line now carries an inline `gitleaks:allow`; this fingerprint clears the
+# historical commit that introduced it so release-range scans stay clean.
+bdec70f61c91c38f15794e06ed89124d13b4009a:plugins/oh-my-gjc/test/lazycodex-gjc.test.ts:generic-api-key:135

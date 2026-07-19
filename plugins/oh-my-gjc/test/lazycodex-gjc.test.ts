@@ -132,7 +132,7 @@ process.stdin.on("end", () => {
   }
   else if (${JSON.stringify(mode)} === "observe-tokens") {
     process.stdout.write("event: Authorization: Bearer bearer-canary-raw\\n");
-    process.stdout.write("progress token=ghp_ABCDEFGHIJ0123456789 step ok\\n");
+    process.stdout.write("progress token=ghp_ABCDEFGHIJ0123456789 step ok\\n"); // gitleaks:allow — synthetic redaction fixture, not a real credential
     process.stdout.write("plain progress line survives\\n");
     fs.writeFileSync(out, "worker-result");
   }
