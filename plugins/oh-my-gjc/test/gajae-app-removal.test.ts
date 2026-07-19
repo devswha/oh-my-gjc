@@ -44,6 +44,7 @@ const retiredSkills = [
   "branch-flow",
   "worktree",
   "gjc-bugwatch",
+  "session-observer",
 ];
 
 const retiredCommands = [
@@ -56,6 +57,7 @@ const retiredCommands = [
   "branchflow-always",
   "worktree",
   "bugwatch-scan",
+  "session-observer",
 ];
 
 describe("removed capability manifests", () => {
@@ -64,8 +66,8 @@ describe("removed capability manifests", () => {
     const expectedCommands = parseManifest("EXPECTED_COMMANDS");
     const removedSkills = parseManifest("REMOVED_SKILLS");
     const removedCommands = parseManifest("REMOVED_COMMANDS");
-    expect(expectedSkills).toHaveLength(9);
-    expect(expectedCommands).toHaveLength(12);
+    expect(expectedSkills).toHaveLength(8);
+    expect(expectedCommands).toHaveLength(11);
     expect(expectedSkills).not.toContain("gajae-app");
     expect(expectedCommands).not.toContain("gajae-app");
 
@@ -77,7 +79,6 @@ describe("removed capability manifests", () => {
       "insane-review",
       "lazycodex-gjc",
       "deep-onboarding",
-      "session-observer",
       "preset-pack",
     ]);
     expect(expectedCommands).toEqual([
@@ -91,7 +92,6 @@ describe("removed capability manifests", () => {
       "insane-review",
       "lazycodex-gjc",
       "deep-onboarding",
-      "session-observer",
       "preset-pack",
     ]);
     for (const skill of retiredSkills) expect(removedSkills).toContain(skill);
@@ -114,9 +114,9 @@ describe("removed capability manifests", () => {
     expect(existsSync(join(pluginRoot, "bin/lazycodex-gjc.mjs"))).toBe(true);
     expect(existsSync(join(pluginRoot, "skills/lazycodex-gjc/SKILL.md"))).toBe(true);
     expect(existsSync(join(pluginRoot, "templates/lazycodex-gjc.md"))).toBe(true);
-    expect(existsSync(join(pluginRoot, "bin/session-observer.ts"))).toBe(true);
-    expect(existsSync(join(pluginRoot, "skills/session-observer/SKILL.md"))).toBe(true);
-    expect(existsSync(join(pluginRoot, "templates/session-observer.md"))).toBe(true);
+    expect(existsSync(join(pluginRoot, "bin/session-observer.ts"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "skills/session-observer/SKILL.md"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "templates/session-observer.md"))).toBe(false);
     expect(readFileSync(join(pluginRoot, "skills/extragoal/SKILL.md"), "utf8")).not.toContain("--mpreset reviewer");
   });
 });

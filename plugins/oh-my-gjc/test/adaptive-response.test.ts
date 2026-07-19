@@ -124,7 +124,7 @@ describe("adaptive response contract", () => {
     expect(fable).not.toContain("사용자가 도메인을 모른다고 가정");
   });
 
-  test("keeps the exact public surface at nine skills and twelve commands", () => {
+  test("keeps the exact public surface at eight skills and eleven commands", () => {
     const skillRoot = join(pluginRoot, "skills");
     const skillNames = readdirSync(skillRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(join(skillRoot, entry.name, "SKILL.md")))
@@ -135,7 +135,7 @@ describe("adaptive response contract", () => {
       .map((name) => name.slice(0, -3))
       .sort();
 
-    expect(skillNames).toEqual(["adaptive-response", "deep-onboarding", "extragoal", "insane-review", "lazycodex-gjc", "no-english", "preset-pack", "session-observer", "time-left"]);
+    expect(skillNames).toEqual(["adaptive-response", "deep-onboarding", "extragoal", "insane-review", "lazycodex-gjc", "no-english", "preset-pack", "time-left"]);
     expect(commandNames).toEqual([
       "deep-onboarding",
       "fable",
@@ -146,7 +146,6 @@ describe("adaptive response contract", () => {
       "no-english",
       "omg",
       "preset-pack",
-      "session-observer",
       "setup",
       "time-left",
     ]);

@@ -42,9 +42,9 @@ done
 PLUGIN_ROOT="$(cd -P "$(dirname "$0")/.." && pwd -P)"
 
 # ── EXPECTED manifest (the single source of truth for a complete install) ────────────
-EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding session-observer preset-pack)
-EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc deep-onboarding session-observer preset-pack)
-EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs bin/session-observer.ts tools/sdk-lab/package.json tools/sdk-lab/bun.lock tools/sdk-lab/src/inspect.ts tools/sdk-lab/src/eta.ts references/preset-pack.yml)
+EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding preset-pack)
+EXPECTED_COMMANDS=(omg setup gate gate-always no-english time-left fable insane-review lazycodex-gjc deep-onboarding preset-pack)
+EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs tools/sdk-lab/package.json tools/sdk-lab/bun.lock tools/sdk-lab/src/inspect.ts tools/sdk-lab/src/eta.ts references/preset-pack.yml)
 # Capabilities REMOVED (관제탑 발주, 하코 승인). 0.11.0: codex-deepwork(실사용 0회, lazycodex와 중복) +
 # codex-app 짝(대상 앱 빌드 트랙 07-03 아카이브; Pro 리뷰는 insane-review 전담). 0.12.0: codex-cli-ask·
 # lazycodex·tower(명시 호출 0 — Codex 트래픽은 전량 제품 파이프라인 codex exec 직결로 스킬 미경유,
@@ -53,10 +53,12 @@ EXPECTED_RUNTIMES=(bin/lazycodex-gjc.mjs bin/session-observer.ts tools/sdk-lab/p
 # Post-v0.17.1 prune: multivendor-presets, release-gate, easy-answer, plain-layer,
 # branch-flow/worktree, and public gjc-bugwatch. lazycodex-gjc remains supported.
 # gate-briefing was renamed to adaptive-response, korean-first to no-english, and workflow-eta to time-left;
-# upgrades remove retired native directories.
+# upgrades remove retired native directories. 0.23.0: session-observer(하코 직접 지시 07-19,
+# v0.22.0 출시 당일 제거 — 관찰은 터미널 직접 tail/tmux로 충분) — 업그레이드가 네이티브
+# skills/session-observer + omg:session-observer.md를 청소한다.
 # Upgrades sweep only their native skill/command files plus explicitly owned retired state.
-REMOVED_SKILLS=(gate-briefing korean-first workflow-eta codex-deepwork codex-app-launch codex-app-cdp codex-cli-ask lazycodex tower worktree gajae-app multivendor-presets release-gate easy-answer plain-layer branch-flow gjc-bugwatch)
-REMOVED_COMMANDS=(codex-run codex-app-launch codex-app-ask codex-ask lazycodex-setup lazycodex-work tower-setup gajae-app presets release easy easy-always plain branchflow-always worktree bugwatch-scan)
+REMOVED_SKILLS=(gate-briefing korean-first workflow-eta codex-deepwork codex-app-launch codex-app-cdp codex-cli-ask lazycodex tower worktree gajae-app multivendor-presets release-gate easy-answer plain-layer branch-flow gjc-bugwatch session-observer)
+REMOVED_COMMANDS=(codex-run codex-app-launch codex-app-ask codex-ask lazycodex-setup lazycodex-work tower-setup gajae-app presets release easy easy-always plain branchflow-always worktree bugwatch-scan session-observer)
 # Pre-0.8.1 native files that upgrades must sweep away: the 17 one-release deprecation
 # tombstones shipped by 0.8.0 (removed in 0.8.1). Old `oh-my-gjc:<name>.md` aliases are
 # covered separately by looping EXPECTED_COMMANDS in cleanup_legacy_commands.
@@ -663,7 +665,7 @@ target="all"
 if [ $# -ge 1 ]; then
   if [ "$1" = "all" ]; then
     target="all"; shift
-  elif [ "$1" = "session-observer" ] || [ -d "$PLUGIN_ROOT/skills/$1" ] || [ -f "$PLUGIN_ROOT/templates/$1.md" ]; then
+  elif [ -d "$PLUGIN_ROOT/skills/$1" ] || [ -f "$PLUGIN_ROOT/templates/$1.md" ]; then
     target="$1"; shift
   fi
 fi
@@ -733,12 +735,6 @@ case "$mode" in
       cleanup_retired_branchflow_marker
       report_missing
     else
-      if [ "$target" = "session-observer" ]; then
-        for r in skills/session-observer/SKILL.md templates/session-observer.md bin/session-observer.ts; do
-          [ -f "$PLUGIN_ROOT/$r" ] && [ ! -L "$PLUGIN_ROOT/$r" ] || MISSING+=("$r")
-        done
-        report_missing
-      fi
       if [ "$target" = "lazycodex-gjc" ]; then
         [ -f "$PLUGIN_ROOT/bin/lazycodex-gjc.mjs" ] && [ ! -L "$PLUGIN_ROOT/bin/lazycodex-gjc.mjs" ] || MISSING+=("bin/lazycodex-gjc.mjs")
         report_missing

@@ -2,8 +2,8 @@
 """Fail-closed provenance gate for an installed ``oh-my-gjc`` cache payload.
 
 The marketplace reference is recorded only as operator context. It is not an
-independently verifiable binding, so Gate 2 and Gate 3 remain separate release
-gates.
+independently verifiable binding, so review and publication remain separate
+verification steps.
 
 Threat model: the caller must retain exclusive control of the candidate and
 cache paths for this bounded gate. Descriptor-walked full plugin-tree
@@ -53,9 +53,7 @@ MARKERS = [
     "templates/insane-review.md",
     "templates/lazycodex-gjc.md",
     "templates/deep-onboarding.md",
-    "templates/session-observer.md",
     "bin/lazycodex-gjc.mjs",
-    "bin/session-observer.ts",
     "skills/insane-review/SKILL.md",
     "skills/adaptive-response/SKILL.md",
     "skills/no-english/SKILL.md",
@@ -63,7 +61,6 @@ MARKERS = [
     "skills/extragoal/SKILL.md",
     "skills/lazycodex-gjc/SKILL.md",
     "skills/deep-onboarding/SKILL.md",
-    "skills/session-observer/SKILL.md",
     "tools/sdk-lab/package.json",
     "tools/sdk-lab/bun.lock",
     "tools/sdk-lab/src/inspect.ts",
@@ -1119,7 +1116,7 @@ def build_attestation(arguments):
             "marketplace_ref_used": arguments.marketplace_ref,
             "marketplace_ref_status": (
                 "informational only; no independently verifiable binding was supplied; "
-                "Gate 2 and Gate 3 remain separate."
+                "review and publication remain separate."
             ),
             "manifest_identity": {
                 "marketplace_head": sha256_bytes(marketplace_head),

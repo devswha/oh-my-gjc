@@ -37,9 +37,7 @@ MARKERS = [
     "templates/insane-review.md",
     "templates/lazycodex-gjc.md",
     "templates/deep-onboarding.md",
-    "templates/session-observer.md",
     "bin/lazycodex-gjc.mjs",
-    "bin/session-observer.ts",
     "skills/insane-review/SKILL.md",
     "skills/adaptive-response/SKILL.md",
     "skills/no-english/SKILL.md",
@@ -47,7 +45,6 @@ MARKERS = [
     "skills/extragoal/SKILL.md",
     "skills/lazycodex-gjc/SKILL.md",
     "skills/deep-onboarding/SKILL.md",
-    "skills/session-observer/SKILL.md",
     "tools/sdk-lab/package.json",
     "tools/sdk-lab/bun.lock",
     "tools/sdk-lab/src/inspect.ts",
@@ -284,7 +281,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self.assertNotIn("installed", bootstrap)
         self.assertIn("not a member of the installed plugin-cache", bootstrap["scope"])
         self.assertIn("informational only", record["marketplace_ref_status"])
-        self.assertIn("Gate 2 and Gate 3 remain separate", record["marketplace_ref_status"])
+        self.assertIn("review and publication remain separate", record["marketplace_ref_status"])
         self.assertIn("exclusive control", record["threat_model"])
         self.assertIn("same-UID actor", record["threat_model"])
         self.assertTrue(record["final_revalidation"]["head_matches_first_pass"])
