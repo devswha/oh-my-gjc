@@ -6,15 +6,15 @@
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gajaecode — focused Gajae Code suite: 7 skills + 10 commands. Explicit presentation and ETA controls, external review, read-only Codex delegation, and confirmation-gated deep onboarding.",
-    "version": "0.20.0"
+    "description": "oh-my-gajaecode — focused Gajae Code suite: 10 skills + 13 commands. Explicit presentation and ETA controls, external review, read-only Codex delegation, confirmation-gated deep onboarding, repomix-measured preset fitting, and an explicit-install curated preset pack.",
+    "version": "0.22.0"
   },
   "plugins": [
     {
       "name": "oh-my-gjc",
       "source": "./plugins/oh-my-gjc",
-      "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc, deep-onboarding. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:time-left, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc, /omg:deep-onboarding. Deep onboarding analyzes first, interviews for missing context, and writes project-map/ADR/handoff documents only to an explicitly confirmed output path. models.yml remains untouched.",
-      "version": "0.20.0",
+      "description": "oh-my-gajaecode — focused Gajae Code suite. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc, deep-onboarding, session-observer, preset-pack. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:time-left, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc, /omg:deep-onboarding, /omg:session-observer, /omg:preset-pack. Preset-pack merges the curated daily/deep/sec profiles into the user's models.yml only on explicit command, after backup, name-scoped. The installer itself never modifies models.yml.",
+      "version": "0.22.0",
       "category": "core"
     }
   ]
