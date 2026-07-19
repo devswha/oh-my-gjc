@@ -11,8 +11,12 @@
 #     루프 밖은 상한(executor terra:xhigh — gajae-code gpt-5.6 벤치 근거).
 #   - fable = anthropic/claude-fable-5: 적대적 감사 기질 지휘자. 보안 주제(익스플로잇,
 #     pentest, CVE 재현 등)에서 클램프로 세션이 죽을 수 있다 → 그런 날은 sec.
-#   - k3 = kimi-code/k3 (1M, gjc thinking 상한 high). :medium은 서버에서 high로
+#   - k3 = kimi-code/k3 (선언 1M, gjc thinking 상한 high). :medium은 서버에서 high로
 #     승격되므로 low/high만 쓴다. K3 planner는 ralplan 계약(receipt-only) 검증 대기.
+#   - ⚠ K3 실효 컨텍스트 실측(2026-07-19): 선언은 1M이나 kimi-code 게이트웨이가
+#     요청 총 페이로드 2MiB 캡을 물린다(단발·멀티턴 누적 모두 400 재현). 실효
+#     ≈ 400~600k 토큰 — codex 272k보다는 크므로 planner 우위는 유지, "1M" 아님.
+#     ~350k 토큰 단발은 양끝 니들 완벽 회수 확인.
 #
 # 셀렉터는 카탈로그·시점 민감(2026-07-19 실호출 검증: daily/deep/sec 활성 + Reply OK).
 # 재검증: GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1 gjc --mpreset <p> -p --no-session --no-tools "Reply OK"

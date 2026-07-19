@@ -51,7 +51,10 @@ description: "`/omg:preset-pack` 명령이 명시적으로 요청했을 때만 o
 
 - 요구 로그인: anthropic + openai-codex + kimi-code. `required_providers` 중 자격증명이
   없으면 활성화가 하드블록된다.
-- K3 1M 컨텍스트는 Kimi 플랜 티어 게이트가 있다(하위 티어는 256k로 잘림).
+- K3 1M 컨텍스트는 Kimi 플랜 티어 게이트가 있다(하위 티어는 256k로 잘림). **실측(2026-07-19):**
+  선언 1M이어도 kimi-code 게이트웨이의 요청 총 페이로드 2MiB 캡 때문에 gjc 경유 실효는
+  ≈400~600k 토큰이다(단발·멀티턴 누적 모두 400 재현; ~350k 단발은 양끝 니들 완벽 회수).
+  codex 272k보다는 크므로 planner 좌석 우위는 유지된다.
 - k3에 `:medium`을 주면 서버에서 high로 승격된다 — 이 팩은 low/high만 쓴다.
 - 셀렉터·벤치 근거는 카탈로그 시점 민감(2026-07-19 실호출 검증). 실패 시 `gjc --list-models`로 재확인.
 - K3 planner는 ralplan 계약(receipt-only·`--write` 경유) 실전 검증 대기 상태다 —
