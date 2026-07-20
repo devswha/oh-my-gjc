@@ -250,9 +250,9 @@ describe("gjc-bugwatch redaction hardening (C-1/H-1/H-2)", () => {
 	});
 
 	it("redact scrubs suffixed key names and JSON-in-string payloads (G003 review)", () => {
-		expect(redact("session_secret=a1b2c3d4e5f6")).not.toContain("a1b2c3d4e5f6");
+		expect(redact("session_secret=a1b2c3d4e5f6")).not.toContain("a1b2c3d4e5f6"); // gitleaks:allow — synthetic fixture
 		expect(redact("x_api_key: zZ9y8x7w6v")).not.toContain("zZ9y8x7w6v");
-		expect(redact('body {"session_secret":"a1b2c3d4e5f6"}')).not.toContain("a1b2c3d4e5f6");
+		expect(redact('body {"session_secret":"a1b2c3d4e5f6"}')).not.toContain("a1b2c3d4e5f6"); // gitleaks:allow — synthetic fixture
 		expect(redact('{"token":"abcqrs123"}')).not.toContain("abcqrs123");
 		// escaped JSON-in-string (literal backslashes in the payload) and JSON5 single quotes
 		expect(redact('{\\"x-api-key\\":\\"escape987\\"}')).not.toContain("escape987");
