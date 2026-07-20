@@ -19,7 +19,7 @@ oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승).
 - `/omg:insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰. · 전제: ChatGPT 구독 + 크로미움 로그인
 - `/omg:lazycodex-gjc "<작업>"` — 격리된 읽기 전용 Codex+LazyCodex 외부 작업자. · 전제: 설치·로그인된 Codex+호환 OMO+user runtime binding
 - `/omg:deep-onboarding [출력 경로]` — 문서가 부족한 저장소를 분석·인터뷰하고, 경로 재확인 뒤 프로젝트 맵·ADR 제안·인수인계를 생성.
-- `/omg:preset-pack [install|status|remove]` — omg 최종 좌석표 프리셋(daily/deep/sec)을 백업 후 models.yml에 명시 병합·확인·제거. · 전제: anthropic+openai-codex+kimi-code 로그인
+- `/omg:preset-pack [install|status|remove]` — omg 확정 프리셋(daily=사람/agent=무인)을 백업 후 models.yml에 명시 병합·확인·제거. · 전제: daily는 anthropic+openai-codex+kimi-code, agent는 anthropic+openai-codex 로그인
 
 > `/omg:time-left`, `insane-review`, `lazycodex-gjc`는 필요한 런타임·외부 환경이 없으면 안내하고 안전하게 멈춘다.
 > 위의 `/omg:*`가 현재 공개 커맨드 전부다.
