@@ -166,11 +166,12 @@ def pack_repo(target: Path, *, include: str | None, ignore: str | None,
     cfg_path = out_path.with_name(out_path.name + ".repomixcfg.json")
     try:
         cfg_path.write_text(json.dumps(hermetic_cfg), encoding="utf-8")
-    except OSError:
-        cfg_path = None
+    except OSError as exc:
+        # fail-closed: hermetic config 없이 돌리면 repomix가 대상 리포의 설정(.js/.ts 포함)을
+        # 자동탐색해 secretlint를 조용히 끌 수 있다 — 사전 검사(json/json5/jsonc)로는 못 막는다.
+        sys.exit(f"❌ hermetic repomix 설정 생성 실패({str(exc)[:60]}) — 보안검사 강제 불가로 중단(fail-closed).")
     cmd = ["npx", "-y", spec, str(target), "-o", str(out_path), "--style", style]
-    if cfg_path is not None:
-        cmd += ["--config", str(cfg_path)]   # 외부 설정 차단(압축·보안·본문생략 강제)
+    cmd += ["--config", str(cfg_path)]   # 외부 설정 차단(압축·보안·본문생략 강제)
     if line_numbers:
         cmd.append("--output-show-line-numbers")  # AI가 파일:라인 인용 가능 → 근거 강제에 필요
     if compress:

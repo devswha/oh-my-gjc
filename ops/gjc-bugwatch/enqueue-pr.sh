@@ -21,13 +21,17 @@ SUMMARY="${2:?usage: enqueue-pr.sh <draft-path> <one-line-summary>}"
 
 [ -f "${DRAFT}" ] || { echo "enqueue-pr: draft not found: ${DRAFT}" >&2; exit 1; }
 
-HTTP_CODE=$(curl -sS -o /tmp/enqueue-pr-resp.txt -w '%{http_code}' -X POST "${TOWER_URL}/queue/add" \
+# 고정 /tmp 이름은 선점 심볼릭 링크로 클로버 가능 — mktemp(0600) + EXIT 정리로 대체.
+RESP="$(mktemp)"
+trap 'rm -f "${RESP}"' EXIT
+
+HTTP_CODE=$(curl -sS -o "${RESP}" -w '%{http_code}' -X POST "${TOWER_URL}/queue/add" \
   --data-urlencode "source=gjc-bugwatch" \
   --data-urlencode "text=${SUMMARY} | draft: ${DRAFT}" \
   --data "kind=decision")
 
 if [ "${HTTP_CODE}" != "200" ]; then
-  echo "enqueue-pr: tower rejected (HTTP ${HTTP_CODE}): $(cat /tmp/enqueue-pr-resp.txt 2>/dev/null | head -c 200)" >&2
+  echo "enqueue-pr: tower rejected (HTTP ${HTTP_CODE}): $(head -c 200 "${RESP}" 2>/dev/null)" >&2
   exit 1
 fi
 echo "enqueue-pr: queued (kind=decision, source=gjc-bugwatch): ${SUMMARY}"

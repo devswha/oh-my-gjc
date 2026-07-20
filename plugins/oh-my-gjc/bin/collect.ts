@@ -121,9 +121,11 @@ export function redact(text: string): string {
 		.replace(/\b(?:gh[pousr]_|github_pat_)[A-Za-z0-9_]{20,}/g, "<gh-token>")
 		.replace(/\bxox[baprs]-[A-Za-z0-9-]{10,}/gi, "<slack-token>")
 		.replace(/\bBasic\s+[A-Za-z0-9+/=]{8,}/g, "Basic <redacted>")
-		// key=value / key: value secrets — the key name identifies the secret, so redact any length
+		// key=value / key: value secrets — the key name identifies the secret, so redact any length.
+		// [\w-]* prefix catches suffixed names (session_secret, x_api_key); the optional closing
+		// quote before the separator catches JSON-in-string payloads ("token":"…").
 		.replace(
-			/\b(authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|secret|password|passwd|pwd|token)(\s*[=:]\s*)("?)[^\s"',;}]+\3/gi,
+			/\b([\w-]*(?:authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|secret|password|passwd|pwd|token))("?\s*[=:]\s*)("?)[^\s"',;}]+\3/gi,
 			"$1$2<redacted>",
 		)
 		// prefixed opaque tokens (sk-…, Bearer …, token=…) with a lower length floor than before

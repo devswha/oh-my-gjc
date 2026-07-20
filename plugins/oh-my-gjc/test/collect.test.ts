@@ -249,6 +249,13 @@ describe("gjc-bugwatch redaction hardening (C-1/H-1/H-2)", () => {
 		expect(redact("short token=abc123")).not.toContain("abc123");
 	});
 
+	it("redact scrubs suffixed key names and JSON-in-string payloads (G003 review)", () => {
+		expect(redact("session_secret=a1b2c3d4e5f6")).not.toContain("a1b2c3d4e5f6");
+		expect(redact("x_api_key: zZ9y8x7w6v")).not.toContain("zZ9y8x7w6v");
+		expect(redact('body {"session_secret":"a1b2c3d4e5f6"}')).not.toContain("a1b2c3d4e5f6");
+		expect(redact('{"token":"abcqrs123"}')).not.toContain("abcqrs123");
+	});
+
 	it("redact still covers the original formats (no regression)", () => {
 		const r = redact("user devswha@gmail.com id 019f26c8-bfb6-7000-80e3-d1e1b5c68a6b Bearer abcdef1234567890");
 		expect(r).toContain("<email>");
