@@ -11,7 +11,8 @@ argument-hint: "[install|status|remove]"
 
 - 인자가 비어 있거나 `install`이면: 스위트 루트 바인딩에서 `references/preset-pack.yml`
   정본을 찾아, **백업 후** `daily`/`agent`를 `~/.gjc/agent/models.yml`에 이름 단위로
-  병합하고(폐지된 v1 `deep`/`sec`는 원본 일치분만 함께 정리), YAML 파스 + 프리셋별
+  병합하고(폐지된 v1 `deep`/`sec`는 정본의 `retired_v1_profiles` fixture와 파스 동등한
+  경우에만 함께 정리), YAML 파스 + 프리셋별
   활성 스모크로 검증한 뒤 결과와 활성화 커맨드를 보고한다.
 - `status`면: 두 프리셋의 존재·정본 대비 차이와 폐지분 잔존 여부만 보고한다(무수정).
 - `remove`면: 사용자 확인 후 백업하고 해당 블록만 제거한다.

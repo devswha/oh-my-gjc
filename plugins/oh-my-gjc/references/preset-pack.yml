@@ -53,3 +53,27 @@ profiles:
 #          실효 미미, 실사용 0. 필요하면 세션에서 /model로 일시 조정이 낫다.
 #   sec  — fable 클램프 복구 전용(주력 k3). agent가 복구 경로를 대체.
 #   과거 병합본 정리는 /omg:preset-pack install|remove의 명시 경로만 수행한다.
+
+# v1 폐지 프로파일 원본 fixture — 병합 대상이 아니다(install은 `profiles:`의 daily/agent만
+# 병합). 용도는 단 하나: 사용자 profiles의 deep/sec가 "v1 팩이 병합한 그대로"인지
+# 파스 동등성(YAML 파싱 결과 동일)으로 정확 비교해, 일치할 때만 백업 후 정리한다.
+# 한 좌석이라도 다르면 사용자 수정본이므로 무접촉.
+retired_v1_profiles:
+  deep:
+    display_name: deep
+    required_providers: [anthropic, openai-codex, kimi-code]
+    model_mapping:
+      default:   anthropic/claude-fable-5:high
+      planner:   kimi-code/k3:high
+      executor:  openai-codex/gpt-5.6-terra:xhigh
+      architect: anthropic/claude-opus-4-8:high
+      critic:    anthropic/claude-opus-4-8:high
+  sec:
+    display_name: sec
+    required_providers: [anthropic, openai-codex, kimi-code]
+    model_mapping:
+      default:   kimi-code/k3:high
+      planner:   kimi-code/k3:high
+      executor:  openai-codex/gpt-5.6-terra:xhigh
+      architect: anthropic/claude-opus-4-8:high
+      critic:    anthropic/claude-opus-4-8:high

@@ -36,9 +36,11 @@ description: "`/omg:preset-pack` 명령이 명시적으로 요청했을 때만 o
    (파일이 없으면 `profiles:` 한 줄짜리 새 파일 생성부터).
 3. **이름 단위 병합**: 정본의 `daily`/`agent` 블록만 사용자 `profiles:` 아래에
    추가하거나 같은 이름을 교체한다. **다른 프로파일·최상위 키는 절대 건드리지 않는다.**
-4. **폐지분 정리(조건부)**: 사용자 `profiles:`에 `deep`/`sec`가 있고 그 내용이
-   과거 이 팩(v1)이 병합한 좌석표와 **정확히 일치**하면 백업이 있는 상태에서 함께 제거한다.
-   사용자가 한 글자라도 수정한 사본이면 건드리지 않고 보고만 한다.
+4. **폐지분 정리(조건부)**: 사용자 `profiles:`에 `deep`/`sec`가 있으면, 정본 하단의
+   `retired_v1_profiles` fixture와 **파스 동등성**(YAML 파싱 결과가 좌석까지 완전 동일)으로
+   비교해 일치할 때만 백업이 있는 상태에서 함께 제거한다. 한 좌석이라도 다르면
+   사용자 수정본이므로 건드리지 않고 보고만 한다. fixture가 없는 정본(구버전)이면
+   폐지분 정리를 건너뛴다(fail-closed).
 5. **검증**: YAML 파스 확인 후 각 프리셋 활성 스모크 —
    `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1 gjc --mpreset <p> -p --no-session --no-tools "Reply OK"`.
    실패하면 백업 복원 절차를 안내한다.
@@ -52,7 +54,7 @@ description: "`/omg:preset-pack` 명령이 명시적으로 요청했을 때만 o
 
 ### remove
 
-백업 후 `daily`/`agent`(및 v1 잔존 `deep`/`sec` 원본 일치분) 블록만 제거한다.
+백업 후 `daily`/`agent`(및 `retired_v1_profiles`와 파스 동등한 잔존 `deep`/`sec`) 블록만 제거한다.
 다른 프로파일은 보존. 확인 없이 실행하지 않는다.
 
 ## 전제·주의
@@ -72,5 +74,5 @@ description: "`/omg:preset-pack` 명령이 명시적으로 요청했을 때만 o
 ## 하지 않는 것
 
 - 명시 호출 없는 자동 병합(설치 스크립트 포함 어떤 경로로도).
-- `daily`/`agent`(및 v1 원본 일치 잔존분) 외 프로파일·최상위 키 수정, `config.yml` 수정.
+- `daily`/`agent`(및 fixture 파스 동등 잔존분) 외 프로파일·최상위 키 수정, `config.yml` 수정.
 - 프리셋 활성화 자체(활성화는 사용자가 `--mpreset`으로).
