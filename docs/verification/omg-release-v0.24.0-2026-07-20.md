@@ -4,7 +4,7 @@
 
 ## Candidate
 
-- 발행 후보: `e7b0dde` (dev). Release scope (v0.23.0..dev):
+- 발행 후보: `43caa54` (dev; 라운드1 후보 `e7b0dde` + 블로커 수정 `43caa54`). Release scope (v0.23.0..dev):
   1. **거버넌스 자율화** — 승인 게이트·빈도 캡·승인 큐 의무 폐지, Release rules 신설 (`5c60ca8`·`066cc58`, 하코 direct order 07-19; in-session architect APPROVE + executor QA passed).
   2. **G003 코드 리뷰 실결함 수정** — cron 게이트 우회(daily-scan.sh), secretlint fail-open(pack_and_ask.py), redact 누출 4계열(collect.ts, 회귀 테스트 7건), /tmp 클로버(enqueue-pr.sh) (`852a17b`·`c044e8c`; in-session architect 3레인 CLEAR + red-team 블로커 2건 fix-forward).
   3. **preset-pack v2** — 프리셋 `daily`(사람)+`agent`(무인) 2개로 확정(하코 2026-07-20), `deep`/`sec` 폐지(조건부 정리: v1 원본 일치분만), 빌트인 `opus-codex` 실매핑(주력 opus:xhigh·executor terra:low — 바이너리 채굴) 대비 무인 부적합 근거 문서화 (`a63e09f`).
@@ -24,7 +24,9 @@
 
 Fresh-context `openai-codex/gpt-5.5:xhigh`, read/search/find only, `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`.
 
-- Round 1 (`e7b0dde`): PENDING — 완료 시 갱신.
+- **Round 1 (`e7b0dde`): REQUEST_CHANGES** — 블로커 1건: v2가 "v1 원본 일치 시에만 deep/sec 정리"를 약속하면서 설치본에 비교 원본이 없음(네이티브 설치는 git 히스토리 접근 불가 → 휴리스틱 삭제 또는 무정리로 퇴화 위험).
+- Fix-forward: `43caa54` — 정본 yml에 비병합 `retired_v1_profiles` fixture 동봉(v0.23.0 정본과 파스 동등성 스크립트 검증), 스킬/템플릿/AGENTS를 파스 동등성 계약으로 갱신, fixture 부재 시 정리 스킵 fail-closed. bun 197/0 재확인.
+- **Round 2 (`43caa54`): VERDICT: APPROVE** — 블로커 해소 확인(fixture 비병합·v1 파스 동등·계약 일관), 재스캔 신규 블로커 없음: 버전 0.24.0 정합, installer/models.yml 경계 유지, G003 수정 전건 존재 확인, deep/sec 잔존은 은퇴 기록·fixture뿐.
 
 ## Publish
 
