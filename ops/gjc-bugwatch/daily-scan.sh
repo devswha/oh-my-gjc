@@ -7,6 +7,13 @@ set -euo pipefail
 
 export PATH="/home/devswha/.bun/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 
+# cron은 systemd 유닛 Environment를 상속하지 않는다 — 게이트 미설정이면 trigger.ts가
+# 무조건 통과해 관제탑이 닫혀 있어도 주입된다(게이트 우회). live 데몬과 같은 기본값을 강제.
+# ${VAR:-}는 의도적으로 '빈 문자열'도 기본값으로 치환한다: 빈값=게이트 해제=무조건 주입이라
+# cron 레인에서 게이트 없는 실행은 지원 계약이 아니다(fail-closed). 다른 게이트 세션이
+# 필요하면 비어 있지 않은 이름으로 override하라.
+export GJC_BUGWATCH_GATE_SESSION="${GJC_BUGWATCH_GATE_SESSION:-horcrux}"
+
 REPO="${GJC_BUGWATCH_REPO:-/home/devswha/workspace/oh-my-gjc}"
 DAYS="${GJC_BUGWATCH_DAYS:-7}"
 LOG="${GJC_BUGWATCH_CRON_LOG:-${REPO}/.gjc/bugwatch/daily-scan.log}"

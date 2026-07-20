@@ -2,3 +2,7 @@
 # The live line now carries an inline `gitleaks:allow`; this fingerprint clears the
 # historical commit that introduced it so release-range scans stay clean.
 bdec70f61c91c38f15794e06ed89124d13b4009a:plugins/oh-my-gjc/test/lazycodex-gjc.test.ts:generic-api-key:135
+# G003 redaction-test synthetic fixtures (a1b2c3d4e5f6 — sequential hex, not credentials);
+# live lines carry inline gitleaks:allow, these clear the historical commit.
+852a17be9bdad388b78e8d54087114626924df4e:plugins/oh-my-gjc/test/collect.test.ts:generic-api-key:253
+852a17be9bdad388b78e8d54087114626924df4e:plugins/oh-my-gjc/test/collect.test.ts:generic-api-key:255
