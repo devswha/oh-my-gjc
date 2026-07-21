@@ -798,6 +798,9 @@ case "$mode" in
       cleanup_legacy_commands "$scope"
       cleanup_removed "$scope"
       if [ "$scope" = "user" ]; then cleanup_retired_user_runtime_state; uninstall_multi_harness_runtime; fi
+      if [ "$scope" = "user" ] && [ -f "$PLUGIN_ROOT/bin/omg-autoupdate.sh" ]; then
+        bash "$PLUGIN_ROOT/bin/omg-autoupdate.sh" disable >/dev/null 2>&1 || true
+      fi
       uninstall_suite_root_binding "$scope"
       if [ "$scope" = "user" ]; then cleanup_removed_easy_markers; fi
       cleanup_retired_branchflow_marker

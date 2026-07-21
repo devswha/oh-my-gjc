@@ -63,6 +63,9 @@ Tell the human: open a **new** gjc session (or `/move .`) so the command palette
 ## Safety
 Idempotent — re-running re-copies the 6 skills and 8 commands, removes explicitly retired suite-owned native surfaces, and preserves unrelated user state. `adaptive-response` loads only through `/omg:gate` or `/omg:gate-always`; `no-english` loads only through session-local `/omg:no-english`; `deep-onboarding` analyzes and interviews before writing, and writes its three documents only after the user explicitly confirms one output directory. `insane-review` needs ChatGPT+Chromium. During user-scope upgrade, the installer also removes only well-formed retired `easy-always` blocks from `~/.gjc/agent/SYSTEM.md` and `AGENTS.md`, preserving unrelated content and the stable `oh-my-gjc:gate-always` marker.
 
+### Auto-update (opt-in)
+Auto-update is OFF by default; the installer never schedules it. To opt in, run `bin/omg-autoupdate.sh enable` (systemd `--user` timer, cron fallback; `--interval <OnCalendar>`, `--local <checkout>` for offline). Each run re-executes the trusted `install.sh` under a single-flight lock, never as root, logging to `${XDG_STATE_HOME:-~/.local/state}/oh-my-gajae-code/autoupdate.log`. `bin/omg-autoupdate.sh disable` removes it, and `install-skill.sh uninstall … user` disables it too.
+
 ### v0.26.0 tombstone
 
 - Direct user removal: the current Fable audit and its Opus fallback both stalled without a report. Native cross-session review and `insane-review` remain.

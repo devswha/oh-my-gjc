@@ -100,6 +100,23 @@ disposable GJC smoke는 `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`을 prefix하며 
 
 모델 구성은 GJC 내장 프리셋을 그대로 쓴다. 설치 스크립트는 `models.yml`을 절대 수정하지 않으며, 이 스위트는 더 이상 커스텀 프리셋을 배포하지 않는다(`preset-pack`은 v0.29.0에서 제거됨). fable 클램프로 죽은 세션은 `gjc -r <세션ID> --mpreset <내장 프리셋>`으로 복구한다.
 
+## 자동 업데이트 (opt-in)
+
+기본 설치는 자동 업데이트를 켜지 않는다. 원하면 명시적으로 opt-in한다:
+
+```sh
+bin/omg-autoupdate.sh enable            # systemd --user 타이머(없으면 cron 폴백), 기본 daily
+bin/omg-autoupdate.sh enable --interval weekly
+bin/omg-autoupdate.sh enable --local /path/to/checkout   # 네트워크 대신 로컬 checkout 재실행
+bin/omg-autoupdate.sh status            # 스케줄 여부 + 최근 로그
+bin/omg-autoupdate.sh disable           # 해제
+```
+
+- 갱신은 신뢰된 canonical `install.sh` 재실행(또는 `--local` checkout)이다. **root 실행 금지**, 단일 실행 잠금, 모든 실행을 `${XDG_STATE_HOME:-~/.local/state}/oh-my-gajae-code/autoupdate.log`에 기록한다.
+- `enable`은 이 스크립트의 안정 복사본을 상태 디렉터리에 두고 타이머가 그것을 가리키게 해서, 플러그인 캐시 경로가 버전마다 바뀌어도 스케줄이 깨지지 않는다.
+- 무인 원격 실행(`curl | bash`) 위험을 인지하고 쓰는 것이다. 오프라인·감사 필요 환경은 `--local`을 쓴다.
+- `install-skill.sh uninstall … user`는 이 타이머도 함께 해제한다.
+
 ## 세마포어 구조
 
 `/omg:gate-always`는 `~/.gjc/agent/SYSTEM.md`에 소유 마커 블록
