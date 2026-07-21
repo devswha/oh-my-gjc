@@ -47,6 +47,16 @@ Sandbox removed after inspection.
   - Fix (this release, applied before publish): restored the v0.27.0 rebinding — on `Marketplace "oh-my-gajae-code" already exists`, `remove` then re-`add` the canonical `$MARKET` (`devswha/oh-my-gajae-code`), each fail-closed with `die`, before the mandatory `marketplace update`. The candidate/provenance branch is unchanged. Added `one-shot-installer.test.ts` coverage: a rebinding call-order test and a `remove`-failure fail-closed test (`bun test` now 146 pass).
   - Round 2 (focused re-review of the fix): **APPROVE**, zero blockers — remove → canonical add → mandatory update before install, remove/add failures abort before stale source/cache use, candidate path unchanged.
 
+## GitHub repository rename (cutover completion)
+
+The `0.28.0` canonical installer URL only resolves once the GitHub repository itself is renamed, so the rename is part of this release, not a later step. Executed after the merge/tag/publish:
+
+- `gh api -X PATCH repos/devswha/oh-my-gjc -f name=oh-my-gajae-code` → `full_name` now `devswha/oh-my-gajae-code`; local `origin` remote updated and `git ls-remote origin main` resolves `8ec10e5`.
+- New canonical raw installer `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh` → HTTP 200 (fresh, cache MISS); `INSTALLATION.md` under the new name → 200.
+- `https://github.com/devswha/oh-my-gjc` → HTTP 301 → `https://github.com/devswha/oh-my-gajae-code`; release resolves at `https://github.com/devswha/oh-my-gajae-code/releases/tag/v0.28.0`.
+- Old `raw.githubusercontent.com/devswha/oh-my-gjc/...` transiently served a ≤300 s Fastly stale-cache 200 immediately after rename; raw does not follow repo-rename redirects, so it settles to 404 once the CDN entry expires (matches the documented cutover boundary).
+- End-to-end published install in an isolated HOME with no `--candidate-ref`: `gjc plugin marketplace add devswha/oh-my-gajae-code` → Added, `marketplace update` → Updated, `install oh-my-gajae-code@oh-my-gajae-code` → Installed `0.28.0`, all 7 skills + 9 commands bound, rc 0. This is the real user path and would have failed at `marketplace add` (404) before the rename.
+
 ## Deferred environment surfaces
 
 - `insane-review` CDP-to-ChatGPT harvest requires a logged-in GPT-5.6 Sol Pro browser session and was not exercised.
