@@ -6,3 +6,6 @@ bdec70f61c91c38f15794e06ed89124d13b4009a:plugins/oh-my-gjc/test/lazycodex-gjc.te
 # live lines carry inline gitleaks:allow, these clear the historical commit.
 852a17be9bdad388b78e8d54087114626924df4e:plugins/oh-my-gjc/test/collect.test.ts:generic-api-key:253
 852a17be9bdad388b78e8d54087114626924df4e:plugins/oh-my-gjc/test/collect.test.ts:generic-api-key:255
+# Multi-harness credential-isolation canaries (synthetic non-secret labels).
+ef6f34b51f4631a46654045951eb7d882a3be809:plugins/oh-my-gjc/test/multi-harness-research.test.ts:generic-api-key:55
+ef6f34b51f4631a46654045951eb7d882a3be809:plugins/oh-my-gjc/test/multi-harness-research.test.ts:generic-api-key:486
