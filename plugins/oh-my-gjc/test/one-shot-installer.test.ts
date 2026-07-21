@@ -182,6 +182,9 @@ describe("one-shot installer", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("✔ Installed oh-my-gjc from oh-my-gjc (1.2.3)");
+    expect(result.stdout).toContain("Bridge release v0.27.0");
+    expect(result.stdout).toContain("https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh");
+    expect(result.stdout).toContain("this old raw URL is expected to stop working");
     expect(calls).toEqual([
       "plugin marketplace add devswha/oh-my-gjc",
       "plugin marketplace update oh-my-gjc",
