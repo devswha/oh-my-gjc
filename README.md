@@ -28,7 +28,7 @@ git clone --depth 1 https://github.com/devswha/oh-my-gjc.git
 bash oh-my-gjc/install.sh
 ```
 
-한 번 설치로 스킬 8개 + 커맨드 11개(`/omg` + `/omg:*` 10개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+한 번 설치로 스킬 9개 + 커맨드 12개(`/omg` + `/omg:*` 11개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -44,8 +44,9 @@ bash oh-my-gjc/install.sh
 - `lazycodex-gjc` — 설치된 Codex+LazyCodex/OMO를 격리 읽기 전용 외부 작업자로 실행(`/omg:lazycodex-gjc`)
 - `deep-onboarding` — 문서가 부족한 저장소를 읽기 전용 분석하고 인터뷰한 뒤, 확인된 경로에 프로젝트 맵·ADR 제안·인수인계를 생성(`/omg:deep-onboarding`)
 - `preset-pack` — 확정 프리셋 2개(daily=사람 / agent=무인)를 백업 후 `models.yml`에 명시 병합(`/omg:preset-pack`) · **daily는 anthropic+openai-codex+kimi-code, agent는 anthropic+openai-codex 로그인 필요, 명시 호출 시에만 수정**
+- `multi-harness-research` — 같은 조사 과제를 정확한 네 개의 읽기 전용 하니스에 직접 분배하고, 프로젝트 밖 XDG 결과만 보존하는 명시 전용 조사(`/omg:multi-harness`) · **Linux + bwrap + 네 공급자 기존 로그인 필요**
 
-커맨드 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:time-left`, `/omg:fable`, `/omg:insane-review`, `/omg:lazycodex-gjc`, `/omg:deep-onboarding`, `/omg:preset-pack`.
+커맨드 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:time-left`, `/omg:fable`, `/omg:insane-review`, `/omg:lazycodex-gjc`, `/omg:deep-onboarding`, `/omg:preset-pack`, `/omg:multi-harness`.
 
 모델 구성은 기본적으로 GJC 내장 프리셋을 쓴다. 설치 스크립트는 `models.yml`을 절대 수정하지 않으며, 커스텀 프리셋(daily/agent)은 사용자가 `/omg:preset-pack`을 명시 호출했을 때만 백업 후 이름 단위로 병합된다.
 
@@ -106,6 +107,41 @@ bash oh-my-gjc/install.sh
 
 - 쓰기: `/omg:deep-onboarding [출력 경로 제안]`
 - 원문: [`plugins/oh-my-gjc/skills/deep-onboarding/SKILL.md`](./plugins/oh-my-gjc/skills/deep-onboarding/SKILL.md)
+
+### `multi-harness-research` — 네 하니스의 동일 과제 읽기 전용 조사
+
+자연어 요청으로는 절대 자동 활성화하지 않으며 `/omg:multi-harness` 또는 명시 스킬 호출에서만 실행한다.
+인자가 없으면 현재 GJC 리더가 한 문장 목표·조사 질문·기대 산출물을 먼저 보여 주고 확인을 받는다.
+확인된 정규화 과제 바이트와 동일한 안전/출력 suffix 하나를 SHA-256으로 기록해, 다음 순서의 정확한 네
+하니스에만 직접 분배한다. `gjc team`은 쓰지 않는다.
+
+1. `gjc-opus` — GJC 0.11.x `anthropic/claude-opus-4-8`, `--thinking max`
+2. `gjc-sol` — GJC 0.11.x `openai-codex/gpt-5.6-sol`, `--thinking xhigh`
+3. `codex-sol` — Codex CLI `gpt-5.6-sol`, `model_reasoning_effort="xhigh"`, `exec --ephemeral`
+4. `claude-ultracode` — Claude Code `-p --no-session-persistence --effort ultracode`
+
+- 전제: Linux user namespace와 `bwrap`, 지원되는 정확한 자격증명 파일 형식, 그리고 네 CLI의 **기존**
+  로그인이 모두 필요하다. runner는 설치·업데이트·마이그레이션·로그인을 하지 않으며 모델·effort·하니스를
+  대체하거나 fallback하지 않는다. 현재 Codex OAuth live 응답은 **401 pending-environment**이며,
+  이를 성공으로 바꾸어 주장하지 않는다.
+- target은 bubblewrap으로 읽기 전용이고 target `.gjc`와 mutable Git 상태는 노출하지 않는다. GJC/Claude 레인은 read/search/find 및
+  provider-native web만 허용하고 내장 Bash, Write, Edit, Notebook, browser/MCP/hooks/extensions/skills/rules를
+  노출하지 않는다. Codex는 별도 read-only profile에서 shell network를 끄고 provider-native web만 쓴다.
+- 자격증명은 GJC `${XDG_DATA_HOME:-$HOME/.local/share}/gjc/auth.json`, Codex
+  `${CODEX_HOME:-$HOME/.codex}/auth.json`, Claude `$HOME/.claude/.credentials.json`의 검증된 단일 regular
+  파일만 각 private sandbox에 read-only bind한다. 넓은 HOME/auth directory bind, token 환경변수, credential
+  discovery는 없다.
+- orchestrator와 no-model finalizer만 프로젝트 밖
+  `${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/multi-harness/<repo-id>/<run-id>/`에 쓴다
+  (디렉터리 `0700`, 파일 `0600`, no-follow/atomic publication). worker는 target과 artifact 모두에 쓰지 못한다.
+  uninstall은 이 XDG 조사 산출물이나 auth/config를 지우지 않는다.
+- 모든 lane 종료 뒤 1단계가 불변 lane 사실·실패 ledger·`comparison_status: pending`의 factual base summary를
+  seal한다. 네 성공이면 `COMPLETE`/exit `0`, 일부 성공이면 `INCOMPLETE`/`10`, 유효 결과 없음 또는 run fatal이면
+  `1`이다. 성공한 문서는 다른 lane 실패에도 남는다.
+- 그 뒤 **현재 GJC 리더**만 성공 문서를 읽어 비권위적 commonalities/differences와 불확실성을 작성한다.
+  2단계 no-model finalizer가 receipt·nonce·digest·불변 lane 사실을 재검증해 비교 placeholder만 원자적으로
+  바꾼다. finalizer 실패는 `FINALIZATION_FAILED`/`20`으로 따로 보고하며 lane 결과·exit·artifact를 바꾸지
+  않는다. 다섯째 모델, winner/majority/vote/consensus/ranking/recommendation/final verdict는 없다.
 
 ### `/omg:fable` — 안전-크리티컬 코드 적대적 감사
 

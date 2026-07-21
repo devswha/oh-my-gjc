@@ -37,7 +37,9 @@ MARKERS = [
     "templates/insane-review.md",
     "templates/lazycodex-gjc.md",
     "templates/deep-onboarding.md",
+    "templates/multi-harness.md",
     "bin/lazycodex-gjc.mjs",
+    "bin/multi-harness-research.mjs",
     "skills/insane-review/SKILL.md",
     "skills/adaptive-response/SKILL.md",
     "skills/no-english/SKILL.md",
@@ -45,6 +47,7 @@ MARKERS = [
     "skills/extragoal/SKILL.md",
     "skills/lazycodex-gjc/SKILL.md",
     "skills/deep-onboarding/SKILL.md",
+    "skills/multi-harness-research/SKILL.md",
     "tools/sdk-lab/package.json",
     "tools/sdk-lab/bun.lock",
     "tools/sdk-lab/src/inspect.ts",
@@ -840,6 +843,93 @@ class RecordProvenanceTest(unittest.TestCase):
         self._cache_marker(self.cache, marker).unlink()
         os.symlink(self._cache_marker(self.cache, "templates/setup.md"), self._cache_marker(self.cache, marker))
         self._assert_failure_untouched("cache marker 'templates/omg.md' is missing, a symlink, or cannot be safely opened")
+    def test_multi_harness_critical_marker_fixture_matches_the_gate(self):
+        self.assertEqual(PROVENANCE.MARKERS, MARKERS)
+
+    def test_multi_harness_runner_missing_from_candidate_or_cache_is_rejected(self):
+        runner = "bin/multi-harness-research.mjs"
+        candidate_runner = self._candidate_marker(runner)
+        self._git(
+            "update-index",
+            "--skip-worktree",
+            str(candidate_runner.relative_to(self.candidate)),
+        )
+        candidate_runner.unlink()
+        self._assert_failure_untouched(
+            "candidate marker 'bin/multi-harness-research.mjs' is missing, a symlink, or cannot be safely opened"
+        )
+
+        self.temporary_directory.cleanup()
+        self.setUp()
+        self._cache_marker(self.cache, runner).unlink()
+        self._assert_failure_untouched(
+            "cache marker 'bin/multi-harness-research.mjs' is missing, a symlink, or cannot be safely opened"
+        )
+
+    def test_multi_harness_binding_schema_tampering_is_rejected_for_candidate_and_cache(self):
+        binding_schema = "bin/install-skill.sh"
+        candidate_schema = self._candidate_marker(binding_schema)
+        self._git(
+            "update-index",
+            "--skip-worktree",
+            str(candidate_schema.relative_to(self.candidate)),
+        )
+        candidate_schema.write_text("tampered binding schema\n", encoding="utf-8")
+        self._assert_failure_untouched(
+            "candidate marker 'bin/install-skill.sh' bytes differ from the tracked candidate HEAD blob"
+        )
+
+        self.temporary_directory.cleanup()
+        self.setUp()
+        self._cache_marker(self.cache, binding_schema).write_text(
+            "tampered binding schema\n",
+            encoding="utf-8",
+        )
+        self._assert_failure_untouched(
+            "cache marker 'bin/install-skill.sh' bytes differ from the tracked candidate HEAD blob"
+        )
+
+    def test_final_revalidation_rejects_aggregate_drift_of_multi_harness_critical_markers(self):
+        cases = (
+            ("candidate runner", self._candidate_marker, "bin/multi-harness-research.mjs"),
+            ("cache binding schema", lambda path: self._cache_marker(self.cache, path), "bin/install-skill.sh"),
+        )
+        for label, resolve_path, relative_path in cases:
+            with self.subTest(label=label):
+                output = self.root / "provenance.json"
+                output.write_text("previous attestation must survive\n", encoding="utf-8")
+                original_snapshot = PROVENANCE.payload_digest_snapshot
+                snapshot_calls = 0
+
+                def mutate_after_first_snapshot(*arguments):
+                    nonlocal snapshot_calls
+                    result = original_snapshot(*arguments)
+                    snapshot_calls += 1
+                    if snapshot_calls == 1:
+                        target = resolve_path(relative_path)
+                        if label == "candidate runner":
+                            self._git(
+                                "update-index",
+                                "--skip-worktree",
+                                str(target.relative_to(self.candidate)),
+                            )
+                        target.write_text("post-baseline critical marker drift\n", encoding="utf-8")
+                    return result
+
+                with mock.patch.dict(os.environ, {"HOME": str(self.home)}, clear=False):
+                    with mock.patch.object(
+                        PROVENANCE,
+                        "payload_digest_snapshot",
+                        side_effect=mutate_after_first_snapshot,
+                    ):
+                        self.assertEqual(PROVENANCE.main(self._direct_arguments(output)), 1)
+                self.assertEqual(
+                    output.read_text(encoding="utf-8"),
+                    "previous attestation must survive\n",
+                )
+
+                self.temporary_directory.cleanup()
+                self.setUp()
     def test_unlisted_extra_cache_payload_file_leaves_existing_output_untouched(self):
         (self.cache / "unlisted-extra.txt").write_text("unexpected\n", encoding="utf-8")
 

@@ -8,7 +8,7 @@
 #                                explicit dev ref) for release-candidate provenance testing.
 #                                Default is the published marketplace (devswha/oh-my-gjc).
 #
-# One install brings ALL 8 skills + 11 commands (/omg + 10 /omg:*) — there are no separate/optional plugins. Legacy
+# One install brings ALL 9 skills + 12 commands (/omg + 11 /omg:*) — there are no separate/optional plugins. Legacy
 # args (--core, tower, insane-review, codex-*, lazycodex, gjc-bugwatch) are accepted only
 # to print a migration note; they NEVER add extra plugin installs.
 #
@@ -195,7 +195,7 @@ fi
 
 cat <<DONE
 
-✓ oh-my-gajaecode installed — one plugin, 8 skills + 11 commands (/omg + 10 /omg:*), all native surfaces installed.
+✓ oh-my-gajaecode installed — one plugin, 9 skills + 12 commands (/omg + 11 /omg:*), all native surfaces installed.
   Open a NEW gjc session (or run /move .).
     /omg   → catalog of everything you got
   /omg:time-left explicitly queries ETA when Bun >=1.3.14 and locked-package installation succeed; otherwise it fails closed until this installer is rerun.

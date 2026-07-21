@@ -64,10 +64,11 @@ describe("removed capability manifests", () => {
   test("transitions ownership atomically across the four manifests", () => {
     const expectedSkills = parseManifest("EXPECTED_SKILLS");
     const expectedCommands = parseManifest("EXPECTED_COMMANDS");
+    const expectedRuntimes = parseManifest("EXPECTED_RUNTIMES");
     const removedSkills = parseManifest("REMOVED_SKILLS");
     const removedCommands = parseManifest("REMOVED_COMMANDS");
-    expect(expectedSkills).toHaveLength(8);
-    expect(expectedCommands).toHaveLength(11);
+    expect(expectedSkills).toHaveLength(9);
+    expect(expectedCommands).toHaveLength(12);
     expect(expectedSkills).not.toContain("gajae-app");
     expect(expectedCommands).not.toContain("gajae-app");
 
@@ -80,6 +81,7 @@ describe("removed capability manifests", () => {
       "lazycodex-gjc",
       "deep-onboarding",
       "preset-pack",
+      "multi-harness-research",
     ]);
     expect(expectedCommands).toEqual([
       "omg",
@@ -93,7 +95,16 @@ describe("removed capability manifests", () => {
       "lazycodex-gjc",
       "deep-onboarding",
       "preset-pack",
+      "multi-harness",
     ]);
+    for (const runtime of [
+      "bin/lazycodex-gjc.mjs",
+      "bin/multi-harness-research.mjs",
+      "tools/sdk-lab/package.json",
+      "tools/sdk-lab/bun.lock",
+      "tools/sdk-lab/src/inspect.ts",
+      "tools/sdk-lab/src/eta.ts",
+    ]) expect(expectedRuntimes).toContain(runtime);
     for (const skill of retiredSkills) expect(removedSkills).toContain(skill);
     for (const command of retiredCommands) expect(removedCommands).toContain(command);
     expect(intersection(expectedSkills, removedSkills)).toEqual([]);
@@ -114,6 +125,7 @@ describe("removed capability manifests", () => {
     expect(existsSync(join(pluginRoot, "bin/lazycodex-gjc.mjs"))).toBe(true);
     expect(existsSync(join(pluginRoot, "skills/lazycodex-gjc/SKILL.md"))).toBe(true);
     expect(existsSync(join(pluginRoot, "templates/lazycodex-gjc.md"))).toBe(true);
+    expect(existsSync(join(pluginRoot, "bin/multi-harness-research.mjs"))).toBe(true);
     expect(existsSync(join(pluginRoot, "bin/session-observer.ts"))).toBe(false);
     expect(existsSync(join(pluginRoot, "skills/session-observer/SKILL.md"))).toBe(false);
     expect(existsSync(join(pluginRoot, "templates/session-observer.md"))).toBe(false);

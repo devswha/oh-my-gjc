@@ -93,8 +93,9 @@ describe("suite root runtime binding", () => {
       scope === "user" ? join(sandbox.home, ".gjc/agent") : join(sandbox.project, ".gjc");
     const retiredCommand = join(nativeRoot, "commands/omg:easy.md");
     const userRetiredRuntime = join(sandbox.home, ".gjc/agent/runtimes/lazycodex-gjc/binding");
+    const userMultiHarnessRuntime = join(sandbox.home, ".gjc/agent/runtimes/multi-harness-research");
     const models = join(sandbox.home, ".gjc/agent/models.yml");
-    const expectedSkills = ["adaptive-response", "no-english", "time-left", "extragoal", "insane-review", "lazycodex-gjc", "deep-onboarding", "preset-pack"].map((name) =>
+    const expectedSkills = ["adaptive-response", "no-english", "time-left", "extragoal", "insane-review", "lazycodex-gjc", "deep-onboarding", "preset-pack", "multi-harness-research"].map((name) =>
       join(nativeRoot, `skills/${name}/SKILL.md`),
     );
     const expectedCommands = [
@@ -109,6 +110,7 @@ describe("suite root runtime binding", () => {
       "omg:lazycodex-gjc.md",
       "omg:deep-onboarding.md",
       "omg:preset-pack.md",
+      "omg:multi-harness.md",
     ].map((name) => join(nativeRoot, `commands/${name}`));
 
     expect(run(sandbox, ["all", scope]).status).toBe(0);
@@ -119,6 +121,8 @@ describe("suite root runtime binding", () => {
     writeFileSync(retiredCommand, "retired command");
     mkdirSync(dirname(userRetiredRuntime), { recursive: true });
     writeFileSync(userRetiredRuntime, "retired runtime");
+    mkdirSync(userMultiHarnessRuntime, { recursive: true });
+    writeFileSync(join(userMultiHarnessRuntime, "binding"), "multi-harness runtime");
     mkdirSync(dirname(models), { recursive: true });
     writeFileSync(models, "profiles:\n  user-owned: {}\n");
 
@@ -134,6 +138,8 @@ describe("suite root runtime binding", () => {
     }
     if (scope === "user") expect(existsSync(userRetiredRuntime)).toBe(false);
     else expect(readFileSync(userRetiredRuntime, "utf8")).toBe("retired runtime");
+    if (scope === "user") expect(existsSync(userMultiHarnessRuntime)).toBe(false);
+    else expect(readFileSync(join(userMultiHarnessRuntime, "binding"), "utf8")).toBe("multi-harness runtime");
     expect(readFileSync(models, "utf8")).toBe("profiles:\n  user-owned: {}\n");
   });
 
