@@ -14,15 +14,35 @@ argument-hint: "<리뷰 대상/질문>  예) review the auth flow in src/auth"
 > **자동활성화 스킬 포함.** hardened `install.sh`로 단일 스위트를 설치하면 이 커맨드와 함께
 > `insane-review` 스킬도 네이티브로 깔아준다 — "GPT한테 물어봐" 같은 자연어 트리거로도 뜬다.
 ## Step 0 — 엔진 경로 해석 (`$IR`)
-`${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않는다. 네이티브 설치가 기록한 정확한
-suite root binding만 사용한다. 프로젝트 binding을 우선하고, 없을 때만 user binding을 쓰며,
-둘 다 없을 때만 현재 checkout의 정확한 asset으로 fallback한다:
+`${CLAUDE_PLUGIN_ROOT}`는 gjc 커맨드 본문에서 치환되지 않는다. 네이티브 설치가 기록한 정확한 suite root binding만 사용한다. 새 프로젝트 binding을 우선하고 새 user binding을 다음으로 읽는다. 둘 다 없을 때만 **읽기 전용·기간 한정 compatibility fallback**인 기존 `oh-my-gjc` 프로젝트/user binding을 읽고, 그마저 없을 때만 현재 checkout의 정확한 `plugins/oh-my-gajae-code/` asset으로 fallback한다. 기존 binding이나 user state는 쓰거나 지우지 않는다:
 ```bash
 resolve_omg_asset() (
-  fail() { echo "oh-my-gjc runtime binding is missing or invalid; rerun hardened install.sh." >&2; exit 1; }
-  local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir
-  for binding in "$PWD/.gjc/runtimes/oh-my-gjc/root" "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"; do
+  fail() { echo "oh-my-gajae-code runtime binding is missing or invalid; rerun https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh." >&2; exit 1; }
+  reject_symlinked_components() {
+    local path="$1" current="/" component
+    local -a components
+    case "$path" in /*) ;; *) fail ;; esac
+    IFS=/ read -r -a components <<<"${path#/}"
+    for component in "${components[@]}"; do
+      [ -n "$component" ] || continue
+      current="${current%/}/$component"
+      [ ! -L "$current" ] || fail
+    done
+  }
+  local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir checkout
+  local -a bindings=(
+    "$PWD/.gjc/runtimes/oh-my-gajae-code/root"
+    "$HOME/.gjc/agent/runtimes/oh-my-gajae-code/root"
+  )
+  # Bounded read-only compatibility fallback; never mutate legacy paths.
+  local -a legacy_compatibility_bindings=(
+    "$PWD/.gjc/runtimes/oh-my-gjc/root"
+    "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"
+  )
+  bindings+=("${legacy_compatibility_bindings[@]}")
+  for binding in "${bindings[@]}"; do
     if [ -e "$binding" ] || [ -L "$binding" ]; then
+      reject_symlinked_components "$binding"
       [ -f "$binding" ] && [ ! -L "$binding" ] || fail
       bytes="$(LC_ALL=C od -An -v -tu1 "$binding")" || fail
       for byte in $bytes; do
@@ -43,8 +63,10 @@ resolve_omg_asset() (
       exit 0
     fi
   done
-  [ -f "plugins/oh-my-gjc/$expected_asset" ] && [ ! -L "plugins/oh-my-gjc/$expected_asset" ] || fail
-  canonical_root="$(cd -P -- "plugins/oh-my-gjc" 2>/dev/null && pwd -P)" || fail
+  checkout="$PWD/plugins/oh-my-gajae-code"
+  reject_symlinked_components "$checkout"
+  [ -d "$checkout" ] && [ ! -L "$checkout" ] || fail
+  canonical_root="$(cd -P -- "$checkout" 2>/dev/null && pwd -P)" || fail
   asset="$canonical_root/$expected_asset"
   asset_dir="${asset%/*}"
   canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
@@ -54,7 +76,7 @@ resolve_omg_asset() (
 IR="$(resolve_omg_asset "bin/pack_and_ask.py")" || exit 1
 echo "IR=$IR"
 ```
-A malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing binding stops here; rerun hardened `install.sh` rather than selecting a cache.
+A malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing binding stops here; rerun the hardened installer at `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh` rather than selecting a cache.
 
 ## Step 0.5 — 환경 온보딩 (브라우저·로그인; 선택지 기반, 막힌 단계만)
 

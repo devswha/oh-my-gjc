@@ -1,11 +1,11 @@
 ---
-description: oh-my-gajaecode 카탈로그 — 한 번의 설치로 들어온 omg 스킬·커맨드를 한눈에 보여준다. omz(oh-my-zsh) 관례의 단일 엔트리. 인자 없이 /omg 만 입력하면 전체 목록.
+description: oh-my-gajae-code 카탈로그 — 한 번의 설치로 들어온 omg 스킬·커맨드를 한눈에 보여준다. omz(oh-my-zsh) 관례의 단일 엔트리. 인자 없이 /omg 만 입력하면 전체 목록.
 argument-hint: "(인자 없음 — 전체 카탈로그)"
 ---
 
-# /omg — oh-my-gajaecode 카탈로그
+# /omg — oh-my-gajae-code 카탈로그
 
-oh-my-gajaecode 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승). 이 커맨드는 **읽기 전용
+oh-my-gajae-code 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승). 이 커맨드는 **읽기 전용
 안내**다 — 아래 목록을 사용자에게 그대로 정리해 보여주고, 무엇을 쓸지 물어라. 아무것도
 설치·실행·변경하지 않는다. **한 번의 설치로 아래가 전부 들어온다.**
 

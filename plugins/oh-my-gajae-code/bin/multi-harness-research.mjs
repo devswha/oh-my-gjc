@@ -209,7 +209,7 @@ function canonicalCredentialParent(path) {
 
 function authorizedRunner(actual, bound, home) {
   if (actual === bound) return true;
-  const launchRoot = join(home, ".cache", "oh-my-gjc", "multi-harness-research");
+  const launchRoot = join(home, ".cache", "oh-my-gajae-code", "multi-harness-research");
   const launchDirectory = dirname(actual);
   if (dirname(launchDirectory) !== launchRoot || basename(launchDirectory).match(/^launch-[A-Za-z0-9._-]+$/) === null || basename(actual) !== "runner.mjs") return false;
   const trustedLaunchRoot = trustedPath(launchRoot, "directory");
@@ -278,6 +278,10 @@ function configuredXdgData(binding) {
 }
 
 function artifactSuiteRoot(binding) {
+  return join(configuredXdgData(binding), "oh-my-gajae-code", "multi-harness");
+}
+
+function legacyArtifactSuiteRoot(binding) {
   return join(configuredXdgData(binding), "oh-my-gjc", "multi-harness");
 }
 
@@ -292,6 +296,7 @@ function validateTarget(input, binding) {
     dirname(binding.credentials.codex.path),
     dirname(binding.credentials.claude.path),
     artifactSuiteRoot(binding),
+    legacyArtifactSuiteRoot(binding),
   ];
   if (protectedPaths.some((path) => overlaps(target.path, path))) fail("target overlaps protected state");
   return target.path;
@@ -321,7 +326,7 @@ function makeRunDirectory(target, binding) {
   const root = xdgRoot(binding);
   const repoName = basename(target).replace(/[^A-Za-z0-9._-]/g, "-").slice(0, 64) || "repository";
   const repoId = `${repoName}-${sha256(target).slice(0, 16)}`;
-  const base = join(root, "oh-my-gjc");
+  const base = join(root, "oh-my-gajae-code");
   if (!existsSync(base)) mkdirSync(base, { mode: 0o700 });
   const suite = join(base, "multi-harness");
   if (!existsSync(suite)) mkdirSync(suite, { mode: 0o700 });

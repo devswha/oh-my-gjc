@@ -1,12 +1,15 @@
-# AGENTS.md — working in oh-my-gjc
+# AGENTS.md — working in oh-my-gajae-code
 
-Agent-facing guide for `oh-my-gjc`, a **plugin marketplace** for Gajae Code (`gjc`).
+Agent-facing guide for `oh-my-gajae-code`, a **plugin marketplace** for Gajae Code (`gjc`).
 Read this before adding or editing plugins. Human-facing intro lives in [README.md](./README.md).
-## v0.27.0 final old-identity bridge
 
-This is the final pre-cutover release under the `oh-my-gjc` marketplace/plugin identity and `./plugins/oh-my-gjc` source. Keep `/omg:*` and the internal `oh-my-gjc` markers/bindings unchanged. The future identity and canonical repository are [`oh-my-gajae-code`](https://github.com/devswha/oh-my-gajae-code).
+## v0.28.0 identity cutover and migration
 
-After the remote rename, `https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh` is expected to stop working; it does not redirect. No credentials, `models.yml`, or XDG user data migrate in this bridge, and no new runtime paths are introduced.
+`oh-my-gajae-code` is the canonical repository, marketplace/plugin identity, and `./plugins/oh-my-gajae-code` source. `/omg:*` commands remain unchanged.
+
+v0.27.0 was the final old-identity bridge. The canonical installer is `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`; old `raw.githubusercontent.com/devswha/oh-my-gjc/...` URLs do not redirect. Old GitHub repository pages and Git remotes redirect, but active instructions and local checkout names use `oh-my-gajae-code`.
+
+New installs write only `oh-my-gajae-code` bindings. The former `oh-my-gjc` suite-root binding is a read-only fallback for at least 30 days or two releases; it is never rewritten or cleaned up by this cutover. Existing old XDG research data, credentials, and `models.yml` remain in place, and the stable internal `oh-my-gjc:gate-always` marker is preserved.
 
 ## What this repo is
 
@@ -33,14 +36,14 @@ catalog; `gjc plugin list` shows installed). **Plugin management is shell-CLI on
   Credential precedence: live env → `~/.gjc/agent/.env` → `~/.gjc/.env` → `~/.env`.
 - **Web search:** `gjc config set providers.webSearch exa` (fallback: duckduckgo). Full key list (Exa/Tavily/Gemini/…) is in [`.env.example`](./.env.example).
 
-### Capability prerequisites (single `oh-my-gjc` suite)
+### Capability prerequisites (single `oh-my-gajae-code` suite)
 - `insane-review`: ChatGPT subscription + a Chromium-family browser on CDP `:9222` logged into chatgpt.com.
 - `adaptive-response`, `no-english`, `extragoal`, and the `example-plugin` template: no external prerequisites. `preset-pack` requires logged-in anthropic + openai-codex + kimi-code providers for its activation smoke. `multi-harness-research` requires Linux user namespaces, executable `bwrap`, its trusted private user-scope runtime binding, supported exact credential-file layouts, and existing GJC/Codex/Claude logins; it neither installs nor logs in to a provider.
 
 ## Layout
 
 ```
-oh-my-gjc/
+oh-my-gajae-code/
 ├── .claude-plugin/
 │   └── marketplace.json          # catalog: every plugin is registered here
 ├── plugins/
@@ -55,9 +58,9 @@ oh-my-gjc/
 └── AGENTS.md                     # this file
 ```
 
-> ⚠ `commands/` is the *generic* Claude-Code convention. In THIS repo the `oh-my-gjc` suite keeps its
+> ⚠ `commands/` is the *generic* Claude-Code convention. In THIS repo the `oh-my-gajae-code` suite keeps its
 > command bodies in `templates/` (a non-convention dir) because GJC 0.11 marketplace commands are
-> exposed under the wrong `oh-my-gjc:*` namespace; `bin/install-skill.sh` installs `/omg:*` natively.
+> exposed under the wrong `oh-my-gajae-code:*` namespace; `bin/install-skill.sh` installs `/omg:*` natively.
 
 Content is discovered by **convention directories** above; explicit paths in
 `plugin.json` are optional overrides.
@@ -65,7 +68,7 @@ Content is discovered by **convention directories** above; explicit paths in
 ## Add a plugin (procedure)
 
 1. Create `plugins/<plugin>/.claude-plugin/plugin.json`.
-2. Add content in convention dirs (`skills/<name>/SKILL.md`, `agents/`, `hooks/`, `.mcp.json`). Command bodies for the `oh-my-gjc` suite go in `templates/<name>.md` (NOT `commands/` — see the Layout note); a standalone plugin may use `commands/` but then gets the `<plugin>:<name>` namespace.
+2. Add content in convention dirs (`skills/<name>/SKILL.md`, `agents/`, `hooks/`, `.mcp.json`). Command bodies for the `oh-my-gajae-code` suite go in `templates/<name>.md` (NOT `commands/` — see the Layout note); a standalone plugin may use `commands/` but then gets the `<plugin>:<name>` namespace.
 3. Register it in `.claude-plugin/marketplace.json` under `plugins`:
    ```json
    { "name": "<plugin>", "source": "./plugins/<plugin>", "version": "0.1.0", "description": "…", "category": "…" }
@@ -77,7 +80,7 @@ Content is discovered by **convention directories** above; explicit paths in
 ## Conventions agents MUST follow
 
 - **Match the existing shape.** New manifests/commands/skills must mirror the
-  existing `oh-my-gjc` / `example-plugin` structure (same `plugin.json` fields,
+  existing `oh-my-gajae-code` / `example-plugin` structure (same `plugin.json` fields,
   YAML frontmatter on command bodies — `templates/*.md` in the suite — and `SKILL.md`). No parallel conventions.
 - **Name parity.** `marketplace.json` entry `name` == `plugin.json` `name` == the
   `plugins/<name>/` directory. `source` must be `./plugins/<name>`.
@@ -85,7 +88,7 @@ Content is discovered by **convention directories** above; explicit paths in
 - **Register every new plugin** in `marketplace.json`, and keep the entry list
   formatting consistent with siblings.
   **Exception (single-suite policy, 0.8.0+):** new gjc-facing capabilities merge into
-  `plugins/oh-my-gjc` (the one exposed marketplace entry) instead of adding a new entry;
+  `plugins/oh-my-gajae-code` (the one exposed marketplace entry) instead of adding a new entry;
   `example-plugin` stays intentionally unregistered as a copy-me template (Gate A decision).
 - **Skill `description`** is the activation trigger — make it specific and include
   the phrases that should load the skill.
@@ -96,9 +99,9 @@ Content is discovered by **convention directories** above; explicit paths in
 
 ## Per-plugin notes
 
-> **Note (0.8.0 단일 스위트):** marketplace에 노출되는 plugin은 `oh-my-gjc` 하나뿐이다. 아래 절들은
-> 통합 전 plugin 이름을 유지한 **capability 단위 노트**다. 제거된 capability는 `(REMOVED …)` 묘비 절로만 남는다.
-> 파일은 전부 `plugins/oh-my-gjc/` 안에 있다.
+> **Note (single suite):** marketplace exposes only `oh-my-gajae-code`. The sections below retain
+> pre-integration plugin names as **capability notes**; removed capabilities remain only in `(REMOVED …)` tombstone sections.
+> All current suite files are in `plugins/oh-my-gajae-code/`.
 
 ### `codex-cli-control` (REMOVED in 0.12.0)
 - 관제탑 발주·하코 승인(2026-07-13)으로 제거: skill `codex-cli-ask` + command `/omg:codex-ask` 명시 호출 0회 — 로컬 Codex 트래픽은 전량 제품 파이프라인(patina·flask)의 `codex exec` 직결로 스킬을 경유하지 않음. 업그레이드 시 `install-skill.sh`의 `cleanup_removed`가 네이티브 잔존물(`omg:codex-ask.md`, skill dir)을 청소한다. 과거 상세·보안계약은 git 히스토리(≤0.11.0)의 skills/codex-cli-ask/SKILL.md 참조.
@@ -118,9 +121,9 @@ Content is discovered by **convention directories** above; explicit paths in
 
 ### `insane-review` (CLI pack pipeline verified; CDP path deferred)
 - Command `/omg:insane-review` + a native-installable skill (`skills/insane-review/SKILL.md`). Faithful port of `fivetaku/insane-review`. gjc scopes the complete relevant file set → repomix packs it (full code, line numbers, secretlint, packed-file audit) → drives the **logged-in ChatGPT web session over CDP** → selects+**verifies** GPT-5.6 Sol Pro (fail-closed) → harvests the review to the current project's `.insane-review/response_*.md`. Zero API cost (runs on the user's ChatGPT subscription). Also a web-only `agent-council` member via `--council` (see `references/council-setup.md`).
-- **Native install required — WHY (history + current):** on gjc 0.8.2 (`main` & `dev`, verified then) gjc surfaced NEITHER plugin skills NOR plugin commands as first-class: (1) the skill registry dropped non-native skills (`skills.ts`: `if (provider !== "native") return false`); (2) the marketplace slash-command provider (`discovery/claude-plugins.ts`) was never registered because `discovery/index.ts` omitted `import "./claude-plugins"`, so a plugin's `commands/*.md` were not advertised as `/<plugin>:<command>` in ANY session (proven via ACP `available_commands_update`: zero marketplace-plugin commands, only builtins + native `skill:*`). **Current state (gjc 0.9.x): plugin `commands/*.md` ARE auto-exposed — but under the wrong `<plugin>:<name>` namespace — while plugin skills still don't surface** (see the `oh-my-gjc` core section below); native install stays REQUIRED either way. `bin/install-skill.sh` copies SKILL.md into `~/.gjc/agent/skills/insane-review/` (user) or `<cwd>/.gjc/skills/` (project) and installs canonical commands from `templates/` as `~/.gjc/agent/commands/omg:<name>.md` (the filename IS the native command name; the 0.8.0-era deprecation tombstones were dropped in 0.8.1). Applies to every marketplace plugin, not just this one.
+- **Native install required — WHY (history + current):** on gjc 0.8.2 (`main` & `dev`, verified then) gjc surfaced NEITHER plugin skills NOR plugin commands as first-class: (1) the skill registry dropped non-native skills (`skills.ts`: `if (provider !== "native") return false`); (2) the marketplace slash-command provider (`discovery/claude-plugins.ts`) was never registered because `discovery/index.ts` omitted `import "./claude-plugins"`, so a plugin's `commands/*.md` were not advertised as `/<plugin>:<command>` in ANY session (proven via ACP `available_commands_update`: zero marketplace-plugin commands, only builtins + native `skill:*`). **Current state (gjc 0.9.x): plugin `commands/*.md` ARE auto-exposed — but under the wrong `<plugin>:<name>` namespace — while plugin skills still don't surface** (see the `oh-my-gajae-code` core section below); native install stays REQUIRED either way. `bin/install-skill.sh` copies SKILL.md into `~/.gjc/agent/skills/insane-review/` (user) or `<cwd>/.gjc/skills/` (project) and installs canonical commands from `templates/` as `~/.gjc/agent/commands/omg:<name>.md` (the filename IS the native command name; the 0.8.0-era deprecation tombstones were dropped in 0.8.1). Applies to every marketplace plugin, not just this one.
 - **Engine kept byte-for-byte** (`bin/pack_and_ask.py`, Playwright-based, cross-platform). The gjc port only rewrote the shell: skill/command adapted to gjc terms + the `ask` tool onboarding, and the Claude-Code `setup/` (GitHub-star prompt + `~/.claude/settings.json` SessionStart update hook) was **dropped**. Do not reimplement the engine flow with gjc's `browser` tool — the hardened engine is more robust.
-- **Path resolution:** `${CLAUDE_PLUGIN_ROOT}` is NOT substituted in gjc command/skill bodies. Each native install writes one exact private mode-`0600` suite-root binding: project `<cwd>/.gjc/runtimes/oh-my-gjc/root`, then user `~/.gjc/agent/runtimes/oh-my-gjc/root`. Asset consumers validate its single absolute canonical root and required non-symlink asset, resolve project first then user, and use the direct `plugins/oh-my-gjc/` checkout fallback only when neither binding exists. Missing or malformed binding fails closed; bootstrap, upgrade, and repair rerun hardened root `install.sh`, never a cache selection.
+- **Path resolution:** `${CLAUDE_PLUGIN_ROOT}` is NOT substituted in gjc command/skill bodies. Each native install writes one exact private mode-`0600` suite-root binding: project `<cwd>/.gjc/runtimes/oh-my-gajae-code/root`, then user `~/.gjc/agent/runtimes/oh-my-gajae-code/root`. Asset consumers validate its single absolute canonical root and required non-symlink asset, resolve the new project binding then new user binding, then the former `oh-my-gjc` binding as a read-only fallback for at least 30 days or two releases, and finally the direct `plugins/oh-my-gajae-code/` checkout fallback. Missing or malformed bindings fail closed; bootstrap, upgrade, and repair rerun hardened root `install.sh`, never a cache selection.
 - **Security contract (do not weaken):** repomix secretlint forced on (a local repomix config disabling it aborts the run); fail-closed on unverified model / unattached pack / truncated prompt / timeout / empty response (no partial save); `--require-model` must accompany `--model`; output files `chmod 600`. Prompting Pro ships relevant code to an external web service — personal subscription use only (not OpenAI-endorsed).
 - **Prerequisites (manual):** Python `playwright`+`pyperclip` (`--check-env --install`), Node/`npx` (repomix auto via `npx -y`), and a Chromium-family browser on CDP `:9222` with a **dedicated profile** logged into chatgpt.com + GPT-5.6 Sol Pro selected. Login can't be automated.
 - **Verified here (2026-07):** engine AST/`--help`/`--list-browsers`/`--check-env` on Linux; `--pack-only` end-to-end via `npx repomix@1.15.0` (packed-file audit + token count). The former cache-glob simulated-install check is historical, non-executable evidence only; current installs bind the exact suite root. CDP→ChatGPT harvest needs a logged-in Pro session and is deferred-environment.
@@ -148,7 +151,7 @@ Content is discovered by **convention directories** above; explicit paths in
 - Direct user removal: the current Fable audit and its Opus fallback both stalled without a report. Native cross-session review and `insane-review` remain.
 - Upgrade cleanup removes only the native `omg:fable.md`; `claude-fable-5` model preset references are unrelated and remain.
 
-### `oh-my-gjc` (core — absorbed my-workflows v0.3)
+### `oh-my-gajae-code` (core — absorbed my-workflows v0.3)
 - **The current focused suite has 7 skills and 9 commands.** Skills: `adaptive-response`, `no-english`, `extragoal`, `insane-review`, confirmation-gated `deep-onboarding`, explicit-install `preset-pack`, and explicit-only `multi-harness-research`. Commands: bare `/omg` plus `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:insane-review`, `/omg:deep-onboarding`, `/omg:preset-pack`, and `/omg:multi-harness`. The two presentation skills and multi-harness research never auto-activate from ordinary natural language; only their explicit commands may load them.
 - **Native install is REQUIRED:** canonical command bodies remain in `templates/`; the hardened one-shot installer copies all 7 skills and 9 commands, removes explicitly retired suite-owned native surfaces, stages the separate private multi-harness runtime/binding when its prerequisites are available, and emits the suite-root binding.
 - **One-shot install:** root `install.sh` performs marketplace add/update → plugin install → native install. No optional plugin arguments.
@@ -160,7 +163,7 @@ Content is discovered by **convention directories** above; explicit paths in
 - **`extragoal` skill (v0.4, 2026-07-08):** ultragoal + external final review gate. Reviewer lanes are native cross-session gjc and `insane-review` under an AND-gate. Missing/malformed/timeout verdicts fail closed; secret scanning is mandatory on egress.
 - **Multi-harness research boundary:** `/omg:multi-harness` / explicit `multi-harness-research` is the only activation path. With no argument, the current GJC leader previews one sentence of goal, questions, and expected output and receives confirmation. A dedicated direct orchestrator—not `gjc team`, a worker, or a fifth synthesis model—hashes one normalized task plus the identical safety/output suffix and sends it only in this order: `gjc-opus` (GJC 0.11.x `anthropic/claude-opus-4-8`, `--thinking max`), `gjc-sol` (GJC 0.11.x `openai-codex/gpt-5.6-sol`, `--thinking xhigh`), `codex-sol` (`gpt-5.6-sol`, `model_reasoning_effort="xhigh"`, `exec --ephemeral`), and `claude-ultracode` (`-p --no-session-persistence --effort ultracode`). There is no fallback, selector/effort substitution, winner/majority/vote/consensus/ranking/recommendation/final verdict, install/update/migrate/setup/login action, or OMO prompt.
 - **Multi-harness enforced isolation:** Linux `bwrap` mounts the canonical target read-only, shields target `.gjc` and mutable Git state, and gives each lane private HOME/XDG/TMP. GJC/Claude receive only workspace read/search/find plus provider-native public web; built-in Bash, write/edit/notebook, browser automation, MCP, hooks, extensions, skills, and rules are unavailable. Codex has a strict read-only profile, provider-native web only, disabled shell networking, and no user rules/config. The exact credential table has only one verified read-only regular leaf per provider: `${XDG_DATA_HOME:-$HOME/.local/share}/gjc/auth.json` for both GJC lanes, `${CODEX_HOME:-$HOME/.codex}/auth.json` for Codex, and `$HOME/.claude/.credentials.json` for Claude. Never bind a parent auth directory, HOME, alternate file, token environment value, or mutable auth state; unsupported layouts/auth/selectors fail preflight.
-- **Multi-harness artifacts and outcome:** only orchestrator/finalizer write `${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/multi-harness/<repo-id>/<run-id>/`; all run directories are `0700`, files are `0600`, and publication is no-follow, exclusive, same-directory atomic. All lanes reach terminal state before phase 1 seals factual lane facts, ledger, and a `comparison_status: pending` base. `COMPLETE`/`0` means four valid documents; `INCOMPLETE`/`10` preserves successful peers amid lane failure; no valid document or run-fatal is `1`. The current GJC leader reads only successful documents and supplies bounded, non-authoritative commonalities/differences plus uncertainty. The no-model phase-2 finalizer rechecks its one-use receipt, nonce, digest, descriptor identity, and immutable facts before replacing only the comparison placeholder. `FINALIZATION_FAILED`/`20` is separate and never changes phase-1 lane facts, artifacts, or exit. Uninstall removes only owned surfaces/runtime; it MUST preserve XDG research artifacts and auth/config. The current live Codex OAuth result is `pending-environment (401)`, not a passed live lane; never automate login or replace it with fixture success.
+- **Multi-harness artifacts and outcome:** only orchestrator/finalizer write `${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gajae-code/multi-harness/<repo-id>/<run-id>/`; all run directories are `0700`, files are `0600`, and publication is no-follow, exclusive, same-directory atomic. All lanes reach terminal state before phase 1 seals factual lane facts, ledger, and a `comparison_status: pending` base. `COMPLETE`/`0` means four valid documents; `INCOMPLETE`/`10` preserves successful peers amid lane failure; no valid document or run-fatal is `1`. The current GJC leader reads only successful documents and supplies bounded, non-authoritative commonalities/differences plus uncertainty. The no-model phase-2 finalizer rechecks its one-use receipt, nonce, digest, descriptor identity, and immutable facts before replacing only the comparison placeholder. `FINALIZATION_FAILED`/`20` is separate and never changes phase-1 lane facts, artifacts, or exit. Uninstall removes only owned surfaces/runtime; it MUST preserve XDG research artifacts and auth/config. The current live Codex OAuth result is `pending-environment (401)`, not a passed live lane; never automate login or replace it with fixture success.
 - **⚠ Ephemeral gjc harness runs MUST disable both notifications and SDK hosting.** Every throwaway `gjc -p` verify/audit/test invocation (external review, preset smoke, multi-harness GJC lanes, or a `/tmp` clone) MUST be prefixed with `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`. In GJC 0.11 the canonical SDK v3 loopback bus publishes `.gjc/state/sdk/<id>.json` independently of managed notifications; disabling notifications alone does not suppress that endpoint. User working sessions keep both surfaces available — this rule applies only to disposable harness runs.
 - Non-Goals: reimplementing gjc-native workflows (team/ultragoal/ralplan/deep-interview), vendor auto-login, or auto-merging preset copies at install time (curated presets ship only through explicit `/omg:preset-pack` — 하코 2026-07-19).
 

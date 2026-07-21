@@ -267,9 +267,13 @@ describe("multi-harness-research runner", () => {
     for (const entry of Object.values(observed)) expect(entry.args.join(" ")).not.toMatch(/\b(?:Bash|Write|Edit|Notebook|team|omo)\b/i);
   });
 
-  test("records task digest, XDG-only artifacts, private modes, and no raw task", () => {
+  test("records task digest, new-identity XDG artifacts, private modes, and no raw task", () => {
     const f = fixture();
     const task = "Research unique-task-canary-3a70d2.";
+    const legacyArtifact = join(f.artifactRoot, "oh-my-gjc", "multi-harness", "historical-run");
+    const legacySentinel = join(legacyArtifact, "preserve.txt");
+    privateDirectory(legacyArtifact);
+    privateFile(legacySentinel, "old artifact must remain");
     const { child } = invoke(f, task);
     expect(child.status).toBe(0);
     const sealed = handoff(child);
@@ -283,10 +287,11 @@ describe("multi-harness-research runner", () => {
     expect(statSync(sealed.run_dir).mode & 0o777).toBe(0o700);
     expect(statSync(join(sealed.run_dir, "finalization-receipt.json")).mode & 0o777).toBe(0o600);
     expect(String(result(child).finalization_receipt_path)).toBe(join(sealed.run_dir, "finalization-receipt.json"));
-    expect(sealed.run_dir).toStartWith(join(f.artifactRoot, "oh-my-gjc/multi-harness"));
+    expect(sealed.run_dir).toStartWith(join(f.artifactRoot, "oh-my-gajae-code/multi-harness"));
     for (const name of ["summary.md", "finalization-control.json", "finalization-receipt.json", "lanes/01-gjc-opus.md", "lanes/02-gjc-sol.md", "lanes/03-codex-sol.md", "lanes/04-claude-ultracode.md"]) {
       expect(readFileSync(join(sealed.run_dir, name), "utf8")).not.toContain("unique-task-canary");
     }
+    expect(readFileSync(legacySentinel, "utf8")).toBe("old artifact must remain");
   });
 
   test("uses COMPLETE/INCOMPLETE/FATAL exits and preserves successful peers", () => {
@@ -438,11 +443,12 @@ describe("multi-harness-research runner", () => {
     expect(readdirSync(credentialTarget.record)).toEqual([]);
 
     const artifactTarget = fixture();
-    const artifactPath = join(artifactTarget.artifactRoot, "oh-my-gjc", "multi-harness");
-    privateDirectory(join(artifactTarget.artifactRoot, "oh-my-gjc"));
-    privateDirectory(artifactPath);
-    const artifactRun = spawnSync(process.execPath, [artifactTarget.runner, "run", "--target", artifactPath, "--binding", artifactTarget.binding], { env: artifactTarget.env, input: "task", encoding: "utf8" });
-    expect(artifactRun.status).toBe(1);
+    for (const identity of ["oh-my-gjc", "oh-my-gajae-code"]) {
+      const artifactPath = join(artifactTarget.artifactRoot, identity, "multi-harness");
+      privateDirectory(artifactPath);
+      const artifactRun = spawnSync(process.execPath, [artifactTarget.runner, "run", "--target", artifactPath, "--binding", artifactTarget.binding], { env: artifactTarget.env, input: "task", encoding: "utf8" });
+      expect(artifactRun.status).toBe(1);
+    }
     expect(readdirSync(artifactTarget.record)).toEqual([]);
 
     const runtimeRoot = fixture();
@@ -465,7 +471,16 @@ describe("multi-harness-research runner", () => {
     expect(readdirSync(arbitrary.record)).toEqual([]);
 
     const launch = fixture();
-    const launchDirectory = join(launch.home, ".cache", "oh-my-gjc", "multi-harness-research", "launch-test-7a2d");
+    const legacyLaunchDirectory = join(launch.home, ".cache", "oh-my-gjc", "multi-harness-research", "launch-legacy-7a2d");
+    privateDirectory(legacyLaunchDirectory);
+    const legacyLaunchRunner = join(legacyLaunchDirectory, "runner.mjs");
+    copyFileSync(launch.runner, legacyLaunchRunner);
+    chmodSync(legacyLaunchRunner, 0o700);
+    expect(runFrom(launch, legacyLaunchRunner).status).toBe(1);
+    expect(readdirSync(launch.record)).toEqual([]);
+    expect(readFileSync(legacyLaunchRunner, "utf8")).toBe(readFileSync(launch.runner, "utf8"));
+
+    const launchDirectory = join(launch.home, ".cache", "oh-my-gajae-code", "multi-harness-research", "launch-test-7a2d");
     privateDirectory(launchDirectory);
     const launchRunner = join(launchDirectory, "runner.mjs");
     copyFileSync(launch.runner, launchRunner);

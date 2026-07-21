@@ -1,0 +1,24 @@
+{
+  "name": "oh-my-gajae-code",
+  "version": "0.28.0",
+  "description": "oh-my-gajae-code — focused Gajae Code suite with 7 skills and 9 commands. Skills: adaptive-response, no-english, extragoal, insane-review, deep-onboarding, preset-pack, multi-harness-research. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:insane-review, /omg:deep-onboarding, /omg:preset-pack, /omg:multi-harness. Multi-harness research is explicit-only, directly fans one identical task to exactly four read-only harnesses, and writes results only outside the project in XDG state; it requires Linux, bubblewrap, existing provider logins, and a private user runtime binding. Preset-pack merges the curated daily/agent profiles (human vs unattended-agent seat maps) into the user's models.yml only on explicit /omg:preset-pack invocation, after backup, name-scoped, leaving all other profiles and top-level keys untouched. The installer itself never modifies models.yml.",
+  "author": {
+    "name": "devswha",
+    "email": "devswha@gmail.com",
+    "url": "https://github.com/devswha"
+  },
+  "homepage": "https://github.com/devswha/oh-my-gajae-code",
+  "repository": "https://github.com/devswha/oh-my-gajae-code",
+  "license": "MIT",
+  "keywords": [
+    "gjc",
+    "oh-my",
+    "skills",
+    "workflow",
+    "approval-gate",
+    "code-review",
+    "orchestration",
+    "multi-harness-research",
+    "model-presets"
+  ]
+}

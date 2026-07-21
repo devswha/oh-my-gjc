@@ -14,16 +14,22 @@ export PATH="/home/devswha/.bun/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 # 필요하면 비어 있지 않은 이름으로 override하라.
 export GJC_BUGWATCH_GATE_SESSION="${GJC_BUGWATCH_GATE_SESSION:-horcrux}"
 
-REPO="${GJC_BUGWATCH_REPO:-/home/devswha/workspace/oh-my-gjc}"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+DEFAULT_REPO="$(cd -- "${SCRIPT_DIR}/../.." && pwd -P)"
+if [[ -n "${GJC_BUGWATCH_REPO:-}" ]]; then
+	REPO="$(cd -- "${GJC_BUGWATCH_REPO}" && pwd -P)"
+else
+	REPO="${DEFAULT_REPO}"
+fi
 DAYS="${GJC_BUGWATCH_DAYS:-7}"
 LOG="${GJC_BUGWATCH_CRON_LOG:-${REPO}/.gjc/bugwatch/daily-scan.log}"
 
-cd "${REPO}"
+cd -- "${REPO}"
 mkdir -p "$(dirname "${LOG}")"
 
 ts() { date -Iseconds; }
 
-JSON="$(bun run plugins/oh-my-gjc/bin/collect.ts \
+JSON="$(bun run plugins/oh-my-gajae-code/bin/collect.ts \
 	--days "${DAYS}" --fresh-only --hide-resolved --json 2>>"${LOG}" || echo '[]')"
 
 # Pipe the candidate array into trigger.ts --daily; it decides whether to inject.

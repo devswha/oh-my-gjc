@@ -1,8 +1,9 @@
 # ops/gjc-bugwatch — automation lane (outside the plugin)
 
 Promotes the **manual** gjc-bugwatch lane to an **automatic cadence** without weakening
-the plugin's safety contract. The plugin (`plugins/oh-my-gjc`) stays **drafts-only,
-read-only, redacted, no-fabrication**. Everything here is glue — systemd/cron/tmux — and
+the plugin's safety contract. The plugin (`plugins/oh-my-gajae-code`) stays
+**drafts-only, read-only, redacted, no-fabrication**. Everything here is glue —
+systemd/cron/tmux — and
 **never submits anything**. It only *injects a triage instruction* into the operator's
 tmux session so the agent picks up the work; a human still approves every upstream PR.
 
@@ -21,11 +22,12 @@ tmux session so the agent picks up the work; a human still approves every upstre
 ## Install
 
 ```sh
-bash /home/devswha/workspace/oh-my-gjc/ops/gjc-bugwatch/install.sh
+bash /absolute/path/to/checkout/ops/gjc-bugwatch/install.sh
 ```
 
-Idempotent. Installs the user unit (enable + `--now` + linger) and adds the daily cron
-entry (~08:20) if not already present.
+Idempotent. It resolves the repository from the installer location unless
+`GJC_BUGWATCH_REPO` explicitly selects another existing checkout, then installs and starts
+the user unit (enable + linger) and replaces its managed daily cron entry (~08:20).
 
 ## Cadence
 
@@ -45,7 +47,7 @@ entry (~08:20) if not already present.
   all remain human-gated via the horcrux queue.
 - **tmux send-keys never contains a tilde (`~`).** Injected payloads use absolute paths;
   `injectTmux` throws if a `~` slips in.
-- **Automation stays outside the plugin.** `plugins/oh-my-gjc` is untouched; its
+- **Automation stays outside the plugin.** `plugins/oh-my-gajae-code` is untouched; its
   drafts-only / read-only / redaction / no-fabrication contract is intact.
 
 ## Configuration (env)
@@ -56,7 +58,7 @@ entry (~08:20) if not already present.
 | `GJC_BUGWATCH_MIN` | `medium` | daemon.sh (follow.ts `--min`) |
 | `GJC_BUGWATCH_COOLDOWN_MS` | `1800000` | trigger.ts dedup window |
 | `GJC_BUGWATCH_DRYRUN` | _(unset)_ | trigger.ts — log the tmux command instead of running it |
-| `GJC_BUGWATCH_REPO` | `/home/devswha/workspace/oh-my-gjc` | all scripts |
+| `GJC_BUGWATCH_REPO` | script-relative checkout root | daemon.sh, daily-scan.sh, install.sh |
 | `HORCRUX_BIN` | `/home/devswha/workspace/horcrux/scripts/horcrux` | enqueue-pr.sh |
 
 ## Verify

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Install oh-my-gajaecode SKILLs and slash COMMANDs as NATIVE gjc capabilities.
+# Install oh-my-gajae-code SKILLs and slash COMMANDs as NATIVE gjc capabilities.
 #
 # WHY native install (and why command files live in templates/, not commands/):
 #   gjc 0.9.x auto-exposes a marketplace plugin's convention `commands/*.md` as
 #   `<plugin>:<name>` slash commands (claude-plugins provider). For this suite that
-#   would surface a second, wrongly-namespaced `oh-my-gjc:*` command set alongside
+#   would surface a second, wrongly-namespaced `oh-my-gajae-code:*` command set alongside
 #   the canonical `/omg:*`. To keep exactly ONE command surface, the command bodies
 #   live in `templates/` — a NON-convention dir gjc never auto-registers — and this
 #   installer copies them into the native commands dir with the `omg:` prefix.
@@ -34,7 +34,7 @@ for _a in "$@"; do
     */*|*install-skill.sh)
       echo "❌ '$_a' looks like a path, not an argument — a glob likely matched the wrong plugin folder." >&2
       echo "   Repair or upgrade through the hardened suite installer instead:" >&2
-      echo "   curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash" >&2
+      echo "   curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh | bash" >&2
       exit 2 ;;
   esac
 done
@@ -79,8 +79,8 @@ prepare_native_surface_paths() { # $1=scope $2=create|verify
 multi_harness_runtime() { echo "$HOME/.gjc/agent/runtimes/multi-harness-research"; }
 suite_runtime_dir() {
   case "$1" in
-    user)    printf '%s\n' "$HOME/.gjc/agent/runtimes/oh-my-gjc" ;;
-    project) printf '%s\n' "$PWD/.gjc/runtimes/oh-my-gjc" ;;
+    user)    printf '%s\n' "$HOME/.gjc/agent/runtimes/oh-my-gajae-code" ;;
+    project) printf '%s\n' "$PWD/.gjc/runtimes/oh-my-gajae-code" ;;
     *)       return 2 ;;
   esac
 }

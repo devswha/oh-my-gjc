@@ -1,6 +1,6 @@
 /**
  * gajae-app ownership-transfer regression.
- * Run: bun test plugins/oh-my-gjc/test/gajae-app-removal.test.ts
+ * Run: bun test plugins/oh-my-gajae-code/test/gajae-app-removal.test.ts
  */
 import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
@@ -147,7 +147,7 @@ describe("removed capability upgrade cleanup", () => {
     const removedCommandPaths = retiredCommands.map((name) =>
       join(nativeRoot, `commands/omg:${name}.md`),
     );
-    const legacyCommand = join(nativeRoot, "commands/oh-my-gjc:gajae-app.md");
+    const legacyCommandAlias = join(nativeRoot, "commands/oh-my-gjc:gajae-app.md");
     const nativeSibling = join(nativeRoot, "skills/gajae-app-sentinel/SKILL.md");
     const commandSibling = join(nativeRoot, "commands/omg:gajae-app-sentinel.md");
     const removedRuntime = join(home, ".gjc/agent/runtimes/lazycodex-gjc/binding");
@@ -158,6 +158,7 @@ describe("removed capability upgrade cleanup", () => {
     const codexCredential = join(home, ".codex/auth.json");
     const systemFile = join(home, ".gjc/agent/SYSTEM.md");
     const agentsFile = join(home, ".gjc/agent/AGENTS.md");
+    // Historical cleanup fixture: remove the retired easy marker but preserve the stable gate marker.
     const markerFixture = [
       "user content before",
       "<!-- BEGIN oh-my-gjc:easy-always -->",
@@ -182,7 +183,7 @@ describe("removed capability upgrade cleanup", () => {
     try {
       for (const path of removedSkillPaths) writeSentinel(path, "removed skill");
       for (const path of removedCommandPaths) writeSentinel(path, "removed command");
-      writeSentinel(legacyCommand, "legacy command to remove");
+      writeSentinel(legacyCommandAlias, "legacy command alias to remove");
       rmSync(removedSkillPaths[0]);
       symlinkSync(join(sandbox, "missing-retired-skill"), removedSkillPaths[0]);
       rmSync(removedCommandPaths[0]);
@@ -225,7 +226,7 @@ describe("removed capability upgrade cleanup", () => {
       expect(result.stdout).toContain("removed-capability native file");
       for (const path of removedSkillPaths) expect(existsSync(path)).toBe(false);
       for (const path of removedCommandPaths) expect(existsSync(path)).toBe(false);
-      expect(existsSync(legacyCommand)).toBe(false);
+      expect(existsSync(legacyCommandAlias)).toBe(false);
       expect(() => lstatSync(removedSkillPaths[0])).toThrow();
       expect(() => lstatSync(removedCommandPaths[0])).toThrow();
       if (scope === "user") {
@@ -243,6 +244,8 @@ describe("removed capability upgrade cleanup", () => {
           expect(content).toContain("user content before");
           expect(content).toContain("preserved gate rule");
           expect(content).toContain("user content after");
+          expect(content).toContain("<!-- BEGIN oh-my-gjc:gate-always -->");
+          expect(content).toContain("<!-- END oh-my-gjc:gate-always -->");
           expect(content).not.toContain("easy-always");
           expect(statSync(file).mode & 0o777).toBe(0o600);
           const backupName = readdirSync(dirname(file)).find((name) =>
@@ -291,7 +294,7 @@ describe("removed capability upgrade cleanup", () => {
       expect(result.status).not.toBe(0);
       expect(readFileSync(sentinel, "utf8")).toBe("external user file remains");
       expect(existsSync(join(externalSkills, "adaptive-response/SKILL.md"))).toBe(false);
-      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gjc/root"))).toBe(false);
+      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gajae-code/root"))).toBe(false);
     } finally {
       rmSync(sandbox, { recursive: true, force: true });
     }
@@ -314,7 +317,7 @@ describe("removed capability upgrade cleanup", () => {
       expect(result.status).not.toBe(0);
       expect(readFileSync(sentinel, "utf8")).toBe("external user command remains");
       expect(existsSync(join(home, ".gjc/agent/skills"))).toBe(false);
-      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gjc/root"))).toBe(false);
+      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gajae-code/root"))).toBe(false);
     } finally {
       rmSync(sandbox, { recursive: true, force: true });
     }
@@ -342,6 +345,7 @@ describe("removed capability upgrade cleanup", () => {
     const home = join(sandbox, "home");
     const external = join(sandbox, "external-system.md");
     const systemFile = join(home, ".gjc/agent/SYSTEM.md");
+    // Historical cleanup marker must remain untouched when its policy file is symlinked.
     const content = [
       "external content",
       "<!-- BEGIN oh-my-gjc:easy-always -->",
@@ -381,6 +385,7 @@ describe("removed capability upgrade cleanup", () => {
     const fakeBin = join(sandbox, "bin");
     const state = join(sandbox, `${command}-count`);
     const systemFile = join(home, ".gjc/agent/SYSTEM.md");
+    // Historical cleanup marker must remain untouched when atomic cleanup fails.
     const content = [
       "user content",
       "<!-- BEGIN oh-my-gjc:easy-always -->",

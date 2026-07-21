@@ -63,7 +63,7 @@ SOURCE_RUNNER="$RUNTIME_ROOT/runner.mjs"
   exit 1
 }
 
-PRIVATE_BASE="$ACCOUNT_HOME/.cache/oh-my-gjc/multi-harness-research"
+PRIVATE_BASE="$ACCOUNT_HOME/.cache/oh-my-gajae-code/multi-harness-research"
 /usr/bin/mkdir -p "$PRIVATE_BASE" && /usr/bin/chmod 700 "$PRIVATE_BASE" || {
   echo "cannot create private multi-harness launch directory" >&2
   exit 1

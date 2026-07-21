@@ -1,12 +1,12 @@
 ---
 name: example-skill
-description: Template skill shipped by the example-plugin oh-my-gjc plugin. Use when you want a worked reference for how an oh-my-gjc plugin packages a skill. Replace this body with your own workflow before publishing.
+description: Template skill shipped by the example-plugin oh-my-gajae-code plugin. Use when you want a worked reference for how an oh-my-gajae-code plugin packages a skill. Replace this body with your own workflow before publishing.
 ---
 
 # Example Skill
 
 This is a template skill. It exists to show the on-disk shape of a skill that
-ships inside an oh-my-gjc plugin. Delete it (or rewrite it) before publishing a
+ships inside an oh-my-gajae-code plugin. Delete it (or rewrite it) before publishing a
 real plugin.
 
 ## What a real skill should contain

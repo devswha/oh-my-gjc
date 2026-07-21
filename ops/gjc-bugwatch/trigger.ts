@@ -2,7 +2,7 @@
 /**
  * gjc-bugwatch automation trigger — the glue that lives OUTSIDE the plugin.
  *
- * The plugin (plugins/oh-my-gjc) keeps its safety contract intact: drafts-only,
+ * The plugin (plugins/oh-my-gajae-code) keeps its safety contract intact: drafts-only,
  * read-only, redaction, no fabrication. This file is repo tooling that promotes the
  * manual lane to an automatic cadence WITHOUT weakening that contract — it never
  * submits anything; it only *injects a triage instruction* into the operator's tmux
