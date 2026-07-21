@@ -21,9 +21,17 @@
   - opt-in 보증: `install.sh`에 enable 호출 없음(테스트로 강제). `install-skill.sh uninstall … user`가 타이머 disable 호출.
 - **gitleaks**: 각 커밋 staged 스캔 no leaks. 릴리스 범위 재스캔은 발행 전 수행.
 
-## 교차리뷰 (recommended)
-- fresh-context 교차패밀리 리뷰(`gjc -p --no-session --model openai-codex/gpt-5.6-sol:high --tools read,search,find`)로 자동 업데이터·uninstall 훅 diff 심사. 결과는 아래 기록.
-  - 판정: (본 파일 하단 업데이트)
+## 교차리뷰 (recommended, dogfood lane)
+fresh-context 교차패밀리 리뷰(`gjc -p --no-session --model openai-codex/gpt-5.6-sol:high --tools read,search,find`)로 자동 업데이터·uninstall 훅 diff 심사. 2라운드 실시, 모두 fix-forward:
+- **Round 1 → REQUEST_CHANGES (4건, 전부 수정, commit `4b17ba5`)**:
+  1. `curl|bash` pipefail/부분 다운로드 실행 → 임시파일 다운로드 후 fetch rc·비어있음 검사 뒤 실행.
+  2. 항상 rc=0로 실패 은폐 → 설치기 실제 rc 전파(systemd/cron이 실패 인지).
+  3. `disable`이 user bus 없으면 유닛 미삭제 → 유닛 파일 무조건 삭제 + best-effort systemctl.
+  4. `--interval`·경로 미검증 삽입 → allowlist 검증 + systemd `%` escape/인용 + cron `%` escape/인용.
+- **Round 2 → REQUEST_CHANGES (4번 부분, 전부 수정, commit `25f8047`)**:
+  - cron 폴백이 raw `--interval`을 스케줄로 써 `* * * * * rm -rf /` 명령 주입 가능 → 별칭 아니면 **엄격 5-필드 cron만** 허용(초과 필드·명령 텍스트 거부). 테스트로 rc≠0 증명.
+  - 경로의 `"` 가 systemd 인용 깨뜨림 → `assert_safe_path`가 `'`,`"`,`\`,`` ` `` 거부.
+- 두 라운드 지적을 모두 결정적 테스트(`test/omg-autoupdate.test.ts`)로 회귀 고정. 교차리뷰는 규칙상 권장·비차단이며, 제기된 결함은 발행 전 전부 해소됨.
 
 ## 계약 보존
 - 설치 스크립트는 `models.yml`을 절대 수정·삭제하지 않는다.
