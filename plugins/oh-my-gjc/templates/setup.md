@@ -9,14 +9,14 @@ argument-hint: "(인자 없음)"
 
 ## Step 0 — 네이티브 표면과 binding 확인
 
-canonical 진단 대상은 user scope `~/.gjc/agent`다. 아래 7개 skill과 10개 command가 모두 있는지와 private runtime binding의 **존재만** 확인한다. binding 존재는 실제 로그인·selector·credential 검증 성공을 뜻하지 않는다.
+canonical 진단 대상은 user scope `~/.gjc/agent`다. 아래 7개 skill과 9개 command가 모두 있는지와 private runtime binding의 **존재만** 확인한다. binding 존재는 실제 로그인·selector·credential 검증 성공을 뜻하지 않는다.
 
 ```bash
 root="$HOME/.gjc/agent"
 for skill in adaptive-response no-english extragoal insane-review deep-onboarding preset-pack multi-harness-research; do
   test -f "$root/skills/$skill/SKILL.md" || exit 1
 done
-for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:fable.md omg:insane-review.md omg:deep-onboarding.md omg:preset-pack.md omg:multi-harness.md; do
+for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:insane-review.md omg:deep-onboarding.md omg:preset-pack.md omg:multi-harness.md; do
   test -f "$root/commands/$command" || exit 1
 done
 for runtime in "$root/runtimes/multi-harness-research"; do

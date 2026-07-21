@@ -105,7 +105,6 @@ describe("suite root runtime binding", () => {
       "omg:gate.md",
       "omg:gate-always.md",
       "omg:no-english.md",
-      "omg:fable.md",
       "omg:insane-review.md",
       "omg:deep-onboarding.md",
       "omg:preset-pack.md",

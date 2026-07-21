@@ -32,7 +32,6 @@ MARKERS = [
     "templates/gate.md",
     "templates/gate-always.md",
     "templates/no-english.md",
-    "templates/fable.md",
     "templates/insane-review.md",
     "templates/deep-onboarding.md",
     "templates/multi-harness.md",

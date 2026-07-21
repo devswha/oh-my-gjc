@@ -43,12 +43,12 @@ PLUGIN_ROOT="$(cd -P "$(dirname "$0")/.." && pwd -P)"
 
 # ── EXPECTED manifest (the single source of truth for a complete install) ────────────
 EXPECTED_SKILLS=(adaptive-response no-english extragoal insane-review deep-onboarding preset-pack multi-harness-research)
-EXPECTED_COMMANDS=(omg setup gate gate-always no-english fable insane-review deep-onboarding preset-pack multi-harness)
+EXPECTED_COMMANDS=(omg setup gate gate-always no-english insane-review deep-onboarding preset-pack multi-harness)
 EXPECTED_RUNTIMES=(bin/multi-harness-research.mjs references/preset-pack.yml)
 # Upgrades sweep only native files and dedicated runtime state owned by capabilities
 # retired from this suite.
 REMOVED_SKILLS=(gate-briefing korean-first workflow-eta time-left codex-deepwork codex-app-launch codex-app-cdp codex-cli-ask lazycodex lazycodex-gjc tower worktree gajae-app multivendor-presets release-gate easy-answer plain-layer branch-flow gjc-bugwatch session-observer)
-REMOVED_COMMANDS=(time-left codex-run codex-app-launch codex-app-ask codex-ask lazycodex-setup lazycodex-work lazycodex-gjc tower-setup gajae-app presets release easy easy-always plain branchflow-always worktree bugwatch-scan session-observer)
+REMOVED_COMMANDS=(fable time-left codex-run codex-app-launch codex-app-ask codex-ask lazycodex-setup lazycodex-work lazycodex-gjc tower-setup gajae-app presets release easy easy-always plain branchflow-always worktree bugwatch-scan session-observer)
 # Pre-0.8.1 native files that upgrades must sweep away: the 17 one-release deprecation
 # tombstones shipped by 0.8.0 (removed in 0.8.1). Old `oh-my-gjc:<name>.md` aliases are
 # covered separately by looping EXPECTED_COMMANDS in cleanup_legacy_commands.

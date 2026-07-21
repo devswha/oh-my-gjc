@@ -28,7 +28,7 @@ git clone --depth 1 https://github.com/devswha/oh-my-gjc.git
 bash oh-my-gjc/install.sh
 ```
 
-한 번 설치로 스킬 7개 + 커맨드 10개(`/omg` + `/omg:*` 9개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+한 번 설치로 스킬 7개 + 커맨드 9개(`/omg` + `/omg:*` 8개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -47,8 +47,12 @@ bash oh-my-gjc/install.sh
 
 ### 커맨드
 
-- `/omg:fable` — 안전-크리티컬 코드 적대적 감사(돈·데이터·보안 코드) · **Fable 5 모델 필요**
-- 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:fable`, `/omg:insane-review`, `/omg:deep-onboarding`, `/omg:preset-pack`, `/omg:multi-harness`.
+- 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:insane-review`, `/omg:deep-onboarding`, `/omg:preset-pack`, `/omg:multi-harness`.
+
+### v0.26.0 묘비
+
+- `fable`: 사용자의 직접 지시로 제거. 현재 Fable 감사와 Opus fallback 감사가 모두 보고서 없이 멈췄다. 네이티브 교차세션 리뷰와 `insane-review`는 유지한다.
+- 업그레이드는 native `omg:fable.md`만 정리한다. `claude-fable-5` 모델 프리셋 참조는 무관하며 유지한다.
 
 ### v0.25 묘비
 
@@ -80,7 +84,7 @@ bash oh-my-gjc/install.sh
 번역이 기술적 의미나 검색 가능성을 해치면 첫 등장에 원어를 병기한다.
 
 - GJC 정식 이름은 번역·음역하지 않는다. `ultragoal`, `ralplan`, `deep-interview`, `team`,
-  `adaptive-response`, `/omg:fable`을 그대로 쓴다.
+  `adaptive-response`를 그대로 쓴다.
 - 따라서 “울트라고울”, “울트라골”, “랄플랜”, “딥 인터뷰”처럼 바꾸지 않는다.
 
 - 원문: [`plugins/oh-my-gjc/skills/no-english/SKILL.md`](./plugins/oh-my-gjc/skills/no-english/SKILL.md)
@@ -91,7 +95,7 @@ bash oh-my-gjc/install.sh
 검토하는 게 아니라, 실제 PR 리뷰처럼 무공유·교차패밀리로 판정 → 승인/변경요청 verdict → 발견 정리 →
 고치고 재서명하며 깨끗한 후보가 될 때까지 fix-forward → 기계적 머지.
 
-- 리뷰어 레인: 네이티브 교차세션 gjc(기본) / `/omg:fable` / `insane-review`(GPT-5.6 Sol Pro 웹) — AND 게이트로 합침.
+- 리뷰어 레인: 네이티브 교차세션 gjc(기본)와 `insane-review`(GPT-5.6 Sol Pro 웹)를 AND 게이트로 합친다.
 - fail-closed: verdict 누락·malformed·timeout은 절대 승인으로 안 친다. 시크릿 스캔은 번들이 기기 밖 나가는 레인에서 비타협.
 - 켜기: 스킬 트리거로 활성. 별도 reviewer 프리셋 없이 GJC 기본 모델 구성의 교차세션 리뷰를 쓴다. 원문: [`plugins/oh-my-gjc/skills/extragoal/SKILL.md`](./plugins/oh-my-gjc/skills/extragoal/SKILL.md)
 
@@ -140,17 +144,6 @@ bash oh-my-gjc/install.sh
   바꾼다. finalizer 실패는 `FINALIZATION_FAILED`/`20`으로 따로 보고하며 lane 결과·exit·artifact를 바꾸지
   않는다. 다섯째 모델, winner/majority/vote/consensus/ranking/recommendation/final verdict는 없다.
 
-### `/omg:fable` — 안전-크리티컬 코드 적대적 감사
-
-돈·데이터·보안 걸린 코드를 Fable 5 모델로 적대적 감사한다. 설계 리뷰가 아니라
-"이 안전장치들이 **동시에** 터지는 시나리오가 있나"를 판다. 읽기 전용, 심각도 +
-파일:라인 + 재현 시나리오로 보고한다.
-
-- 스코프는 파일 3~6개만. 넘으면 감사가 얕아진다.
-- 보고서 상위 발견은 실코드랑 대조(스팟체크)한 뒤에만 브리핑한다. 억지 결함 안 만든다.
-- `:max` 금지 — Fable은 조용히 `xhigh`로 깎인다. Fable이 거부하면 `opus-4-8`로 대체한다.
-- 쓰기: `/omg:fable "주문 경로와 손절 로직"`
-- 원문: [`plugins/oh-my-gjc/templates/fable.md`](./plugins/oh-my-gjc/templates/fable.md)
 
 ### `insane-review` — GPT-5.6 Sol Pro 웹 리뷰
 

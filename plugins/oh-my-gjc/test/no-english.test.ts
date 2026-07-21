@@ -46,7 +46,6 @@ describe("no-english skill contract", () => {
       "`deep-interview`",
       "`team`",
       "`adaptive-response`",
-      "`/omg:fable`",
     ]) {
       expect(skill).toContain(canonical);
     }
