@@ -12,9 +12,15 @@ set -euo pipefail
 # systemd user units start with a minimal PATH — make bun/tmux resolvable.
 export PATH="/home/devswha/.bun/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 
-REPO="${GJC_BUGWATCH_REPO:-/home/devswha/workspace/oh-my-gjc}"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+DEFAULT_REPO="$(cd -- "${SCRIPT_DIR}/../.." && pwd -P)"
+if [[ -n "${GJC_BUGWATCH_REPO:-}" ]]; then
+	REPO="$(cd -- "${GJC_BUGWATCH_REPO}" && pwd -P)"
+else
+	REPO="${DEFAULT_REPO}"
+fi
 LOGDIR="${GJC_LOG_DIR:-${HOME}/.gjc/logs}"
 MIN="${GJC_BUGWATCH_MIN:-medium}"
 
-exec bun run "${REPO}/plugins/oh-my-gjc/bin/follow.ts" --dir "${LOGDIR}" --min "${MIN}" \
+exec bun run "${REPO}/plugins/oh-my-gajae-code/bin/follow.ts" --dir "${LOGDIR}" --min "${MIN}" \
 	| bun run "${REPO}/ops/gjc-bugwatch/trigger.ts"

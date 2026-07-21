@@ -5,6 +5,7 @@ Run manually with:
   python3 -m unittest ops.verify.test_record_provenance
 """
 import errno
+import hashlib
 import importlib.util
 from unittest import mock
 import json
@@ -22,7 +23,13 @@ SCRIPT = Path(__file__).with_name("record_provenance.py")
 MODULE_SPEC = importlib.util.spec_from_file_location("record_provenance_under_test", SCRIPT)
 PROVENANCE = importlib.util.module_from_spec(MODULE_SPEC)
 MODULE_SPEC.loader.exec_module(PROVENANCE)
-PLUGIN_NAME = "oh-my-gjc"
+PLUGIN_NAME = "oh-my-gajae-code"
+PLUGIN_SOURCE = "./plugins/{}".format(PLUGIN_NAME)
+CACHE_PREFIX = "{}___{}___".format(PLUGIN_NAME, PLUGIN_NAME)
+# Historical v0.27 identity; retained only for explicit rejection coverage.
+OLD_PLUGIN_NAME = "oh-my-gjc"
+OLD_PLUGIN_SOURCE = "./plugins/{}".format(OLD_PLUGIN_NAME)
+OLD_CACHE_PREFIX = "{}___{}___".format(OLD_PLUGIN_NAME, OLD_PLUGIN_NAME)
 VERSION = "1.2.3"
 MARKERS = [
     "bin/install-skill.sh",
@@ -60,7 +67,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self.home = self.root / "home"
         self.candidate = self.root / "candidate"
         self.cache_parent = self.home / ".gjc" / "plugins" / "cache" / "plugins"
-        self.cache = self.cache_parent / ("oh-my-gjc___oh-my-gjc___" + VERSION)
+        self.cache = self.cache_parent / (CACHE_PREFIX + VERSION)
         self._create_matching_fixture(self.candidate, self.cache)
         self._git("init", "-q")
         self._git("config", "user.email", "provenance@example.test")
@@ -94,7 +101,7 @@ class RecordProvenanceTest(unittest.TestCase):
             "plugins": [
                 {
                     "name": PLUGIN_NAME,
-                    "source": "./plugins/oh-my-gjc",
+                    "source": PLUGIN_SOURCE,
                     "version": VERSION,
                 }
             ],
@@ -216,6 +223,9 @@ class RecordProvenanceTest(unittest.TestCase):
         self.assertIsInstance(record["candidate_identity"]["plugin_inode"], int)
         self.assertTrue(record["candidate_identity"]["plugin_pathname_matches_descriptor"])
         self.assertEqual(record["version_parity"]["plugin_manifest"], VERSION)
+        self.assertEqual(PROVENANCE.PLUGIN_NAME, PLUGIN_NAME)
+        self.assertEqual(PROVENANCE.PLUGIN_SOURCE, PLUGIN_SOURCE)
+        self.assertEqual(PROVENANCE.CACHE_PREFIX, CACHE_PREFIX)
         self.assertTrue(record["version_parity"]["all_equal"])
         self.assertEqual(record["cache_identity"]["root"], str(self.cache))
         self.assertEqual(record["cache_identity"]["parent"], str(self.cache_parent))
@@ -293,6 +303,23 @@ class RecordProvenanceTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
         self.assertEqual(json.loads(result.stdout), record)
         self.assertIn("complete plugin-tree payload bytes match", result.stderr)
+
+    def test_payload_aggregate_digest_uses_v2_domain_separator(self):
+        payloads = {"fixture.txt": b"fixture payload\n"}
+        expected = hashlib.sha256()
+        expected.update(b"oh-my-gajae-code plugin payload v2\x00")
+        for relative_path in sorted(payloads):
+            path_bytes = relative_path.encode("utf-8")
+            payload = payloads[relative_path]
+            expected.update(len(path_bytes).to_bytes(8, "big"))
+            expected.update(path_bytes)
+            expected.update(len(payload).to_bytes(8, "big"))
+            expected.update(payload)
+
+        self.assertEqual(
+            PROVENANCE.payload_aggregate_digest(payloads),
+            "sha256:" + expected.hexdigest(),
+        )
 
     def test_uppercase_full_commit_is_normalized(self):
         result = self._invoke(commit=self.head.upper())
@@ -726,6 +753,27 @@ class RecordProvenanceTest(unittest.TestCase):
                 self._assert_failure_untouched(expected_message)
                 self._restore_marketplace()
 
+    def test_old_identity_marketplace_manifest_and_source_are_rejected(self):
+        marketplace_path = self.candidate / ".claude-plugin" / "marketplace.json"
+        mutations = (
+            ("top-level name", lambda value: value.__setitem__("name", OLD_PLUGIN_NAME), "top-level name"),
+            ("entry name", lambda value: value["plugins"][0].__setitem__("name", OLD_PLUGIN_NAME), "entry name"),
+            ("entry source", lambda value: value["plugins"][0].__setitem__("source", OLD_PLUGIN_SOURCE), "entry source"),
+        )
+        for name, mutate, expected_message in mutations:
+            with self.subTest(name=name):
+                document = self._marketplace_document()
+                mutate(document)
+                self._write_json(marketplace_path, document)
+                self._commit_candidate_changes()
+                self._assert_failure_untouched(expected_message)
+                self._restore_marketplace()
+
+        manifest_path = self._candidate_marker(".claude-plugin/plugin.json")
+        self._write_json(manifest_path, {"name": OLD_PLUGIN_NAME, "version": VERSION})
+        self._commit_candidate_changes()
+        self._assert_failure_untouched("candidate plugin manifest name")
+
     def test_plugin_manifest_version_drift_and_invalid_semver_are_rejected(self):
         manifest_path = self._candidate_marker(".claude-plugin/plugin.json")
         self._write_json(manifest_path, {"name": PLUGIN_NAME, "version": "9.9.9"})
@@ -745,7 +793,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self._write_json(marketplace_path, self._marketplace_document())
         self._commit_candidate_changes()
         marketplace_path.write_text(
-            '{"name":"oh-my-gjc","name":"wrong","metadata":{"version":"1.2.3"},"plugins":[]}\n',
+            '{"name":"oh-my-gajae-code","name":"wrong","metadata":{"version":"1.2.3"},"plugins":[]}\n',
             encoding="utf-8",
         )
         self._commit_candidate_changes()
@@ -754,7 +802,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self._write_json(marketplace_path, self._marketplace_document())
         self._commit_candidate_changes()
         self._candidate_marker(".claude-plugin/plugin.json").write_text(
-            '{"name":"oh-my-gjc","name":"wrong","version":"1.2.3"}\n',
+            '{"name":"oh-my-gajae-code","name":"wrong","version":"1.2.3"}\n',
             encoding="utf-8",
         )
         self._commit_candidate_changes()
@@ -763,7 +811,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self.temporary_directory.cleanup()
         self.setUp()
         self._cache_marker(self.cache, ".claude-plugin/plugin.json").write_text(
-            '{"name":"oh-my-gjc","name":"wrong","version":"1.2.3"}\n',
+            '{"name":"oh-my-gajae-code","name":"wrong","version":"1.2.3"}\n',
             encoding="utf-8",
         )
         self._assert_failure_untouched("cache plugin manifest contains duplicate JSON key 'name'")
@@ -785,20 +833,23 @@ class RecordProvenanceTest(unittest.TestCase):
         cache_file.write_text("not a directory\n", encoding="utf-8")
         self._assert_failure_untouched("cache root must be an existing directory", cache=cache_file)
 
-    def test_cache_identity_requires_authoritative_home_parent_and_exact_basename(self):
+    def test_cache_identity_rejects_old_identity_and_requires_authoritative_home_parent_and_exact_basename(self):
         wrong_basename = self.cache_parent / "wrong-cache-name"
-        wrong_version = self.cache_parent / "oh-my-gjc___oh-my-gjc___9.9.9"
+        wrong_version = self.cache_parent / (CACHE_PREFIX + "9.9.9")
+        old_identity_cache = self.cache_parent / (OLD_CACHE_PREFIX + VERSION)
         sibling = self.root / "sibling" / self.cache.name
         fake_parent = self.root / "fake" / "plugins"
         fake_cache = fake_parent / self.cache.name
         shutil.copytree(self.cache, wrong_basename)
         shutil.copytree(self.cache, wrong_version)
+        shutil.copytree(self.cache, old_identity_cache)
         shutil.copytree(self.cache, sibling)
         shutil.copytree(self.cache, fake_cache)
 
         cases = (
             (wrong_basename, "cache basename must be exactly"),
             (wrong_version, "cache basename must be exactly"),
+            (old_identity_cache, "cache basename must be exactly"),
             (sibling, "cache parent must be exactly $HOME/.gjc/plugins/cache/plugins"),
             (fake_cache, "cache parent must be exactly $HOME/.gjc/plugins/cache/plugins"),
         )
@@ -936,7 +987,7 @@ class RecordProvenanceTest(unittest.TestCase):
     def test_candidate_and_cache_extra_or_missing_payload_files_are_rejected(self):
         ignored_extra = self._candidate_marker("candidate-extra.txt")
         (self.candidate / ".gitignore").write_text(
-            "plugins/oh-my-gjc/candidate-extra.txt\n", encoding="utf-8"
+            "plugins/{}/candidate-extra.txt\n".format(PLUGIN_NAME), encoding="utf-8"
         )
         self._commit_candidate_changes()
         ignored_extra.write_text("unexpected\n", encoding="utf-8")

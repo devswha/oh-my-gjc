@@ -1,23 +1,21 @@
-# oh-my-gajaecode (plugin)
+# oh-my-gajae-code (plugin)
 
 **Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치로 스킬 7개 + 커맨드 9개
 (`/omg` + `/omg:*` 8개)가 전부 들어온다. `insane-review`는 ChatGPT+크로미움,
 `multi-harness-research`는 Linux user namespace+`bwrap`, 정확한 credential-file layout,
 그리고 네 provider CLI의 기존 로그인이 필요하다.
-## v0.27.0 final old-identity bridge
+## v0.28.0 identity cutover
 
-This final pre-cutover release keeps the marketplace/plugin identity `oh-my-gjc`, source `./plugins/oh-my-gjc`, and `/omg:*` commands unchanged. The future identity and canonical repository (available after the rename) are [`oh-my-gajae-code`](https://github.com/devswha/oh-my-gajae-code).
-
-After the remote rename, all old `https://raw.githubusercontent.com/devswha/oh-my-gjc/...` paths, including `install.sh` and documentation, are expected to stop working; they do not redirect. The future installer will be `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`. No user-data migration is needed: credentials, `models.yml`, and XDG data remain in place, and this bridge adds no new runtime paths.
+`oh-my-gajae-code` is the canonical repository, marketplace/plugin identity, source `./plugins/oh-my-gajae-code`, and local checkout name. `/omg:*` commands remain unchanged; the migration contract is below.
 
 ## Quick Start
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh | bash
 
 # curl|bash가 금지된 환경:
-git clone --depth 1 https://github.com/devswha/oh-my-gjc.git
-bash oh-my-gjc/install.sh
+git clone --depth 1 https://github.com/devswha/oh-my-gajae-code.git oh-my-gajae-code
+bash oh-my-gajae-code/install.sh
 
 # 새 gjc 세션을 연 뒤 (또는 /move .):
 /omg
@@ -83,7 +81,7 @@ GJC `${XDG_DATA_HOME:-$HOME/.local/share}/gjc/auth.json`, Codex
 credential discovery, token environment 전달은 금지된다.
 
 worker는 쓰지 못하며 orchestrator/finalizer만
-`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/multi-harness/<repo-id>/<run-id>/`에
+`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gajae-code/multi-harness/<repo-id>/<run-id>/`에
 no-follow/atomic artifacts를 쓴다 (directory `0700`, file `0600`). 모든 lane terminal 뒤 phase 1이
 failure ledger와 `comparison_status: pending` factual base summary를 seal한다: 네 success는
 `COMPLETE`/rc `0`, 일부 success는 `INCOMPLETE`/rc `10`, no valid result 또는 run fatal은 rc `1`이다.
@@ -102,10 +100,16 @@ disposable GJC smoke는 `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`을 prefix하며 
 ## 세마포어 구조
 
 `/omg:gate-always`는 `~/.gjc/agent/SYSTEM.md`에 소유 마커 블록
-(`<!-- BEGIN oh-my-gjc:gate-always -->` ~ `<!-- END ... -->`)을 넣고 빼는 방식이다.
+(`<!-- BEGIN oh-my-gjc:gate-always -->` ~ `<!-- END ... -->`)을 넣고 빼는 방식이다. 이 안정적인 내부 마커는 이름 변경 후에도 보존한다.
 업그레이드는 제거된 `easy-always` 마커만 백업 후 정리하며, 다른 사용자 내용은 건드리지 않는다.
 
 ## 마이그레이션
+
+v0.27.0은 이전 identity의 마지막 bridge release였다. `oh-my-gajae-code`가 canonical repository, marketplace/plugin identity, source, local checkout 이름이며, canonical installer는 `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`다.
+
+이전 `https://raw.githubusercontent.com/devswha/oh-my-gjc/...` raw URL은 redirect하지 않는다. 이전 GitHub repository page와 Git remote는 redirect하지만, active install 문서와 새 checkout은 새 URL과 `oh-my-gajae-code` 이름만 쓴다.
+
+새 install은 `oh-my-gajae-code` runtime binding만 쓴다. 기존 `oh-my-gjc` binding은 최소 30일 또는 두 release 동안 read-only fallback으로만 읽고, rewrite·cleanup하지 않는다. 기존 XDG research data, credentials, `models.yml`, 안정적인 내부 `oh-my-gjc:gate-always` marker는 보존한다.
 
 hardened installer 재실행은 이름이 바뀐 `gate-briefing`과 제거된 공개 기능
 (`multivendor-presets`, `release-gate`, `easy-answer`, `plain-layer`, `branch-flow`,

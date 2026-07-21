@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { spawnSync } from "child_process";
@@ -37,6 +37,12 @@ function createSandbox(): Sandbox {
 
 function bindingPath(sandbox: Sandbox, scope: Scope): string {
   return scope === "user"
+    ? join(sandbox.home, ".gjc/agent/runtimes/oh-my-gajae-code/root")
+    : join(sandbox.project, ".gjc/runtimes/oh-my-gajae-code/root");
+}
+
+function legacyBindingPath(sandbox: Sandbox, scope: Scope): string {
+  return scope === "user"
     ? join(sandbox.home, ".gjc/agent/runtimes/oh-my-gjc/root")
     : join(sandbox.project, ".gjc/runtimes/oh-my-gjc/root");
 }
@@ -59,7 +65,7 @@ describe("suite root runtime binding", () => {
     const sandbox = createSandbox();
     const staleHigherCache = join(
       sandbox.home,
-      ".gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___99.0.0",
+      ".gjc/plugins/cache/plugins/oh-my-gajae-code___oh-my-gajae-code___99.0.0",
     );
     mkdirSync(staleHigherCache, { recursive: true });
     writeFileSync(join(staleHigherCache, "root"), "/stale/higher/cache");
@@ -86,6 +92,7 @@ describe("suite root runtime binding", () => {
   test.each(["user", "project"] as const)("%s uninstall removes only this suite binding", (scope) => {
     const sandbox = createSandbox();
     const binding = bindingPath(sandbox, scope);
+    const legacyBinding = legacyBindingPath(sandbox, scope);
     const suiteSibling = join(dirname(binding), "keep");
     const runtimes = dirname(dirname(binding));
     const otherSuiteBinding = join(runtimes, "another-suite/root");
@@ -110,6 +117,10 @@ describe("suite root runtime binding", () => {
       "omg:preset-pack.md",
       "omg:multi-harness.md",
     ].map((name) => join(nativeRoot, `commands/${name}`));
+    mkdirSync(dirname(legacyBinding), { recursive: true, mode: 0o700 });
+    chmodSync(dirname(legacyBinding), 0o700);
+    writeFileSync(legacyBinding, "/legacy/suite/root\n", { mode: 0o600 });
+    chmodSync(legacyBinding, 0o600);
 
     expect(run(sandbox, ["all", scope]).status).toBe(0);
     writeFileSync(suiteSibling, "suite sibling remains");
@@ -134,6 +145,7 @@ describe("suite root runtime binding", () => {
     expect(existsSync(binding)).toBe(false);
     expect(readFileSync(suiteSibling, "utf8")).toBe("suite sibling remains");
     expect(readFileSync(otherSuiteBinding, "utf8")).toBe("other suite remains");
+    expect(readFileSync(legacyBinding, "utf8")).toBe("/legacy/suite/root\n");
     expect(existsSync(retiredCommand)).toBe(false);
     for (const path of [...expectedSkills, ...expectedCommands]) {
       expect(existsSync(path)).toBe(false);
@@ -150,7 +162,7 @@ describe("suite root runtime binding", () => {
 
   test("fails closed when a user binding path component is symlinked", () => {
     const sandbox = createSandbox();
-    const linkedParent = join(sandbox.home, ".gjc/agent/runtimes/oh-my-gjc");
+    const linkedParent = join(sandbox.home, ".gjc/agent/runtimes/oh-my-gajae-code");
     const external = join(sandbox.root, "external-runtime");
     mkdirSync(dirname(linkedParent), { recursive: true });
     mkdirSync(external);
@@ -161,5 +173,43 @@ describe("suite root runtime binding", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("suite runtime binding path contains a symlink");
     expect(existsSync(join(external, "root"))).toBe(false);
+  });
+  test("preserves malformed and symlinked legacy bindings for bounded read fallback", () => {
+    const malformed = createSandbox();
+    const malformedBinding = legacyBindingPath(malformed, "user");
+    mkdirSync(dirname(malformedBinding), { recursive: true, mode: 0o700 });
+    chmodSync(dirname(malformedBinding), 0o700);
+    writeFileSync(malformedBinding, "malformed legacy binding\n", { mode: 0o600 });
+    chmodSync(malformedBinding, 0o600);
+
+    const malformedInstall = run(malformed, ["all", "user"]);
+
+    expect(malformedInstall.status, malformedInstall.stderr).toBe(0);
+    expect(readFileSync(malformedBinding, "utf8")).toBe("malformed legacy binding\n");
+    expect(readFileSync(bindingPath(malformed, "user"), "utf8")).toBe(`${canonicalPluginRoot}\n`);
+
+    const linked = createSandbox();
+    const linkedParent = dirname(legacyBindingPath(linked, "user"));
+    const external = join(linked.root, "legacy-runtime");
+    mkdirSync(dirname(linkedParent), { recursive: true });
+    mkdirSync(external);
+    symlinkSync(external, linkedParent);
+
+    const linkedInstall = run(linked, ["all", "user"]);
+
+    expect(linkedInstall.status, linkedInstall.stderr).toBe(0);
+    expect(lstatSync(linkedParent).isSymbolicLink()).toBe(true);
+    expect(existsSync(join(external, "root"))).toBe(false);
+    expect(readFileSync(bindingPath(linked, "user"), "utf8")).toBe(`${canonicalPluginRoot}\n`);
+  });
+  test("fails closed when the new binding is malformed", () => {
+    const sandbox = createSandbox();
+    const binding = bindingPath(sandbox, "user");
+    mkdirSync(binding, { recursive: true });
+
+    const result = run(sandbox, ["all", "user"]);
+
+    expect(result.status).not.toBe(0);
+    expect(statSync(binding).isDirectory()).toBe(true);
   });
 });

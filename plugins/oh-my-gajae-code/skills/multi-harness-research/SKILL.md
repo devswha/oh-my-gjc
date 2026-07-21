@@ -19,7 +19,7 @@ harnesses; it does not create a GJC `team`, task, goal, session, worktree, or wo
   project-external XDG artifact directory is writable.
 - `constraint:same-task` — every lane receives byte-identical normalized task bytes plus
   the same safety/output suffix, recorded by one SHA-256 digest.
-- `constraint:single-suite` — all files and runtime ownership remain in `oh-my-gjc`; no
+- `constraint:single-suite` — all active files and runtime ownership use `oh-my-gajae-code`; no
   additional marketplace plugin is involved.
 
 ## Activation and task confirmation
@@ -76,11 +76,16 @@ parent-directory bind, broad home bind, alternate layout, or writable refresh pa
 
 ## Artifacts, lane truth, and output limits
 
-The orchestrator alone atomically publishes under
-`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/multi-harness/<repo-id>/<run-id>/`; the fallback
-is `$HOME/.local/share`. Artifact directories are mode `0700`, files are mode `0600`, creation is
-no-follow and exclusive, and publication uses same-directory fsync plus atomic rename. Raw tasks,
-raw child streams, credentials, tokens, auth state, and target snapshots are never persisted.
+The orchestrator alone atomically publishes new artifacts under
+`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gajae-code/multi-harness/<repo-id>/<run-id>/`; the
+fallback is `$HOME/.local/share`. Artifact directories are mode `0700`, files are mode `0600`,
+creation is no-follow and exclusive, and publication uses same-directory fsync plus atomic rename.
+Raw tasks, raw child streams, credentials, tokens, auth state, and target snapshots are never
+persisted.
+
+**Preserved historical artifact data:** the former
+`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/multi-harness/<repo-id>/<run-id>/` root is
+read-only historical data. Never write, migrate, or clean it.
 
 Each lane is independent. Valid Markdown is non-empty UTF-8, no more than 1 MiB, secret-clean,
 and contains `## Conclusion`, `## Evidence`, and `## Uncertainties` with a verifiable path+line or

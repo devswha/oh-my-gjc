@@ -29,9 +29,12 @@ description: "`/omg:preset-pack` 명령이 명시적으로 요청했을 때만 o
 
 ### install (기본)
 
-1. **정본 위치 결정**: 스위트 루트 바인딩(`<cwd>/.gjc/runtimes/oh-my-gjc/root` →
-   `~/.gjc/agent/runtimes/oh-my-gjc/root` 순) 안의 `references/preset-pack.yml`.
-   바인딩·파일이 없으면 병합하지 말고 하드닝된 루트 `install.sh` 재실행을 안내한다(fail-closed).
+1. **정본 위치 결정**: `references/preset-pack.yml`은 다음 순서로만 해석한다.
+   1. 새 프로젝트 binding `<cwd>/.gjc/runtimes/oh-my-gajae-code/root`
+   2. 새 user binding `~/.gjc/agent/runtimes/oh-my-gajae-code/root`
+   3. **읽기 전용·기간 한정 compatibility fallback**인 기존 `<cwd>/.gjc/runtimes/oh-my-gjc/root` 프로젝트 binding, 이어서 `~/.gjc/agent/runtimes/oh-my-gjc/root` user binding
+   4. 정확한 현재 checkout `plugins/oh-my-gajae-code/references/preset-pack.yml`
+   각 binding은 절대·단일행·canonical root를 담은 일반 파일이어야 하며, binding 또는 그 경로 구성요소·asset·asset 디렉터리에 symlink가 없어야 한다. 하나라도 존재하지만 malformed, symlinked, non-canonical, control-character-containing, multiline, 또는 asset-missing이면 이후 binding/check-out으로 넘어가지 않고 fail-closed한다. 기존 compatibility binding은 읽기만 하며 쓰거나 지우지 않고, user state도 그 이전에는 수정하지 않는다. 모두 없을 때도 정확한 checkout asset만 허용한다. 바인딩·파일 오류면 병합하지 말고 `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`의 하드닝된 루트 installer를 재실행하도록 안내한다.
 2. **백업**: `cp ~/.gjc/agent/models.yml ~/.gjc/agent/models.yml.bak-$(date +%s)`
    (파일이 없으면 `profiles:` 한 줄짜리 새 파일 생성부터).
 3. **이름 단위 병합**: 정본의 `daily`/`agent` 블록만 사용자 `profiles:` 아래에

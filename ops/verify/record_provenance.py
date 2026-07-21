@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed provenance gate for an installed ``oh-my-gjc`` cache payload.
+"""Fail-closed provenance gate for an installed ``oh-my-gajae-code`` cache payload.
 
 The marketplace reference is recorded only as operator context. It is not an
 independently verifiable binding, so review and publication remain separate
@@ -27,9 +27,9 @@ import shutil
 import sys
 
 
-PLUGIN_NAME = "oh-my-gjc"
-PLUGIN_SOURCE = "./plugins/oh-my-gjc"
-CACHE_PREFIX = "oh-my-gjc___oh-my-gjc___"
+PLUGIN_NAME = "oh-my-gajae-code"
+PLUGIN_SOURCE = "./plugins/oh-my-gajae-code"
+CACHE_PREFIX = "oh-my-gajae-code___oh-my-gajae-code___"
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 NORMALIZABLE_COMMIT_RE = re.compile(r"[0-9A-Fa-f]{40}")
 SEMVER_RE = re.compile(
@@ -38,7 +38,7 @@ SEMVER_RE = re.compile(
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
 )
 
-# Candidate stores the plugin below plugins/oh-my-gjc; cache root IS plugin root.
+# Candidate stores the plugin below plugins/oh-my-gajae-code; cache root IS plugin root.
 # MARKERS remain independently reported critical surfaces; the full inventory is the payload proof.
 MARKERS = [
     "bin/install-skill.sh",
@@ -364,7 +364,7 @@ def require_payload_tree_matches_inventory(tree, expected_files, label):
 def payload_aggregate_digest(payloads):
     """Hash sorted UTF-8 relative paths and raw bytes with unambiguous lengths."""
     digest = hashlib.sha256()
-    digest.update(b"oh-my-gjc plugin payload v1\x00")
+    digest.update(b"oh-my-gajae-code plugin payload v2\x00")
     for relative_path in sorted(payloads):
         path_bytes = relative_path.encode("utf-8")
         payload = payloads[relative_path]

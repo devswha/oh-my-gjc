@@ -6,6 +6,8 @@ const pluginRoot = join(import.meta.dir, "..");
 const skillPath = join(pluginRoot, "skills/multi-harness-research/SKILL.md");
 const commandPath = join(pluginRoot, "templates/multi-harness.md");
 const runnerPath = join(pluginRoot, "bin/multi-harness-research.mjs");
+const setupPath = join(pluginRoot, "templates/setup.md");
+const catalogPath = join(pluginRoot, "templates/omg.md");
 
 const lockedIntentIds = [
   "artifact:research-docs",
@@ -139,11 +141,34 @@ describe("multi-harness research surface", () => {
     expect(skill).toContain("`${XDG_DATA_HOME:-$HOME/.local/share}/gjc/auth.json`");
     expect(skill).toContain("`${CODEX_HOME:-$HOME/.codex}/auth.json`");
     expect(skill).toContain("`$HOME/.claude/.credentials.json`");
-    expect(skill).toContain("`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/multi-harness/<repo-id>/<run-id>/`");
+    expect(skill).toContain("`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gajae-code/multi-harness/<repo-id>/<run-id>/`");
     expect(skill).toContain("Artifact directories are mode `0700`, files are mode `0600`");
     expect(skill).toContain("no more than 1 MiB");
     expect(skill).toContain("Raw stdout and stderr each stop at 8 MiB");
     expect(skill).toContain("`preflight`, `spawn`, `timeout`, `nonzero_exit`,\n`invalid_output`, and `contract_breach`");
+  });
+  test("uses the canonical suite identity for active writes and labels old artifacts as preserved history", () => {
+    const skill = read(skillPath);
+    const command = read(commandPath);
+    const setup = read(setupPath);
+    const catalog = read(catalogPath);
+    const shell = shellBlocks(command);
+    const setupShell = shellBlocks(setup);
+
+    expect(skill).toContain("all active files and runtime ownership use `oh-my-gajae-code`");
+    expect(skill).toContain("`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gajae-code/multi-harness/<repo-id>/<run-id>/`");
+    expect(shell).toContain('PRIVATE_BASE="$ACCOUNT_HOME/.cache/oh-my-gajae-code/multi-harness-research"');
+    expect(shell).not.toContain("/.cache/oh-my-gjc/");
+
+    expect(skill).toContain("**Preserved historical artifact data:** the former\n`${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/multi-harness/<repo-id>/<run-id>/` root is\nread-only historical data. Never write, migrate, or clean it.");
+
+    expect(setup).toContain("oh-my-gajae-code 읽기 전용 진단");
+    expect(setupShell).toContain('new_suite_binding="$root/runtimes/oh-my-gajae-code/root"');
+    expect(setupShell).toContain('legacy_suite_binding="$root/runtimes/oh-my-gjc/root"');
+    expect(setupShell).toContain("warning: preserved compatibility fallback binding is present");
+    expect(setup).toContain("**Preserved compatibility fallback:**");
+    expect(catalog).toContain("# /omg — oh-my-gajae-code 카탈로그");
+    expect(catalog).not.toContain("oh-my-gajaecode");
   });
 
   test("seals factual lane truth before the bounded non-authoritative finalization", () => {

@@ -1,13 +1,13 @@
 {
   "name": "example-plugin",
   "version": "0.1.0",
-  "description": "Starter template plugin for oh-my-gjc. Ships one slash command and one skill so you can see the full structure before authoring your own.",
+  "description": "Starter template plugin for oh-my-gajae-code. Ships one slash command and one skill so you can see the full structure before authoring your own.",
   "author": {
     "name": "devswha",
     "email": "devswha@gmail.com"
   },
-  "homepage": "https://github.com/devswha/oh-my-gjc",
-  "repository": "https://github.com/devswha/oh-my-gjc",
+  "homepage": "https://github.com/devswha/oh-my-gajae-code",
+  "repository": "https://github.com/devswha/oh-my-gajae-code",
   "license": "MIT",
   "keywords": ["gjc", "example", "template", "starter"]
 }

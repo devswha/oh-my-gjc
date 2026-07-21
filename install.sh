@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# oh-my-gajaecode — one-shot installer (single plugin suite).
+# oh-my-gajae-code — one-shot installer (single plugin suite).
 #
-#   curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
-#       → installs the one oh-my-gjc plugin + native skill/command copy. Then open a new gjc session.
+#   curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh | bash
+#       → installs the one oh-my-gajae-code plugin + native skill/command copy. Then open a new gjc session.
 #
 #   --candidate-ref <path|ref>   marketplace SOURCE override (a local checkout path or an
 #                                explicit dev ref) for release-candidate provenance testing.
-#                                Default is the published marketplace (devswha/oh-my-gjc).
+#                                Default is the published marketplace (devswha/oh-my-gajae-code).
 #
 # One install brings ALL 7 skills + 9 commands (/omg + 8 /omg:*) — there are no separate/optional plugins. Legacy
 # args (--core, tower, insane-review, codex-*, lazycodex, gjc-bugwatch) are accepted only
@@ -14,13 +14,13 @@
 #
 # Absorbs everything setup does that needs no user choice: marketplace add, the single
 # plugin install, and the NATIVE skill/command copy. gjc 0.9.x auto-exposes plugin
-# commands as `oh-my-gjc:*` (wrong namespace), so command bodies ship in templates/ and
+# commands as `oh-my-gajae-code:*` (wrong namespace), so command bodies ship in templates/ and
 # install natively as `omg:*`; skills install natively too. Model selection stays entirely
 # with GJC defaults/built-ins; the gate always-on toggle is exposed through /omg:setup. Idempotent. Shell CLI only.
 set -euo pipefail
 
-MARKET_DEFAULT="devswha/oh-my-gjc"
-ENTRY="oh-my-gjc"
+MARKET_DEFAULT="devswha/oh-my-gajae-code"
+ENTRY="oh-my-gajae-code"
 PLUGIN_ID="${ENTRY}@${ENTRY}"
 CACHE="$HOME/.gjc/plugins/cache/plugins"
 INSTALL_STDERR=""
@@ -84,8 +84,8 @@ resolve_native_installer() {
   # control bytes inside the token.
   ansi_sgr=$'\033''\[[0-9;]*m'
   status_token='[^[:space:][:cntrl:]]{1,16}'
-  success_line_re="^(${ansi_sgr})?${status_token} Installed oh-my-gjc from oh-my-gjc \\((${semver_re})\\)(${ansi_sgr})?$"
-  success_prefix_re="^(${ansi_sgr})?${status_token} Installed oh-my-gjc from oh-my-gjc"
+  success_line_re="^(${ansi_sgr})?${status_token} Installed oh-my-gajae-code from oh-my-gajae-code \\((${semver_re})\\)(${ansi_sgr})?$"
+  success_prefix_re="^(${ansi_sgr})?${status_token} Installed oh-my-gajae-code from oh-my-gajae-code"
   match_count=0
 
   while IFS= read -r line || [ -n "$line" ]; do
@@ -100,7 +100,7 @@ resolve_native_installer() {
 
   [ "$match_count" -eq 1 ] || return 1
 
-  cache_name="oh-my-gjc___oh-my-gjc___${entry_version}"
+  cache_name="oh-my-gajae-code___oh-my-gajae-code___${entry_version}"
   root="${CACHE}/${cache_name}"
 
   # Do not follow cache or native-installer symlinks. Canonical paths must describe the
@@ -138,7 +138,7 @@ else
     market_status=$?
     market_stderr="$(<"$MARKET_STDERR")"
     if [[ "$market_stderr" =~ Marketplace[[:space:]]+[\"\']?${ENTRY}[\"\']?[[:space:]]+already[[:space:]]+exists ]]; then
-      warn "marketplace name already exists — replacing its source with $MARKET"
+      warn "marketplace $ENTRY already exists — rebinding its source to $MARKET."
       gjc plugin marketplace remove "$ENTRY" \
         || die "could not remove the existing marketplace — refusing an unbound source."
       gjc plugin marketplace add "$MARKET" \
@@ -195,21 +195,16 @@ fi
 
 cat <<DONE
 
-✓ oh-my-gajaecode installed — one plugin, 7 skills + 9 commands (/omg + 8 /omg:*), all native surfaces installed.
+✓ oh-my-gajae-code installed — one plugin, 7 skills + 9 commands (/omg + 8 /omg:*), all native surfaces installed.
   Open a NEW gjc session (or run /move .).
     /omg   → catalog of everything you got
   (Optional: /omg:setup checks prerequisites / explains the gate always-on mode.)
 
-════════════════ Bridge release v0.27.0 ════════════════
-  This GitHub repository will move to oh-my-gajae-code.
-  Future canonical installer:
+════════════════ v0.28.0 cutover ════════════════
+  /omg:* commands remain stable.
+  Use the canonical installer:
     https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh
-  After the GitHub rename, this old raw URL is expected to stop working:
-    https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh
-  All old raw.githubusercontent.com/devswha/oh-my-gjc paths, including docs,
-  share this limitation.
-  Recovery: use the redirected GitHub repository page or clone URL:
-    https://github.com/devswha/oh-my-gjc
-    git clone --depth 1 https://github.com/devswha/oh-my-gjc.git oh-my-gjc
-══════════════════════════════════════════════════════════
+  Old raw.githubusercontent.com/devswha/oh-my-gjc URLs no longer work.
+  An old oh-my-gjc marketplace registration may remain until targeted CLI cleanup is proven.
+══════════════════════════════════════════════════
 DONE
