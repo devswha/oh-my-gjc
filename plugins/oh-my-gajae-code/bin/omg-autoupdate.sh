@@ -285,31 +285,41 @@ do_enable() {
 
 do_disable() {
   guard_not_root
-  local removed=0
-  # systemd — remove unit files unconditionally; best-effort stop via the bus.
   if [ "$DRY_RUN" = 1 ]; then
-    log "  [dry-run] systemctl --user disable --now $UNIT_NAME.timer (best-effort)"
+    log "  [dry-run] systemctl --user disable --now $UNIT_NAME.timer (if user bus available)"
     log "  [dry-run] rm -f $TIMER_UNIT $SERVICE_UNIT"
-  else
-    if command -v systemctl >/dev/null 2>&1; then
-      systemctl --user disable --now "$UNIT_NAME.timer" >/dev/null 2>&1 || true
+    log "  [dry-run] remove crontab line tagged: $CRON_TAG"
+    return 0
+  fi
+  local failed=0 removed=0
+  # systemd — only relevant if this suite's unit files exist on disk.
+  if [ -e "$TIMER_UNIT" ] || [ -e "$SERVICE_UNIT" ]; then
+    if command -v systemctl >/dev/null 2>&1 && systemd_user_available; then
+      systemctl --user disable --now "$UNIT_NAME.timer" >/dev/null 2>&1 || failed=1
+    else
+      warn "systemd user bus unavailable — removing unit files, but cannot confirm a loaded timer is stopped."
+      failed=1
     fi
+    rm -f "$TIMER_UNIT" "$SERVICE_UNIT"
     if [ -e "$TIMER_UNIT" ] || [ -e "$SERVICE_UNIT" ]; then
-      rm -f "$TIMER_UNIT" "$SERVICE_UNIT"
-      systemctl --user daemon-reload >/dev/null 2>&1 || true
+      failed=1
+    else
       removed=1
+      command -v systemctl >/dev/null 2>&1 && systemctl --user daemon-reload >/dev/null 2>&1 || true
     fi
   fi
-  # cron
-  if command -v crontab >/dev/null 2>&1; then
-    if [ "$DRY_RUN" = 1 ]; then
-      log "  [dry-run] remove crontab line tagged: $CRON_TAG"
-    elif crontab -l 2>/dev/null | grep -qF "$CRON_TAG"; then
-      crontab -l 2>/dev/null | grep -vF "$CRON_TAG" | grep -v '^[[:space:]]*$' | crontab - || true
-      removed=1
+  # cron — confirm the tagged line is actually gone after rewriting.
+  if command -v crontab >/dev/null 2>&1 && crontab -l 2>/dev/null | grep -qF "$CRON_TAG"; then
+    if crontab -l 2>/dev/null | grep -vF "$CRON_TAG" | grep -v '^[[:space:]]*$' | crontab -; then
+      if crontab -l 2>/dev/null | grep -qF "$CRON_TAG"; then failed=1; else removed=1; fi
+    else
+      failed=1
     fi
   fi
-  [ "$DRY_RUN" = 1 ] || { [ "$removed" = 1 ] && log "✓ auto-update disabled." || log "auto-update was not enabled — nothing to remove."; }
+  if [ "$failed" = 1 ]; then
+    die "auto-update disable could not be fully confirmed — a timer or cron entry may still run unattended. Re-run with the user systemd bus available and verify with 'omg-autoupdate.sh status'."
+  fi
+  [ "$removed" = 1 ] && log "✓ auto-update disabled." || log "auto-update was not enabled — nothing to remove."
 }
 
 do_status() {

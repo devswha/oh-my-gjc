@@ -96,6 +96,7 @@ Content is discovered by **convention directories** above; explicit paths in
   only tracked one and MUST contain placeholders, never real keys). Runtime state
   under `.gjc/` is gitignored.
 - **Document the real install paths** (verified): plugin management is the **shell CLI only** — `gjc plugin marketplace add <ref>` then `gjc plugin install <name>@<marketplace> …` (batch-capable), `gjc plugin list`. gjc has **no `/plugin` slash command** (Claude-Code syntax; a `/plugin …` line in a gjc session is just a chat message). Never write `/plugin …` in gjc install docs.
+- **Removed code is archived in `docs/removed/` (2026-07-21 user directive).** When you delete code or retire a capability, in the SAME change copy its removed source into `docs/removed/<name>/` and add an entry to `docs/removed/README.md` (original path(s), removal commit, release version). Git history is NOT a substitute — the archive is the browsable record. The archive is documentation only: never installed, executed, resolved by the suite-root binding, or referenced by `install.sh` / `install-skill.sh`. This complements (does not replace) the `AGENTS.md` tombstone that records rationale/boundary.
 
 ## Per-plugin notes
 
