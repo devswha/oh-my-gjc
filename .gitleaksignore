@@ -1,6 +1,6 @@
 # Synthetic redaction-test fixture token (sequential alphabet, not a real credential).
-# The live line now carries an inline `gitleaks:allow`; this fingerprint clears the
-# historical commit that introduced it so release-range scans stay clean.
+# The fixture file was retired; this fingerprint preserves the historical allowlist
+# so release-range and full-history scans stay clean.
 bdec70f61c91c38f15794e06ed89124d13b4009a:plugins/oh-my-gjc/test/lazycodex-gjc.test.ts:generic-api-key:135
 # G003 redaction-test synthetic fixtures (a1b2c3d4e5f6 — sequential hex, not credentials);
 # live lines carry inline gitleaks:allow, these clear the historical commit.
