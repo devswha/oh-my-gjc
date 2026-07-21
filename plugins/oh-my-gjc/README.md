@@ -4,6 +4,11 @@
 (`/omg` + `/omg:*` 8개)가 전부 들어온다. `insane-review`는 ChatGPT+크로미움,
 `multi-harness-research`는 Linux user namespace+`bwrap`, 정확한 credential-file layout,
 그리고 네 provider CLI의 기존 로그인이 필요하다.
+## v0.27.0 final old-identity bridge
+
+This final pre-cutover release keeps the marketplace/plugin identity `oh-my-gjc`, source `./plugins/oh-my-gjc`, and `/omg:*` commands unchanged. The future identity and canonical repository are [`oh-my-gajae-code`](https://github.com/devswha/oh-my-gajae-code).
+
+After the remote rename, the current old raw installer URL (`https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh`) is expected to stop working; it does not redirect. No user-data migration is needed: credentials, `models.yml`, and XDG data remain in place, and this bridge adds no new runtime paths.
 
 ## Quick Start
 

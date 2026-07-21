@@ -199,4 +199,15 @@ cat <<DONE
   Open a NEW gjc session (or run /move .).
     /omg   → catalog of everything you got
   (Optional: /omg:setup checks prerequisites / explains the gate always-on mode.)
+
+════════════════ Bridge release v0.27.0 ════════════════
+  This GitHub repository will move to oh-my-gajae-code.
+  Future canonical installer:
+    https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh
+  After the GitHub rename, this old raw URL is expected to stop working:
+    https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh
+  Recovery: use the redirected GitHub repository page or clone URL:
+    https://github.com/devswha/oh-my-gjc
+    git clone --depth 1 https://github.com/devswha/oh-my-gjc.git oh-my-gjc
+══════════════════════════════════════════════════════════
 DONE

@@ -2,6 +2,11 @@
 
 Agent-facing guide for `oh-my-gjc`, a **plugin marketplace** for Gajae Code (`gjc`).
 Read this before adding or editing plugins. Human-facing intro lives in [README.md](./README.md).
+## v0.27.0 final old-identity bridge
+
+This is the final pre-cutover release under the `oh-my-gjc` marketplace/plugin identity and `./plugins/oh-my-gjc` source. Keep `/omg:*` and the internal `oh-my-gjc` markers/bindings unchanged. The future identity and canonical repository are [`oh-my-gajae-code`](https://github.com/devswha/oh-my-gajae-code).
+
+After the remote rename, `https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh` is expected to stop working; it does not redirect. No credentials, `models.yml`, or XDG user data migrate in this bridge, and no new runtime paths are introduced.
 
 ## What this repo is
 
