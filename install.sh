@@ -138,7 +138,11 @@ else
     market_status=$?
     market_stderr="$(<"$MARKET_STDERR")"
     if [[ "$market_stderr" =~ Marketplace[[:space:]]+[\"\']?${ENTRY}[\"\']?[[:space:]]+already[[:space:]]+exists ]]; then
-      warn "marketplace $ENTRY already exists; leaving its registration intact before update."
+      warn "marketplace $ENTRY already exists — rebinding its source to $MARKET."
+      gjc plugin marketplace remove "$ENTRY" \
+        || die "could not remove the existing marketplace — refusing an unbound source."
+      gjc plugin marketplace add "$MARKET" \
+        || die "could not bind marketplace $ENTRY to $MARKET."
     else
       die "marketplace add failed (exit $market_status) — refusing to use an unverified existing source."
     fi

@@ -19,6 +19,7 @@ type InstallStderr = "none" | "stale-success";
 interface RunInstallerOptions {
   addFails?: boolean;
   addDuplicate?: boolean;
+  removeFails?: boolean;
   args?: string[];
   cacheSymlink?: boolean;
   forceOutcome?: ForceOutcome;
@@ -120,6 +121,9 @@ case "$*" in
       exit 9
     fi
     ;;
+  "plugin marketplace remove oh-my-gajae-code")
+    if [ "$REMOVE_FAILS" = "1" ]; then exit 9; fi
+    ;;
   "plugin marketplace update oh-my-gajae-code")
     if [ "$UPDATE_FAILS" = "1" ]; then exit 9; fi
     ;;
@@ -163,6 +167,7 @@ esac
       INSTALL_VERSION: installVersion,
       PATH: `${bin}:/usr/bin:/bin`,
       UPDATE_FAILS: options.updateFails ? "1" : "0",
+      REMOVE_FAILS: options.removeFails ? "1" : "0",
     },
     encoding: "utf8",
   });
@@ -201,16 +206,29 @@ describe("one-shot installer", () => {
     expect(calls.at(-1)).toBe(nativeCall(selectedRoot));
   });
 
-  test("refreshes an existing canonical marketplace registration before install", () => {
+  test("rebinds an existing same-name marketplace to the canonical source before install", () => {
     const { calls, result, selectedRoot } = runInstaller({ addDuplicate: true });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stderr).toContain("already exists; leaving its registration intact before update");
+    expect(result.stderr).toContain("already exists — rebinding its source to devswha/oh-my-gajae-code");
     expect(calls).toEqual([
+      "plugin marketplace add devswha/oh-my-gajae-code",
+      "plugin marketplace remove oh-my-gajae-code",
       "plugin marketplace add devswha/oh-my-gajae-code",
       "plugin marketplace update oh-my-gajae-code",
       "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
       nativeCall(selectedRoot),
+    ]);
+  });
+
+  test("fails closed when removing an existing same-name marketplace fails", () => {
+    const { calls, result } = runInstaller({ addDuplicate: true, removeFails: true });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("could not remove the existing marketplace");
+    expect(calls).toEqual([
+      "plugin marketplace add devswha/oh-my-gajae-code",
+      "plugin marketplace remove oh-my-gajae-code",
     ]);
   });
 
