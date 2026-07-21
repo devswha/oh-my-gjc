@@ -206,6 +206,8 @@ cat <<DONE
     https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh
   After the GitHub rename, this old raw URL is expected to stop working:
     https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh
+  All old raw.githubusercontent.com/devswha/oh-my-gjc paths, including docs,
+  share this limitation.
   Recovery: use the redirected GitHub repository page or clone URL:
     https://github.com/devswha/oh-my-gjc
     git clone --depth 1 https://github.com/devswha/oh-my-gjc.git oh-my-gjc

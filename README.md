@@ -11,7 +11,7 @@
 ```
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
-> **Bridge release v0.27.0:** This active suite remains `oh-my-gjc` and `/omg:*` stays unchanged. The GitHub repository will move to `oh-my-gajae-code`; after the rename, use the future canonical installer: `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`. The current raw URL `https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh` is expected to stop working. Recover through the redirected [GitHub repository page](https://github.com/devswha/oh-my-gjc) or clone URL: `git clone --depth 1 https://github.com/devswha/oh-my-gjc.git oh-my-gjc`.
+> **Bridge release v0.27.0:** This active suite remains `oh-my-gjc` and `/omg:*` stays unchanged. The GitHub repository will move to `oh-my-gajae-code`; after the rename, use the future canonical installer (available after the repository rename): `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`. All old `https://raw.githubusercontent.com/devswha/oh-my-gjc/...` paths, including `install.sh` and `INSTALLATION.md`, are expected to stop working. Recover through the redirected [GitHub repository page](https://github.com/devswha/oh-my-gjc) or clone URL: `git clone --depth 1 https://github.com/devswha/oh-my-gjc.git oh-my-gjc`.
 
 **② gjc 세션에서:**
 

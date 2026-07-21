@@ -6,9 +6,9 @@
 그리고 네 provider CLI의 기존 로그인이 필요하다.
 ## v0.27.0 final old-identity bridge
 
-This final pre-cutover release keeps the marketplace/plugin identity `oh-my-gjc`, source `./plugins/oh-my-gjc`, and `/omg:*` commands unchanged. The future identity and canonical repository are [`oh-my-gajae-code`](https://github.com/devswha/oh-my-gajae-code).
+This final pre-cutover release keeps the marketplace/plugin identity `oh-my-gjc`, source `./plugins/oh-my-gjc`, and `/omg:*` commands unchanged. The future identity and canonical repository (available after the rename) are [`oh-my-gajae-code`](https://github.com/devswha/oh-my-gajae-code).
 
-After the remote rename, the current old raw installer URL (`https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh`) is expected to stop working; it does not redirect. No user-data migration is needed: credentials, `models.yml`, and XDG data remain in place, and this bridge adds no new runtime paths.
+After the remote rename, all old `https://raw.githubusercontent.com/devswha/oh-my-gjc/...` paths, including `install.sh` and documentation, are expected to stop working; they do not redirect. The future installer will be `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`. No user-data migration is needed: credentials, `models.yml`, and XDG data remain in place, and this bridge adds no new runtime paths.
 
 ## Quick Start
 
