@@ -1,8 +1,11 @@
 # Synthetic redaction-test fixture token (sequential alphabet, not a real credential).
-# The live line now carries an inline `gitleaks:allow`; this fingerprint clears the
-# historical commit that introduced it so release-range scans stay clean.
+# The fixture file was retired; this fingerprint preserves the historical allowlist
+# so release-range and full-history scans stay clean.
 bdec70f61c91c38f15794e06ed89124d13b4009a:plugins/oh-my-gjc/test/lazycodex-gjc.test.ts:generic-api-key:135
 # G003 redaction-test synthetic fixtures (a1b2c3d4e5f6 — sequential hex, not credentials);
 # live lines carry inline gitleaks:allow, these clear the historical commit.
 852a17be9bdad388b78e8d54087114626924df4e:plugins/oh-my-gjc/test/collect.test.ts:generic-api-key:253
 852a17be9bdad388b78e8d54087114626924df4e:plugins/oh-my-gjc/test/collect.test.ts:generic-api-key:255
+# Multi-harness credential-isolation canaries (synthetic non-secret labels).
+ef6f34b51f4631a46654045951eb7d882a3be809:plugins/oh-my-gjc/test/multi-harness-research.test.ts:generic-api-key:55
+ef6f34b51f4631a46654045951eb7d882a3be809:plugins/oh-my-gjc/test/multi-harness-research.test.ts:generic-api-key:486

@@ -8,7 +8,7 @@
 #                                explicit dev ref) for release-candidate provenance testing.
 #                                Default is the published marketplace (devswha/oh-my-gjc).
 #
-# One install brings ALL 8 skills + 11 commands (/omg + 10 /omg:*) — there are no separate/optional plugins. Legacy
+# One install brings ALL 7 skills + 9 commands (/omg + 8 /omg:*) — there are no separate/optional plugins. Legacy
 # args (--core, tower, insane-review, codex-*, lazycodex, gjc-bugwatch) are accepted only
 # to print a migration note; they NEVER add extra plugin installs.
 #
@@ -195,9 +195,21 @@ fi
 
 cat <<DONE
 
-✓ oh-my-gajaecode installed — one plugin, 8 skills + 11 commands (/omg + 10 /omg:*), all native surfaces installed.
+✓ oh-my-gajaecode installed — one plugin, 7 skills + 9 commands (/omg + 8 /omg:*), all native surfaces installed.
   Open a NEW gjc session (or run /move .).
     /omg   → catalog of everything you got
-  /omg:time-left explicitly queries ETA when Bun >=1.3.14 and locked-package installation succeed; otherwise it fails closed until this installer is rerun.
   (Optional: /omg:setup checks prerequisites / explains the gate always-on mode.)
+
+════════════════ Bridge release v0.27.0 ════════════════
+  This GitHub repository will move to oh-my-gajae-code.
+  Future canonical installer:
+    https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh
+  After the GitHub rename, this old raw URL is expected to stop working:
+    https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh
+  All old raw.githubusercontent.com/devswha/oh-my-gjc paths, including docs,
+  share this limitation.
+  Recovery: use the redirected GitHub repository page or clone URL:
+    https://github.com/devswha/oh-my-gjc
+    git clone --depth 1 https://github.com/devswha/oh-my-gjc.git oh-my-gjc
+══════════════════════════════════════════════════════════
 DONE

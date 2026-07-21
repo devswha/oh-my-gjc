@@ -113,18 +113,8 @@ describe("adaptive response contract", () => {
     }
   });
 
-  test("propagates calibration without hiding Fable findings", () => {
-    const fable = read(join(pluginRoot, "templates/fable.md"));
 
-    expect(fable).toContain("adaptive-response의 임시");
-    expect(fable).toContain("입문에는 일상어 영향, 실무/전문에는 계약·경계조건·증거");
-    expect(fable).toContain("간결한 완전한 목록으로 모두 제시");
-    expect(fable).toContain("CRITICAL/HIGH, 안전 경계, 검증 실패");
-    expect(fable).toContain("승인·수정 실행은 대행하지 않는다");
-    expect(fable).not.toContain("사용자가 도메인을 모른다고 가정");
-  });
-
-  test("keeps the exact public surface at eight skills and eleven commands", () => {
+  test("keeps the exact public surface at seven skills and nine commands", () => {
     const skillRoot = join(pluginRoot, "skills");
     const skillNames = readdirSync(skillRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(join(skillRoot, entry.name, "SKILL.md")))
@@ -135,19 +125,17 @@ describe("adaptive response contract", () => {
       .map((name) => name.slice(0, -3))
       .sort();
 
-    expect(skillNames).toEqual(["adaptive-response", "deep-onboarding", "extragoal", "insane-review", "lazycodex-gjc", "no-english", "preset-pack", "time-left"]);
+    expect(skillNames).toEqual(["adaptive-response", "deep-onboarding", "extragoal", "insane-review", "multi-harness-research", "no-english", "preset-pack"]);
     expect(commandNames).toEqual([
       "deep-onboarding",
-      "fable",
       "gate",
       "gate-always",
       "insane-review",
-      "lazycodex-gjc",
+      "multi-harness",
       "no-english",
       "omg",
       "preset-pack",
       "setup",
-      "time-left",
     ]);
   });
 });

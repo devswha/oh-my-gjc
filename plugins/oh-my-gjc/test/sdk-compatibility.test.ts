@@ -14,7 +14,6 @@ describe("GJC 0.11 SDK compatibility", () => {
   test("disables notifications and SDK hosting in disposable GJC launches", () => {
     const launchContracts = [
       join(pluginRoot, "skills/extragoal/SKILL.md"),
-      join(pluginRoot, "templates/fable.md"),
       join(repositoryRoot, "AGENTS.md"),
     ];
 

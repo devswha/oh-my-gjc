@@ -11,7 +11,6 @@ import { spawnSync } from "child_process";
 const pluginRoot = join(import.meta.dir, "..");
 const installSh = join(pluginRoot, "bin/install-skill.sh");
 const installer = readFileSync(installSh, "utf8");
-const sdkRuntimeDisabled = { OMG_TIME_LEFT_RUNTIME: "0" };
 
 function parseManifest(name: string): string[] {
   const match = installer.match(new RegExp(`^${name}=\\(([^)]*)\\)`, "m"));
@@ -45,6 +44,8 @@ const retiredSkills = [
   "worktree",
   "gjc-bugwatch",
   "session-observer",
+  "time-left",
+  "lazycodex-gjc",
 ];
 
 const retiredCommands = [
@@ -58,28 +59,31 @@ const retiredCommands = [
   "worktree",
   "bugwatch-scan",
   "session-observer",
+  "time-left",
+  "lazycodex-gjc",
+  "fable",
 ];
 
 describe("removed capability manifests", () => {
   test("transitions ownership atomically across the four manifests", () => {
     const expectedSkills = parseManifest("EXPECTED_SKILLS");
     const expectedCommands = parseManifest("EXPECTED_COMMANDS");
+    const expectedRuntimes = parseManifest("EXPECTED_RUNTIMES");
     const removedSkills = parseManifest("REMOVED_SKILLS");
     const removedCommands = parseManifest("REMOVED_COMMANDS");
-    expect(expectedSkills).toHaveLength(8);
-    expect(expectedCommands).toHaveLength(11);
+    expect(expectedSkills).toHaveLength(7);
+    expect(expectedCommands).toHaveLength(9);
     expect(expectedSkills).not.toContain("gajae-app");
     expect(expectedCommands).not.toContain("gajae-app");
 
     expect(expectedSkills).toEqual([
       "adaptive-response",
       "no-english",
-      "time-left",
       "extragoal",
       "insane-review",
-      "lazycodex-gjc",
       "deep-onboarding",
       "preset-pack",
+      "multi-harness-research",
     ]);
     expect(expectedCommands).toEqual([
       "omg",
@@ -87,12 +91,14 @@ describe("removed capability manifests", () => {
       "gate",
       "gate-always",
       "no-english",
-      "time-left",
-      "fable",
       "insane-review",
-      "lazycodex-gjc",
       "deep-onboarding",
       "preset-pack",
+      "multi-harness",
+    ]);
+    expect(expectedRuntimes).toEqual([
+      "bin/multi-harness-research.mjs",
+      "references/preset-pack.yml",
     ]);
     for (const skill of retiredSkills) expect(removedSkills).toContain(skill);
     for (const command of retiredCommands) expect(removedCommands).toContain(command);
@@ -111,9 +117,13 @@ describe("removed capability manifests", () => {
     for (const command of retiredCommands) {
       expect(existsSync(join(pluginRoot, `templates/${command}.md`))).toBe(false);
     }
-    expect(existsSync(join(pluginRoot, "bin/lazycodex-gjc.mjs"))).toBe(true);
-    expect(existsSync(join(pluginRoot, "skills/lazycodex-gjc/SKILL.md"))).toBe(true);
-    expect(existsSync(join(pluginRoot, "templates/lazycodex-gjc.md"))).toBe(true);
+    expect(existsSync(join(pluginRoot, "bin/lazycodex-gjc.mjs"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "skills/lazycodex-gjc/SKILL.md"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "templates/lazycodex-gjc.md"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "skills/time-left/SKILL.md"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "templates/time-left.md"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "tools/sdk-lab"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "bin/multi-harness-research.mjs"))).toBe(true);
     expect(existsSync(join(pluginRoot, "bin/session-observer.ts"))).toBe(false);
     expect(existsSync(join(pluginRoot, "skills/session-observer/SKILL.md"))).toBe(false);
     expect(existsSync(join(pluginRoot, "templates/session-observer.md"))).toBe(false);
@@ -141,7 +151,11 @@ describe("removed capability upgrade cleanup", () => {
     const nativeSibling = join(nativeRoot, "skills/gajae-app-sentinel/SKILL.md");
     const commandSibling = join(nativeRoot, "commands/omg:gajae-app-sentinel.md");
     const removedRuntime = join(home, ".gjc/agent/runtimes/lazycodex-gjc/binding");
+    const removedRunner = join(home, ".gjc/agent/runtimes/lazycodex-gjc/runner.mjs");
     const removedReceipt = join(home, ".gjc/agent/receipts/lazycodex-gjc-runner.sha256");
+    const removedSdkRuntime = join(home, ".gjc/agent/runtimes/oh-my-gjc/sdk-lab/package.json");
+    const removedSdkLock = join(home, ".gjc/agent/runtimes/oh-my-gjc/.sdk-lab.lock");
+    const codexCredential = join(home, ".codex/auth.json");
     const systemFile = join(home, ".gjc/agent/SYSTEM.md");
     const agentsFile = join(home, ".gjc/agent/AGENTS.md");
     const markerFixture = [
@@ -176,13 +190,23 @@ describe("removed capability upgrade cleanup", () => {
       expect(lstatSync(removedSkillPaths[0]).isSymbolicLink()).toBe(true);
       expect(lstatSync(removedCommandPaths[0]).isSymbolicLink()).toBe(true);
 
-      writeSentinel(removedRuntime, "retired binding");
+      writeSentinel(removedRuntime, `lazycodex-gjc-binding-v1\n${home}\n`);
+      writeSentinel(removedRunner, "retired runner");
+      chmodSync(dirname(removedRuntime), 0o700);
+      chmodSync(removedRuntime, 0o600);
+      chmodSync(removedRunner, 0o700);
       if (scope === "user") {
         mkdirSync(dirname(removedReceipt), { recursive: true });
         symlinkSync(join(sandbox, "missing-retired-receipt"), removedReceipt);
       } else {
         writeSentinel(removedReceipt, "retired receipt");
       }
+      writeSentinel(removedSdkRuntime, '{"name": "@oh-my-gjc/sdk-lab"}\n');
+      writeSentinel(removedSdkLock, "retired SDK lock");
+      chmodSync(dirname(removedSdkRuntime), 0o700);
+      chmodSync(removedSdkRuntime, 0o600);
+      chmodSync(removedSdkLock, 0o600);
+      writeSentinel(codexCredential, "user Codex credential remains");
       writeSentinel(systemFile, markerFixture);
       writeSentinel(agentsFile, markerFixture.replaceAll("oh-my-gjc:easy-always", "my-workflows:easy-always"));
       chmodSync(systemFile, 0o600);
@@ -193,7 +217,7 @@ describe("removed capability upgrade cleanup", () => {
 
       const result = spawnSync("bash", [installSh, "all", scope], {
         cwd: scope === "project" ? project : sandbox,
-        env: { ...process.env, ...sdkRuntimeDisabled, HOME: home, CODEX_HOME: join(sandbox, "absent-codex-home") },
+        env: { ...process.env, HOME: home, CODEX_HOME: join(sandbox, "absent-codex-home") },
         encoding: "utf8",
       });
 
@@ -207,6 +231,9 @@ describe("removed capability upgrade cleanup", () => {
       if (scope === "user") {
         expect(existsSync(removedRuntime)).toBe(false);
         expect(() => lstatSync(removedReceipt)).toThrow();
+        expect(existsSync(removedSdkRuntime)).toBe(false);
+        expect(existsSync(removedSdkLock)).toBe(false);
+        expect(readFileSync(codexCredential, "utf8")).toBe("user Codex credential remains");
         for (const file of [systemFile, agentsFile]) {
           const original =
             file === systemFile
@@ -226,8 +253,12 @@ describe("removed capability upgrade cleanup", () => {
           expect(statSync(join(dirname(file), backupName!)).mode & 0o777).toBe(0o600);
         }
       } else {
-        expect(readFileSync(removedRuntime, "utf8")).toBe("retired binding");
+        expect(readFileSync(removedRuntime, "utf8")).toBe(`lazycodex-gjc-binding-v1\n${home}\n`);
+        expect(readFileSync(removedRunner, "utf8")).toBe("retired runner");
         expect(readFileSync(removedReceipt, "utf8")).toBe("retired receipt");
+        expect(readFileSync(removedSdkRuntime, "utf8")).toBe('{"name": "@oh-my-gjc/sdk-lab"}\n');
+        expect(readFileSync(removedSdkLock, "utf8")).toBe("retired SDK lock");
+        expect(readFileSync(codexCredential, "utf8")).toBe("user Codex credential remains");
         expect(readFileSync(systemFile, "utf8")).toBe(markerFixture);
         expect(readFileSync(agentsFile, "utf8")).toBe(
           markerFixture.replaceAll("oh-my-gjc:easy-always", "my-workflows:easy-always"),
@@ -238,6 +269,52 @@ describe("removed capability upgrade cleanup", () => {
       for (const [path, content] of sentinels) {
         expect(readFileSync(path, "utf8")).toBe(content);
       }
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  });
+  test("rejects symlinked native surface roots before mutation", () => {
+    const sandbox = mkdtempSync(join(tmpdir(), "omg-native-symlink-"));
+    const home = join(sandbox, "home");
+    const externalSkills = join(sandbox, "external-skills");
+    const skillsRoot = join(home, ".gjc/agent/skills");
+    const sentinel = join(externalSkills, "time-left/SKILL.md");
+    try {
+      writeSentinel(sentinel, "external user file remains");
+      mkdirSync(dirname(skillsRoot), { recursive: true });
+      symlinkSync(externalSkills, skillsRoot);
+      const result = spawnSync("bash", [installSh, "all", "user"], {
+        cwd: sandbox,
+        env: { ...process.env, HOME: home },
+        encoding: "utf8",
+      });
+      expect(result.status).not.toBe(0);
+      expect(readFileSync(sentinel, "utf8")).toBe("external user file remains");
+      expect(existsSync(join(externalSkills, "adaptive-response/SKILL.md"))).toBe(false);
+      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gjc/root"))).toBe(false);
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  });
+  test("validates every native root before creating any missing sibling", () => {
+    const sandbox = mkdtempSync(join(tmpdir(), "omg-command-symlink-"));
+    const home = join(sandbox, "home");
+    const externalCommands = join(sandbox, "external-commands");
+    const commandsRoot = join(home, ".gjc/agent/commands");
+    const sentinel = join(externalCommands, "omg:time-left.md");
+    try {
+      writeSentinel(sentinel, "external user command remains");
+      mkdirSync(dirname(commandsRoot), { recursive: true });
+      symlinkSync(externalCommands, commandsRoot);
+      const result = spawnSync("bash", [installSh, "all", "user"], {
+        cwd: sandbox,
+        env: { ...process.env, HOME: home },
+        encoding: "utf8",
+      });
+      expect(result.status).not.toBe(0);
+      expect(readFileSync(sentinel, "utf8")).toBe("external user command remains");
+      expect(existsSync(join(home, ".gjc/agent/skills"))).toBe(false);
+      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gjc/root"))).toBe(false);
     } finally {
       rmSync(sandbox, { recursive: true, force: true });
     }
@@ -278,7 +355,7 @@ describe("removed capability upgrade cleanup", () => {
       symlinkSync(external, systemFile);
       const result = spawnSync("bash", [installSh, "all", "user"], {
         cwd: sandbox,
-        env: { ...process.env, ...sdkRuntimeDisabled, HOME: home },
+        env: { ...process.env, HOME: home },
         encoding: "utf8",
       });
       expect(result.status, result.stderr).toBe(0);
@@ -360,7 +437,7 @@ describe("removed capability upgrade cleanup", () => {
       chmodSync(systemFile, 0o600);
       const result = spawnSync("bash", [installSh, "all", "user"], {
         cwd: sandbox,
-        env: { ...process.env, ...sdkRuntimeDisabled, HOME: home },
+        env: { ...process.env, HOME: home },
         encoding: "utf8",
       });
       expect(result.status, result.stderr).toBe(0);
@@ -392,7 +469,7 @@ describe("retired branchflow marker cleanup", () => {
   function install(home: string, project: string) {
     return spawnSync("bash", [installSh, "all", "user"], {
       cwd: project,
-      env: { ...process.env, ...sdkRuntimeDisabled, HOME: home, CODEX_HOME: join(home, "absent-codex-home") },
+      env: { ...process.env, HOME: home, CODEX_HOME: join(home, "absent-codex-home") },
       encoding: "utf8",
     });
   }
