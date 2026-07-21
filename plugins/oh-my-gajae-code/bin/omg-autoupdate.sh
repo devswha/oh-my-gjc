@@ -8,13 +8,20 @@
 # Design / safety:
 #   - Never runs as root.
 #   - Single-flight lock (flock) so overlapping timers don't collide.
+#   - Network updates download to a temp file and check the fetch rc BEFORE
+#     executing, so a partial/failed download is never run or logged OK.
+#   - The installer's real exit code is propagated: a failed update exits
+#     non-zero so systemd/cron surface the failure.
 #   - Every run is timestamped and logged to $STATE_DIR/autoupdate.log.
 #   - `enable` copies THIS script to a STABLE path ($STATE_DIR/omg-autoupdate.sh)
 #     and points the timer/cron at that copy, so a version-bumped plugin cache
 #     path can never break the scheduled unit.
 #   - Update source is the canonical HTTPS installer by default; `--local <dir>`
 #     runs that checkout's install.sh instead (offline / air-gapped).
-#   - systemd --user timer is preferred; cron is the fallback.
+#   - Schedule/path values are validated against an allowlist and escaped for
+#     the systemd/cron syntax they land in.
+#   - systemd --user timer is preferred; cron is the fallback. `disable`
+#     removes both unconditionally.
 #
 # Usage:
 #   omg-autoupdate.sh run     [--local <checkout>] [--dry-run]
@@ -30,6 +37,8 @@ LOG="$STATE_DIR/autoupdate.log"
 LOCK="$STATE_DIR/autoupdate.lock"
 UNIT_NAME="omg-autoupdate"
 SYSTEMD_USER_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+SERVICE_UNIT="$SYSTEMD_USER_DIR/$UNIT_NAME.service"
+TIMER_UNIT="$SYSTEMD_USER_DIR/$UNIT_NAME.timer"
 CRON_TAG="# oh-my-gajae-code autoupdate (managed by omg-autoupdate.sh)"
 DEFAULT_INTERVAL="daily"
 
@@ -46,9 +55,22 @@ guard_not_root() {
   [ "$(id -u)" != 0 ] || die "refusing to run as root — auto-update must run as the owning user."
 }
 
-ensure_state_dir() {
-  [ -d "$STATE_DIR" ] || run_or_echo mkdir -p "$STATE_DIR"
-  [ "$DRY_RUN" = 1 ] || chmod 700 "$STATE_DIR" 2>/dev/null || true
+# Reject paths that would break systemd/cron quoting (newlines, control chars,
+# single quotes). Paths are embedded into scheduler syntax, so keep them plain.
+assert_safe_path() { # $1=label $2=path
+  case "$2" in
+    *[[:cntrl:]]*) die "$1 contains a control character/newline: refusing to schedule." ;;
+    *"'"*)         die "$1 contains a single quote: refusing to schedule." ;;
+  esac
+}
+
+# systemd OnCalendar / cron schedules only need this safe charset. This blocks
+# newline, %, ;, $, backtick, quotes — i.e. any scheduler-directive injection.
+validate_interval() {
+  case "$INTERVAL" in
+    "" ) die "--interval must not be empty." ;;
+    *[!A-Za-z0-9\ :.,*/_-]* ) die "--interval has disallowed characters: '$INTERVAL' (allowed: letters, digits, space : . , * / _ -)." ;;
+  esac
 }
 
 parse_flags() {
@@ -69,50 +91,73 @@ parse_flags() {
   done
 }
 
+ensure_state_dir() {
+  [ -d "$STATE_DIR" ] || run_or_echo mkdir -p "$STATE_DIR"
+  [ "$DRY_RUN" = 1 ] || chmod 700 "$STATE_DIR" 2>/dev/null || true
+}
+
 # ── run: perform one update now ────────────────────────────────────────────────
-resolve_installer_cmd() {
-  # Emits the command (as a bash -c payload) that performs the actual install.
-  if [ -n "$LOCAL_CHECKOUT" ]; then
-    local sh="$LOCAL_CHECKOUT/install.sh"
-    [ -f "$sh" ] || die "--local checkout has no install.sh: $sh"
-    printf 'bash %q' "$sh"
-    return
-  fi
+fetch_to() { # $1=dest — download canonical installer, honoring HTTP errors
   if command -v curl >/dev/null 2>&1; then
-    printf 'curl -fsSL %q | bash' "$CANONICAL_INSTALLER_URL"
+    curl -fsSL "$CANONICAL_INSTALLER_URL" -o "$1"
   elif command -v wget >/dev/null 2>&1; then
-    printf 'wget -qO- %q | bash' "$CANONICAL_INSTALLER_URL"
+    wget -q -O "$1" "$CANONICAL_INSTALLER_URL"
   else
-    die "no installer source available — need curl, wget, or --local <checkout>."
+    return 127
   fi
+}
+
+update_source_label() {
+  if [ -n "$LOCAL_CHECKOUT" ]; then printf 'local: %s/install.sh' "$LOCAL_CHECKOUT"
+  else printf '%s' "$CANONICAL_INSTALLER_URL"; fi
 }
 
 do_run() {
   guard_not_root
   ensure_state_dir
   command -v gjc >/dev/null 2>&1 || die "gjc not found on PATH — nothing to update."
-  local cmd; cmd="$(resolve_installer_cmd)"
+  if [ -n "$LOCAL_CHECKOUT" ]; then
+    [ -f "$LOCAL_CHECKOUT/install.sh" ] || die "--local checkout has no install.sh: $LOCAL_CHECKOUT/install.sh"
+  elif ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    die "no installer source available — need curl, wget, or --local <checkout>."
+  fi
+
   if [ "$DRY_RUN" = 1 ]; then
     log "  [dry-run] flock $LOCK"
-    log "  [dry-run] $cmd"
+    log "  [dry-run] update from $(update_source_label)"
     return 0
   fi
+
   # Single-flight: skip quietly if a run is already in progress.
   exec 9>"$LOCK"
   if ! flock -n 9; then
     printf '%s  skipped: another auto-update run holds the lock\n' "$(date -Is)" >>"$LOG"
     return 0
   fi
+
+  local rc tmp=""
   {
     printf '\n===== %s  omg-autoupdate run =====\n' "$(date -Is)"
-    printf 'source: %s\n' "$cmd"
-    if bash -c "$cmd"; then
-      printf 'result: OK (%s)\n' "$(date -Is)"
+    printf 'source: %s\n' "$(update_source_label)"
+    if [ -n "$LOCAL_CHECKOUT" ]; then
+      if bash "$LOCAL_CHECKOUT/install.sh"; then rc=0; else rc=$?; fi
     else
-      printf 'result: FAILED rc=%s (%s)\n' "$?" "$(date -Is)"
+      tmp="$(mktemp "${TMPDIR:-/tmp}/omg-installer.XXXXXX")"
+      if fetch_to "$tmp" && [ -s "$tmp" ]; then
+        if bash "$tmp"; then rc=0; else rc=$?; fi
+      else
+        rc=$?
+        printf 'download failed (rc=%s) — installer NOT executed\n' "$rc"
+        [ "$rc" -ne 0 ] || rc=1
+      fi
+      rm -f "$tmp"
     fi
+    if [ "$rc" -eq 0 ]; then printf 'result: OK (%s)\n' "$(date -Is)"
+    else printf 'result: FAILED rc=%s (%s)\n' "$rc" "$(date -Is)"; fi
   } >>"$LOG" 2>&1
-  log "auto-update finished — log: $LOG"
+  if [ "$rc" -eq 0 ]; then log "auto-update OK — log: $LOG"
+  else warn "auto-update FAILED (rc=$rc) — log: $LOG"; fi
+  return "$rc"
 }
 
 # ── enable / disable via systemd --user (cron fallback) ────────────────────────
@@ -133,29 +178,36 @@ install_stable_self() {
   chmod 700 "$STABLE_SELF"
 }
 
+# systemd ExecStart honors double-quoted args; a literal % must be doubled.
+systemd_escape() { printf '%s' "${1//%/%%}"; }
+
+exec_start_line() {
+  local line
+  line="/usr/bin/env bash \"$STABLE_SELF\" run"
+  [ -z "$LOCAL_CHECKOUT" ] || line="$line --local \"$LOCAL_CHECKOUT\""
+  systemd_escape "$line"
+}
+
 enable_systemd() {
-  local run_flags=""
-  [ -z "$LOCAL_CHECKOUT" ] || run_flags=" --local $(printf '%q' "$LOCAL_CHECKOUT")"
-  local service="$SYSTEMD_USER_DIR/$UNIT_NAME.service"
-  local timer="$SYSTEMD_USER_DIR/$UNIT_NAME.timer"
   run_or_echo mkdir -p "$SYSTEMD_USER_DIR"
+  local exec_start; exec_start="$(exec_start_line)"
   if [ "$DRY_RUN" = 1 ]; then
-    log "  [dry-run] write $service (ExecStart=/usr/bin/env bash $STABLE_SELF run$run_flags)"
-    log "  [dry-run] write $timer  (OnCalendar=$INTERVAL, Persistent=true)"
+    log "  [dry-run] write $SERVICE_UNIT (ExecStart=$exec_start)"
+    log "  [dry-run] write $TIMER_UNIT  (OnCalendar=$INTERVAL, Persistent=true)"
     log "  [dry-run] systemctl --user daemon-reload"
     log "  [dry-run] systemctl --user enable --now $UNIT_NAME.timer"
     return 0
   fi
-  cat >"$service" <<EOF
+  cat >"$SERVICE_UNIT" <<EOF
 [Unit]
 Description=oh-my-gajae-code auto-update (re-runs the trusted installer)
 Documentation=https://github.com/devswha/oh-my-gajae-code
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/env bash $STABLE_SELF run$run_flags
+ExecStart=$exec_start
 EOF
-  cat >"$timer" <<EOF
+  cat >"$TIMER_UNIT" <<EOF
 [Unit]
 Description=oh-my-gajae-code auto-update schedule
 
@@ -176,28 +228,38 @@ cron_schedule_from_interval() {
     daily)  echo "0 4 * * *" ;;
     weekly) echo "0 4 * * 1" ;;
     hourly) echo "0 * * * *" ;;
-    *)      echo "$INTERVAL" ;;   # allow a raw 5-field cron spec
+    *)      echo "$INTERVAL" ;;   # allow a raw 5-field cron spec (already validated)
   esac
+}
+
+# cron treats a literal % as a newline; it must be backslash-escaped.
+cron_escape() { printf '%s' "${1//%/\\%}"; }
+
+cron_command() {
+  local cmd="/usr/bin/env bash '$STABLE_SELF' run"
+  [ -z "$LOCAL_CHECKOUT" ] || cmd="$cmd --local '$LOCAL_CHECKOUT'"
+  printf '%s' "$cmd"
 }
 
 enable_cron() {
   local sched line existing
   sched="$(cron_schedule_from_interval)"
-  local run_flags=""
-  [ -z "$LOCAL_CHECKOUT" ] || run_flags=" --local $(printf '%q' "$LOCAL_CHECKOUT")"
-  line="$sched /usr/bin/env bash $STABLE_SELF run$run_flags $CRON_TAG"
+  line="$(cron_escape "$sched $(cron_command) $CRON_TAG")"
   if [ "$DRY_RUN" = 1 ]; then
     log "  [dry-run] crontab line: $line"
     return 0
   fi
   command -v crontab >/dev/null 2>&1 || die "neither systemd --user nor crontab is available — cannot schedule."
   existing="$(crontab -l 2>/dev/null | grep -vF "$CRON_TAG" || true)"
-  printf '%s\n%s\n' "$existing" "$line" | grep -v '^$' | crontab -
+  printf '%s\n%s\n' "$existing" "$line" | grep -v '^[[:space:]]*$' | crontab -
   log "✓ enabled cron auto-update ($sched)."
 }
 
 do_enable() {
   guard_not_root
+  validate_interval
+  assert_safe_path "state script path" "$STABLE_SELF"
+  [ -z "$LOCAL_CHECKOUT" ] || assert_safe_path "--local checkout" "$LOCAL_CHECKOUT"
   ensure_state_dir
   install_stable_self
   if systemd_user_available; then
@@ -206,7 +268,7 @@ do_enable() {
     warn "systemd --user unavailable; falling back to cron."
     enable_cron
   fi
-  log "  update source: ${LOCAL_CHECKOUT:-$CANONICAL_INSTALLER_URL}"
+  log "  update source: $(update_source_label)"
   log "  log file:      $LOG"
   log "  disable with:  omg-autoupdate.sh disable"
 }
@@ -214,15 +276,17 @@ do_enable() {
 do_disable() {
   guard_not_root
   local removed=0
-  # systemd
-  if systemd_user_available; then
-    if [ "$DRY_RUN" = 1 ]; then
-      log "  [dry-run] systemctl --user disable --now $UNIT_NAME.timer"
-      log "  [dry-run] rm $SYSTEMD_USER_DIR/$UNIT_NAME.{timer,service}"
-    else
-      systemctl --user disable --now "$UNIT_NAME.timer" 2>/dev/null || true
-      rm -f "$SYSTEMD_USER_DIR/$UNIT_NAME.timer" "$SYSTEMD_USER_DIR/$UNIT_NAME.service"
-      systemctl --user daemon-reload 2>/dev/null || true
+  # systemd — remove unit files unconditionally; best-effort stop via the bus.
+  if [ "$DRY_RUN" = 1 ]; then
+    log "  [dry-run] systemctl --user disable --now $UNIT_NAME.timer (best-effort)"
+    log "  [dry-run] rm -f $TIMER_UNIT $SERVICE_UNIT"
+  else
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl --user disable --now "$UNIT_NAME.timer" >/dev/null 2>&1 || true
+    fi
+    if [ -e "$TIMER_UNIT" ] || [ -e "$SERVICE_UNIT" ]; then
+      rm -f "$TIMER_UNIT" "$SERVICE_UNIT"
+      systemctl --user daemon-reload >/dev/null 2>&1 || true
       removed=1
     fi
   fi
@@ -231,7 +295,7 @@ do_disable() {
     if [ "$DRY_RUN" = 1 ]; then
       log "  [dry-run] remove crontab line tagged: $CRON_TAG"
     elif crontab -l 2>/dev/null | grep -qF "$CRON_TAG"; then
-      crontab -l 2>/dev/null | grep -vF "$CRON_TAG" | grep -v '^$' | crontab - || true
+      crontab -l 2>/dev/null | grep -vF "$CRON_TAG" | grep -v '^[[:space:]]*$' | crontab - || true
       removed=1
     fi
   fi
@@ -265,7 +329,7 @@ main() {
     disable) do_disable ;;
     status)  do_status ;;
     -h|--help|help)
-      sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
+      sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
     *) die "unknown action: $action (expected run|enable|disable|status)" ;;
   esac
 }

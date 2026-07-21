@@ -44,7 +44,7 @@ describe("omg-autoupdate.sh", () => {
       const r = run(["run", "--dry-run"], st);
       expect(r.status, r.stderr).toBe(0);
       expect(r.stdout).toContain("flock");
-      expect(r.stdout).toContain("https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh | bash");
+      expect(r.stdout).toContain("update from https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh");
     } finally {
       rmSync(st, { recursive: true, force: true });
     }
@@ -55,7 +55,7 @@ describe("omg-autoupdate.sh", () => {
     try {
       const r = run(["run", "--local", repoRoot, "--dry-run"], st);
       expect(r.status, r.stderr).toBe(0);
-      expect(r.stdout).toContain(`bash ${join(repoRoot, "install.sh")}`);
+      expect(r.stdout).toContain(`update from local: ${join(repoRoot, "install.sh")}`);
       expect(r.stdout).not.toContain("raw.githubusercontent.com");
     } finally {
       rmSync(st, { recursive: true, force: true });
@@ -76,7 +76,7 @@ describe("omg-autoupdate.sh", () => {
     }
   });
 
-  test("a real run logs OK on success and FAILED on installer error", () => {
+  test("a real run logs OK on success (rc 0) and propagates FAILED rc on installer error", () => {
     const st = mkdtempSync(join(tmpdir(), "omgau-"));
     const fake = mkdtempSync(join(tmpdir(), "omgfake-"));
     const log = join(st, "oh-my-gajae-code/autoupdate.log");
@@ -88,11 +88,36 @@ describe("omg-autoupdate.sh", () => {
 
       writeFileSync(join(fake, "install.sh"), "#!/usr/bin/env bash\nexit 3\n");
       r = run(["run", "--local", fake], st);
-      expect(r.status, r.stderr).toBe(0);
+      // failure must propagate so systemd/cron can detect it
+      expect(r.status).toBe(3);
       expect(readFileSync(log, "utf8")).toContain("result: FAILED rc=3");
     } finally {
       rmSync(st, { recursive: true, force: true });
       rmSync(fake, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects schedule-injection in --interval", () => {
+    const st = mkdtempSync(join(tmpdir(), "omgau-"));
+    try {
+      expect(run(["enable", "--interval", "daily; rm -rf /", "--dry-run"], st).status).not.toBe(0);
+      expect(run(["enable", "--interval", "weekly\nWantedBy=evil", "--dry-run"], st).status).not.toBe(0);
+      // a legitimate OnCalendar value is accepted
+      expect(run(["enable", "--interval", "*-*-* 04:00:00", "--dry-run"], st).status).toBe(0);
+    } finally {
+      rmSync(st, { recursive: true, force: true });
+    }
+  });
+
+  test("disable removes systemd units unconditionally (not gated on the user bus)", () => {
+    const st = mkdtempSync(join(tmpdir(), "omgau-"));
+    try {
+      const r = run(["disable", "--dry-run"], st);
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stdout).toContain("rm -f");
+      expect(r.stdout).toContain("omg-autoupdate.timer");
+    } finally {
+      rmSync(st, { recursive: true, force: true });
     }
   });
 
