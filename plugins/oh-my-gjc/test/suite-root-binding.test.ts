@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { spawnSync } from "child_process";
@@ -93,9 +93,10 @@ describe("suite root runtime binding", () => {
       scope === "user" ? join(sandbox.home, ".gjc/agent") : join(sandbox.project, ".gjc");
     const retiredCommand = join(nativeRoot, "commands/omg:easy.md");
     const userRetiredRuntime = join(sandbox.home, ".gjc/agent/runtimes/lazycodex-gjc/binding");
+    const userRetiredRunner = join(sandbox.home, ".gjc/agent/runtimes/lazycodex-gjc/runner.mjs");
     const userMultiHarnessRuntime = join(sandbox.home, ".gjc/agent/runtimes/multi-harness-research");
     const models = join(sandbox.home, ".gjc/agent/models.yml");
-    const expectedSkills = ["adaptive-response", "no-english", "time-left", "extragoal", "insane-review", "lazycodex-gjc", "deep-onboarding", "preset-pack", "multi-harness-research"].map((name) =>
+    const expectedSkills = ["adaptive-response", "no-english", "extragoal", "insane-review", "deep-onboarding", "preset-pack", "multi-harness-research"].map((name) =>
       join(nativeRoot, `skills/${name}/SKILL.md`),
     );
     const expectedCommands = [
@@ -104,10 +105,8 @@ describe("suite root runtime binding", () => {
       "omg:gate.md",
       "omg:gate-always.md",
       "omg:no-english.md",
-      "omg:time-left.md",
       "omg:fable.md",
       "omg:insane-review.md",
-      "omg:lazycodex-gjc.md",
       "omg:deep-onboarding.md",
       "omg:preset-pack.md",
       "omg:multi-harness.md",
@@ -119,8 +118,12 @@ describe("suite root runtime binding", () => {
     writeFileSync(otherSuiteBinding, "other suite remains");
     mkdirSync(dirname(retiredCommand), { recursive: true });
     writeFileSync(retiredCommand, "retired command");
-    mkdirSync(dirname(userRetiredRuntime), { recursive: true });
-    writeFileSync(userRetiredRuntime, "retired runtime");
+    mkdirSync(dirname(userRetiredRuntime), { recursive: true, mode: 0o700 });
+    chmodSync(dirname(userRetiredRuntime), 0o700);
+    writeFileSync(userRetiredRuntime, `lazycodex-gjc-binding-v1\n${sandbox.home}\n`, { mode: 0o600 });
+    chmodSync(userRetiredRuntime, 0o600);
+    writeFileSync(userRetiredRunner, "retired runner", { mode: 0o700 });
+    chmodSync(userRetiredRunner, 0o700);
     mkdirSync(userMultiHarnessRuntime, { recursive: true });
     writeFileSync(join(userMultiHarnessRuntime, "binding"), "multi-harness runtime");
     mkdirSync(dirname(models), { recursive: true });
@@ -137,7 +140,10 @@ describe("suite root runtime binding", () => {
       expect(existsSync(path)).toBe(false);
     }
     if (scope === "user") expect(existsSync(userRetiredRuntime)).toBe(false);
-    else expect(readFileSync(userRetiredRuntime, "utf8")).toBe("retired runtime");
+    else {
+      expect(readFileSync(userRetiredRuntime, "utf8")).toBe(`lazycodex-gjc-binding-v1\n${sandbox.home}\n`);
+      expect(readFileSync(userRetiredRunner, "utf8")).toBe("retired runner");
+    }
     if (scope === "user") expect(existsSync(userMultiHarnessRuntime)).toBe(false);
     else expect(readFileSync(join(userMultiHarnessRuntime, "binding"), "utf8")).toBe("multi-harness runtime");
     expect(readFileSync(models, "utf8")).toBe("profiles:\n  user-owned: {}\n");

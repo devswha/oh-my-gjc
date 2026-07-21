@@ -1,7 +1,7 @@
 {
   "name": "oh-my-gjc",
-  "version": "0.24.0",
-  "description": "oh-my-gajaecode — focused Gajae Code suite with 9 skills and 12 commands. Skills: adaptive-response, no-english, time-left, extragoal, insane-review, lazycodex-gjc, deep-onboarding, preset-pack, multi-harness-research. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:time-left, /omg:fable, /omg:insane-review, /omg:lazycodex-gjc, /omg:deep-onboarding, /omg:preset-pack, /omg:multi-harness. Multi-harness research is explicit-only, directly fans one identical task to exactly four read-only harnesses, and writes results only outside the project in XDG state; it requires Linux, bubblewrap, existing provider logins, and a private user runtime binding. Preset-pack merges the curated daily/agent profiles (human vs unattended-agent seat maps) into the user's models.yml only on explicit /omg:preset-pack invocation, after backup, name-scoped, leaving all other profiles and top-level keys untouched. The installer itself never modifies models.yml.",
+  "version": "0.25.0",
+  "description": "oh-my-gajaecode — focused Gajae Code suite with 7 skills and 10 commands. Skills: adaptive-response, no-english, extragoal, insane-review, deep-onboarding, preset-pack, multi-harness-research. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:fable, /omg:insane-review, /omg:deep-onboarding, /omg:preset-pack, /omg:multi-harness. Multi-harness research is explicit-only, directly fans one identical task to exactly four read-only harnesses, and writes results only outside the project in XDG state; it requires Linux, bubblewrap, existing provider logins, and a private user runtime binding. Preset-pack merges the curated daily/agent profiles (human vs unattended-agent seat maps) into the user's models.yml only on explicit /omg:preset-pack invocation, after backup, name-scoped, leaving all other profiles and top-level keys untouched. The installer itself never modifies models.yml.",
   "author": {
     "name": "devswha",
     "email": "devswha@gmail.com",
@@ -18,9 +18,7 @@
     "approval-gate",
     "code-review",
     "orchestration",
-    "codex-bridge",
     "multi-harness-research",
-    "lazycodex",
     "model-presets"
   ]
 }

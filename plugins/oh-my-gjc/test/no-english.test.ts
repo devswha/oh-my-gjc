@@ -45,7 +45,6 @@ describe("no-english skill contract", () => {
       "`ralplan`",
       "`deep-interview`",
       "`team`",
-      "`time-left`",
       "`adaptive-response`",
       "`/omg:fable`",
     ]) {
@@ -84,7 +83,7 @@ describe("no-english skill contract", () => {
   test("is part of the exact native skill manifest", () => {
     const installer = read(installerPath);
     expect(installer).toContain(
-      "EXPECTED_SKILLS=(adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding preset-pack multi-harness-research)",
+      "EXPECTED_SKILLS=(adaptive-response no-english extragoal insane-review deep-onboarding preset-pack multi-harness-research)",
     );
     expect(installer).toContain("REMOVED_SKILLS=(gate-briefing korean-first workflow-eta ");
   });

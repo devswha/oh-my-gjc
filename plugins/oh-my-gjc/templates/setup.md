@@ -9,17 +9,17 @@ argument-hint: "(인자 없음)"
 
 ## Step 0 — 네이티브 표면과 binding 확인
 
-canonical 진단 대상은 user scope `~/.gjc/agent`다. 아래 표면이 모두 있는지와 private runtime binding의 **존재만** 확인한다. binding 존재는 실제 로그인·selector·credential 검증 성공을 뜻하지 않는다.
+canonical 진단 대상은 user scope `~/.gjc/agent`다. 아래 7개 skill과 10개 command가 모두 있는지와 private runtime binding의 **존재만** 확인한다. binding 존재는 실제 로그인·selector·credential 검증 성공을 뜻하지 않는다.
 
 ```bash
 root="$HOME/.gjc/agent"
-for skill in adaptive-response no-english time-left extragoal insane-review lazycodex-gjc deep-onboarding preset-pack multi-harness-research; do
+for skill in adaptive-response no-english extragoal insane-review deep-onboarding preset-pack multi-harness-research; do
   test -f "$root/skills/$skill/SKILL.md" || exit 1
 done
-for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:time-left.md omg:fable.md omg:insane-review.md omg:lazycodex-gjc.md omg:deep-onboarding.md omg:preset-pack.md omg:multi-harness.md; do
+for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:fable.md omg:insane-review.md omg:deep-onboarding.md omg:preset-pack.md omg:multi-harness.md; do
   test -f "$root/commands/$command" || exit 1
 done
-for runtime in "$root/runtimes/oh-my-gjc/sdk-lab" "$root/runtimes/lazycodex-gjc" "$root/runtimes/multi-harness-research"; do
+for runtime in "$root/runtimes/multi-harness-research"; do
   test ! -L "$runtime" || exit 1
 done
 test ! -e "$root/runtimes/multi-harness-research" ||
@@ -36,9 +36,7 @@ test ! -e "$root/runtimes/multi-harness-research" ||
 
 | 감지 | 읽기 전용 확인 | 기능 |
 |---|---|---|
-| GJC SDK workflow ETA | Linux + Bun 1.3.14+ + private `oh-my-gjc/sdk-lab` runtime | `/omg:time-left [ralplan\|ultragoal]` |
 | Chrome + ChatGPT | Chrome 프로필 존재 | `/omg:insane-review` |
-| Codex + LazyCodex | `codex` PATH + 호환 OMO + user runtime binding | `/omg:lazycodex-gjc` (읽기 전용) |
 | 네 하니스 조사 | Linux + `bwrap` + Node/GJC/Codex/Claude + private `multi-harness-research` binding과 세 credential leaf | 명시 전용 `/omg:multi-harness` |
 
 `/omg:multi-harness`는 binding이 있어도 네 provider의 실제 selector/auth preflight를 실행할 때만 런타임이 확인한다. 현재 Codex OAuth `401`은 **pending-environment**이며, 이 진단은 로그인 성공으로 바꾸거나 fixture를 성공으로 주장하지 않는다.

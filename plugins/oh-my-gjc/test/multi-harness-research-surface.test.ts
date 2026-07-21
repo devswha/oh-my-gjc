@@ -163,17 +163,15 @@ describe("multi-harness research surface", () => {
     expect(command.replace(/\s+/g, " ")).toContain("full lane documents, task bytes, raw stdout/stderr, credentials, auth state, or finalization receipt");
   });
 
-  test("has exactly nine skills and twelve native command templates at this surface", () => {
+  test("has exactly seven skills and ten native command templates at this surface", () => {
     expect(nativeSkillNames()).toEqual([
       "adaptive-response",
       "deep-onboarding",
       "extragoal",
       "insane-review",
-      "lazycodex-gjc",
       "multi-harness-research",
       "no-english",
       "preset-pack",
-      "time-left",
     ]);
     expect(nativeCommandNames()).toEqual([
       "deep-onboarding.md",
@@ -181,13 +179,11 @@ describe("multi-harness research surface", () => {
       "gate-always.md",
       "gate.md",
       "insane-review.md",
-      "lazycodex-gjc.md",
       "multi-harness.md",
       "no-english.md",
       "omg.md",
       "preset-pack.md",
       "setup.md",
-      "time-left.md",
     ]);
   });
 });
