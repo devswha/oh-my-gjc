@@ -7,14 +7,14 @@
   },
   "metadata": {
     "description": "oh-my-gajae-code — focused Gajae Code suite: 6 skills + 8 commands. Explicit presentation controls, external review, confirmation-gated deep onboarding, and explicit-only four-harness read-only research with XDG-only results.",
-    "version": "0.29.0"
+    "version": "0.29.1"
   },
   "plugins": [
     {
       "name": "oh-my-gajae-code",
       "source": "./plugins/oh-my-gajae-code",
       "description": "oh-my-gajae-code — focused Gajae Code suite with 6 skills and 8 commands. Skills: adaptive-response, no-english, extragoal, insane-review, deep-onboarding, multi-harness-research. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:insane-review, /omg:deep-onboarding, /omg:multi-harness. Multi-harness is explicit-only and directly fans the same task to exactly four read-only harnesses; its private user runtime requires Linux, bubblewrap, and existing provider logins, while only XDG state outside the project receives results.",
-      "version": "0.29.0",
+      "version": "0.29.1",
       "category": "core"
     }
   ]

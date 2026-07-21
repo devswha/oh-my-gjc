@@ -3,7 +3,7 @@
  * Run: bun test plugins/oh-my-gajae-code/test/omg-autoupdate.test.ts
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawnSync } from "child_process";
@@ -129,6 +129,39 @@ describe("omg-autoupdate.sh", () => {
       expect(r.stdout).toContain("omg-autoupdate.timer");
     } finally {
       rmSync(st, { recursive: true, force: true });
+    }
+  });
+
+  test("disable removes owned unit files even when the user bus is unavailable, but reports failure since a loaded timer cannot be confirmed stopped", () => {
+    const st = mkdtempSync(join(tmpdir(), "omgau-"));
+    const cfg = mkdtempSync(join(tmpdir(), "omgcfg-"));
+    const unitDir = join(cfg, "systemd/user");
+    try {
+      mkdirSync(unitDir, { recursive: true });
+      writeFileSync(join(unitDir, "omg-autoupdate.timer"), "[Timer]\n");
+      writeFileSync(join(unitDir, "omg-autoupdate.service"), "[Service]\n");
+      const r = run(["disable"], st, { XDG_CONFIG_HOME: cfg, XDG_RUNTIME_DIR: "" });
+      // cannot confirm the timer is stopped without the bus → nonzero
+      expect(r.status).not.toBe(0);
+      // but the owned unit files are still removed (no silent leftover)
+      expect(existsSync(join(unitDir, "omg-autoupdate.timer"))).toBe(false);
+      expect(existsSync(join(unitDir, "omg-autoupdate.service"))).toBe(false);
+    } finally {
+      rmSync(st, { recursive: true, force: true });
+      rmSync(cfg, { recursive: true, force: true });
+    }
+  });
+
+  test("disable on a system with nothing scheduled exits 0", () => {
+    const st = mkdtempSync(join(tmpdir(), "omgau-"));
+    const cfg = mkdtempSync(join(tmpdir(), "omgcfg-"));
+    try {
+      const r = run(["disable"], st, { XDG_CONFIG_HOME: cfg, XDG_RUNTIME_DIR: "" });
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stdout).toContain("nothing to remove");
+    } finally {
+      rmSync(st, { recursive: true, force: true });
+      rmSync(cfg, { recursive: true, force: true });
     }
   });
 
