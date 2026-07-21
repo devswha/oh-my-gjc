@@ -12,11 +12,17 @@ const pluginRoot = join(import.meta.dir, "..");
 const script = join(pluginRoot, "bin/omg-autoupdate.sh");
 const repoRoot = join(pluginRoot, "..", "..");
 
-function run(args: string[], stateHome: string) {
+function run(args: string[], stateHome: string, extraEnv: Record<string, string> = {}) {
   return spawnSync("bash", [script, ...args], {
     encoding: "utf8",
-    env: { ...process.env, XDG_STATE_HOME: stateHome },
+    env: { ...process.env, XDG_STATE_HOME: stateHome, ...extraEnv },
   });
+}
+
+// Force the cron fallback deterministically (systemd_user_available needs a
+// non-empty XDG_RUNTIME_DIR), so cron-schedule validation is actually exercised.
+function runCron(args: string[], stateHome: string) {
+  return run(args, stateHome, { XDG_RUNTIME_DIR: "" });
 }
 
 describe("omg-autoupdate.sh", () => {
@@ -97,13 +103,18 @@ describe("omg-autoupdate.sh", () => {
     }
   });
 
-  test("rejects schedule-injection in --interval", () => {
+  test("rejects schedule-injection in --interval (cron fallback)", () => {
     const st = mkdtempSync(join(tmpdir(), "omgau-"));
     try {
-      expect(run(["enable", "--interval", "daily; rm -rf /", "--dry-run"], st).status).not.toBe(0);
-      expect(run(["enable", "--interval", "weekly\nWantedBy=evil", "--dry-run"], st).status).not.toBe(0);
-      // a legitimate OnCalendar value is accepted
-      expect(run(["enable", "--interval", "*-*-* 04:00:00", "--dry-run"], st).status).toBe(0);
+      // blocked by the charset allowlist (;) and by the newline check
+      expect(runCron(["enable", "--interval", "daily; rm -rf /", "--dry-run"], st).status).not.toBe(0);
+      expect(runCron(["enable", "--interval", "weekly\nWantedBy=evil", "--dry-run"], st).status).not.toBe(0);
+      // passes the charset allowlist but must NOT be usable as a cron schedule
+      // (7 fields → would inject a trailing command); the 5-field check rejects it
+      expect(runCron(["enable", "--interval", "* * * * * rm -rf /", "--dry-run"], st).status).not.toBe(0);
+      // a named alias and a strict 5-field cron spec are accepted
+      expect(runCron(["enable", "--interval", "weekly", "--dry-run"], st).status).toBe(0);
+      expect(runCron(["enable", "--interval", "0 4 * * *", "--dry-run"], st).status).toBe(0);
     } finally {
       rmSync(st, { recursive: true, force: true });
     }

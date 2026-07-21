@@ -56,11 +56,11 @@ guard_not_root() {
 }
 
 # Reject paths that would break systemd/cron quoting (newlines, control chars,
-# single quotes). Paths are embedded into scheduler syntax, so keep them plain.
+# quote/escape/backtick chars). Paths are embedded into scheduler syntax, keep them plain.
 assert_safe_path() { # $1=label $2=path
   case "$2" in
-    *[[:cntrl:]]*) die "$1 contains a control character/newline: refusing to schedule." ;;
-    *"'"*)         die "$1 contains a single quote: refusing to schedule." ;;
+    *[[:cntrl:]]*)  die "$1 contains a control character/newline: refusing to schedule." ;;
+    *[\'\"\\\`]*)   die "$1 contains a quote/backslash/backtick: refusing to schedule." ;;
   esac
 }
 
@@ -223,13 +223,23 @@ EOF
   log "✓ enabled systemd --user timer '$UNIT_NAME.timer' (OnCalendar=$INTERVAL)."
 }
 
-cron_schedule_from_interval() {
+# Translate the interval to a cron schedule. A named alias maps to a fixed
+# 5-field spec; any other value MUST be a strict 5-field cron expression
+# (digits and * , / - only) so it can never inject a trailing cron command.
+cron_from_interval() {
   case "$INTERVAL" in
-    daily)  echo "0 4 * * *" ;;
-    weekly) echo "0 4 * * 1" ;;
-    hourly) echo "0 * * * *" ;;
-    *)      echo "$INTERVAL" ;;   # allow a raw 5-field cron spec (already validated)
+    daily)  echo "0 4 * * *"; return ;;
+    weekly) echo "0 4 * * 1"; return ;;
+    hourly) echo "0 * * * *"; return ;;
   esac
+  local -a fields
+  read -r -a fields <<<"$INTERVAL"
+  [ "${#fields[@]}" -eq 5 ] || die "cron fallback needs a named interval (daily|weekly|hourly) or a 5-field cron expression; got: '$INTERVAL'"
+  local f
+  for f in "${fields[@]}"; do
+    case "$f" in *[!0-9*,/-]*) die "invalid cron field '$f' in --interval (cron fields allow only digits and * , / -)." ;; esac
+  done
+  echo "$INTERVAL"
 }
 
 # cron treats a literal % as a newline; it must be backslash-escaped.
@@ -243,7 +253,7 @@ cron_command() {
 
 enable_cron() {
   local sched line existing
-  sched="$(cron_schedule_from_interval)"
+  sched="$(cron_from_interval)"
   line="$(cron_escape "$sched $(cron_command) $CRON_TAG")"
   if [ "$DRY_RUN" = 1 ]; then
     log "  [dry-run] crontab line: $line"
