@@ -15,7 +15,7 @@ Do exactly the following in a terminal. Do not improvise other steps.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh | bash
 ```
-One install brings the whole suite (7 skills + 9 commands: `/omg` + 8 `/omg:*`). There are no separate/optional plugins to add.
+One install brings the whole suite (6 skills + 8 commands: `/omg` + 7 `/omg:*`). There are no separate/optional plugins to add.
 `multi-harness-research` is present but runnable only through explicit `/omg:multi-harness`; it requires Linux user namespaces + `bwrap`, four supported existing CLI logins, and its private runtime binding. The installer never installs or logs in to those providers.
 
 ## Manual path (equivalent, if curl|bash is disallowed)
@@ -41,16 +41,16 @@ The self-hosted web UI now lives in [`devswha/claudecodeui`'s canonical SELF-HOS
 ```sh
 gjc plugin list  # must list oh-my-gajae-code@oh-my-gajae-code
 root="$HOME/.gjc/agent"
-for skill in adaptive-response no-english extragoal insane-review deep-onboarding preset-pack multi-harness-research; do
+for skill in adaptive-response no-english extragoal insane-review deep-onboarding multi-harness-research; do
   test -f "$root/skills/$skill/SKILL.md" || exit 1
 done
-for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:insane-review.md omg:deep-onboarding.md omg:preset-pack.md omg:multi-harness.md; do
+for command in omg.md omg:setup.md omg:gate.md omg:gate-always.md omg:no-english.md omg:insane-review.md omg:deep-onboarding.md omg:multi-harness.md; do
   test -f "$root/commands/$command" || exit 1
 done
-for skill in workflow-eta easy-answer plain-layer branch-flow worktree gjc-bugwatch multivendor-presets release-gate session-observer time-left lazycodex-gjc; do
+for skill in workflow-eta easy-answer plain-layer branch-flow worktree gjc-bugwatch multivendor-presets preset-pack release-gate session-observer time-left lazycodex-gjc; do
   test ! -e "$root/skills/$skill" && test ! -L "$root/skills/$skill" || exit 1
 done
-for retired in easy easy-always plain branchflow-always worktree bugwatch-scan presets release session-observer time-left lazycodex-gjc fable; do
+for retired in easy easy-always plain branchflow-always worktree bugwatch-scan presets preset-pack release session-observer time-left lazycodex-gjc fable; do
   test ! -e "$root/commands/omg:$retired.md" && test ! -L "$root/commands/omg:$retired.md" || exit 1
 done
 test -f "$root/runtimes/oh-my-gajae-code/root"
@@ -61,7 +61,7 @@ test "$(stat -c %a "$root/runtimes/oh-my-gajae-code/root" 2>/dev/null || stat -f
 Tell the human: open a **new** gjc session (or `/move .`) so the command palette rebuilds, then run `/omg` for the catalog and `/omg:setup` for optional prerequisite checks and always-on toggles. Commands are `/omg:<name>`.
 
 ## Safety
-Idempotent — re-running re-copies the 7 skills and 9 commands, removes explicitly retired suite-owned native surfaces, and preserves unrelated user state. `adaptive-response` loads only through `/omg:gate` or `/omg:gate-always`; `no-english` loads only through session-local `/omg:no-english`; `deep-onboarding` analyzes and interviews before writing, and writes its three documents only after the user explicitly confirms one output directory. `insane-review` needs ChatGPT+Chromium. `preset-pack` merges the curated daily/agent profiles into user `models.yml` only on explicit `/omg:preset-pack install`, after backup, name-scoped; the installer itself never touches `models.yml`. During user-scope upgrade, the installer also removes only well-formed retired `easy-always` blocks from `~/.gjc/agent/SYSTEM.md` and `AGENTS.md`, preserving unrelated content and the stable `oh-my-gjc:gate-always` marker.
+Idempotent — re-running re-copies the 6 skills and 8 commands, removes explicitly retired suite-owned native surfaces, and preserves unrelated user state. `adaptive-response` loads only through `/omg:gate` or `/omg:gate-always`; `no-english` loads only through session-local `/omg:no-english`; `deep-onboarding` analyzes and interviews before writing, and writes its three documents only after the user explicitly confirms one output directory. `insane-review` needs ChatGPT+Chromium. During user-scope upgrade, the installer also removes only well-formed retired `easy-always` blocks from `~/.gjc/agent/SYSTEM.md` and `AGENTS.md`, preserving unrelated content and the stable `oh-my-gjc:gate-always` marker.
 
 ### v0.26.0 tombstone
 

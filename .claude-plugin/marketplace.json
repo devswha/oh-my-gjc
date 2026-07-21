@@ -6,15 +6,15 @@
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gajae-code — focused Gajae Code suite: 7 skills + 9 commands. Explicit presentation controls, external review, confirmation-gated deep onboarding, an explicit-install curated preset pack, and explicit-only four-harness read-only research with XDG-only results.",
-    "version": "0.28.0"
+    "description": "oh-my-gajae-code — focused Gajae Code suite: 6 skills + 8 commands. Explicit presentation controls, external review, confirmation-gated deep onboarding, and explicit-only four-harness read-only research with XDG-only results.",
+    "version": "0.29.0"
   },
   "plugins": [
     {
       "name": "oh-my-gajae-code",
       "source": "./plugins/oh-my-gajae-code",
-      "description": "oh-my-gajae-code — focused Gajae Code suite with 7 skills and 9 commands. Skills: adaptive-response, no-english, extragoal, insane-review, deep-onboarding, preset-pack, multi-harness-research. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:insane-review, /omg:deep-onboarding, /omg:preset-pack, /omg:multi-harness. Multi-harness is explicit-only and directly fans the same task to exactly four read-only harnesses; its private user runtime requires Linux, bubblewrap, and existing provider logins, while only XDG state outside the project receives results. Preset-pack merges the curated daily/agent profiles into the user's models.yml only on explicit command, after backup, name-scoped. The installer itself never modifies models.yml.",
-      "version": "0.28.0",
+      "description": "oh-my-gajae-code — focused Gajae Code suite with 6 skills and 8 commands. Skills: adaptive-response, no-english, extragoal, insane-review, deep-onboarding, multi-harness-research. Commands: /omg, /omg:setup, /omg:gate, /omg:gate-always, /omg:no-english, /omg:insane-review, /omg:deep-onboarding, /omg:multi-harness. Multi-harness is explicit-only and directly fans the same task to exactly four read-only harnesses; its private user runtime requires Linux, bubblewrap, and existing provider logins, while only XDG state outside the project receives results.",
+      "version": "0.29.0",
       "category": "core"
     }
   ]

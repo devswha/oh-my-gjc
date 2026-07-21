@@ -185,7 +185,7 @@ describe("one-shot installer", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("✔ Installed oh-my-gajae-code from oh-my-gajae-code (1.2.3)");
-    expect(result.stdout).toContain("✓ oh-my-gajae-code installed — one plugin, 7 skills + 9 commands (/omg + 8 /omg:*), all native surfaces installed.");
+    expect(result.stdout).toContain("✓ oh-my-gajae-code installed — one plugin, 6 skills + 8 commands (/omg + 7 /omg:*), all native surfaces installed.");
     expect(result.stdout).toContain("v0.28.0 cutover");
     expect(result.stdout).toContain("/omg:* commands remain stable.");
     expect(result.stdout).toContain("https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh");
