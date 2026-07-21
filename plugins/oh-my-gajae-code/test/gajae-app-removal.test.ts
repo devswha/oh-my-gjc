@@ -37,6 +37,7 @@ const retiredSkills = [
   "workflow-eta",
   "gajae-app",
   "multivendor-presets",
+  "preset-pack",
   "release-gate",
   "easy-answer",
   "plain-layer",
@@ -51,6 +52,7 @@ const retiredSkills = [
 const retiredCommands = [
   "gajae-app",
   "presets",
+  "preset-pack",
   "release",
   "easy",
   "easy-always",
@@ -71,8 +73,8 @@ describe("removed capability manifests", () => {
     const expectedRuntimes = parseManifest("EXPECTED_RUNTIMES");
     const removedSkills = parseManifest("REMOVED_SKILLS");
     const removedCommands = parseManifest("REMOVED_COMMANDS");
-    expect(expectedSkills).toHaveLength(7);
-    expect(expectedCommands).toHaveLength(9);
+    expect(expectedSkills).toHaveLength(6);
+    expect(expectedCommands).toHaveLength(8);
     expect(expectedSkills).not.toContain("gajae-app");
     expect(expectedCommands).not.toContain("gajae-app");
 
@@ -82,7 +84,6 @@ describe("removed capability manifests", () => {
       "extragoal",
       "insane-review",
       "deep-onboarding",
-      "preset-pack",
       "multi-harness-research",
     ]);
     expect(expectedCommands).toEqual([
@@ -93,12 +94,10 @@ describe("removed capability manifests", () => {
       "no-english",
       "insane-review",
       "deep-onboarding",
-      "preset-pack",
       "multi-harness",
     ]);
     expect(expectedRuntimes).toEqual([
       "bin/multi-harness-research.mjs",
-      "references/preset-pack.yml",
     ]);
     for (const skill of retiredSkills) expect(removedSkills).toContain(skill);
     for (const command of retiredCommands) expect(removedCommands).toContain(command);
@@ -109,6 +108,9 @@ describe("removed capability manifests", () => {
     expect(existsSync(join(pluginRoot, "skills/multivendor-presets/SKILL.md"))).toBe(false);
     expect(existsSync(join(pluginRoot, "templates/presets.md"))).toBe(false);
     expect(existsSync(join(pluginRoot, "references/presets.yml"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "skills/preset-pack/SKILL.md"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "templates/preset-pack.md"))).toBe(false);
+    expect(existsSync(join(pluginRoot, "references/preset-pack.yml"))).toBe(false);
     expect(existsSync(join(pluginRoot, "skills/release-gate/SKILL.md"))).toBe(false);
     expect(existsSync(join(pluginRoot, "templates/release.md"))).toBe(false);
     for (const skill of retiredSkills) {

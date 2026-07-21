@@ -103,7 +103,7 @@ describe("suite root runtime binding", () => {
     const userRetiredRunner = join(sandbox.home, ".gjc/agent/runtimes/lazycodex-gjc/runner.mjs");
     const userMultiHarnessRuntime = join(sandbox.home, ".gjc/agent/runtimes/multi-harness-research");
     const models = join(sandbox.home, ".gjc/agent/models.yml");
-    const expectedSkills = ["adaptive-response", "no-english", "extragoal", "insane-review", "deep-onboarding", "preset-pack", "multi-harness-research"].map((name) =>
+    const expectedSkills = ["adaptive-response", "no-english", "extragoal", "insane-review", "deep-onboarding", "multi-harness-research"].map((name) =>
       join(nativeRoot, `skills/${name}/SKILL.md`),
     );
     const expectedCommands = [
@@ -114,7 +114,6 @@ describe("suite root runtime binding", () => {
       "omg:no-english.md",
       "omg:insane-review.md",
       "omg:deep-onboarding.md",
-      "omg:preset-pack.md",
       "omg:multi-harness.md",
     ].map((name) => join(nativeRoot, `commands/${name}`));
     mkdirSync(dirname(legacyBinding), { recursive: true, mode: 0o700 });

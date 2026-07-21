@@ -28,7 +28,7 @@ git clone --depth 1 https://github.com/devswha/oh-my-gajae-code.git oh-my-gajae-
 bash oh-my-gajae-code/install.sh
 ```
 
-한 번 설치로 스킬 7개 + 커맨드 9개(`/omg` + `/omg:*` 8개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
+한 번 설치로 스킬 6개 + 커맨드 8개(`/omg` + `/omg:*` 7개)가 전부 들어온다(추가 설치 없음). 업그레이드 땐 원샷 한 줄 다시.
 원리·글롭 규칙 등 기여자용 상세는 AGENTS.md 참조.
 
 </details>
@@ -49,12 +49,15 @@ New installs write `oh-my-gajae-code` runtime bindings. The old `oh-my-gjc` bind
 - `extragoal` — 외부 최종 리뷰 게이트(무공유·교차패밀리 리뷰 후 머지)
 - `insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰 · **ChatGPT 구독 + 크로미움 로그인 필요**
 - `deep-onboarding` — 문서가 부족한 저장소를 읽기 전용 분석하고 인터뷰한 뒤, 확인된 경로에 프로젝트 맵·ADR 제안·인수인계를 생성(`/omg:deep-onboarding`)
-- `preset-pack` — 확정 프리셋 2개(daily=사람 / agent=무인)를 백업 후 `models.yml`에 명시 병합(`/omg:preset-pack`) · **daily는 anthropic+openai-codex+kimi-code, agent는 anthropic+openai-codex 로그인 필요, 명시 호출 시에만 수정**
 - `multi-harness-research` — 같은 조사 과제를 정확한 네 개의 읽기 전용 하니스에 직접 분배하고, 프로젝트 밖 XDG 결과만 보존하는 명시 전용 조사(`/omg:multi-harness`) · **Linux + bwrap + 네 공급자 기존 로그인 필요**
 
 ### 커맨드
 
-- 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:insane-review`, `/omg:deep-onboarding`, `/omg:preset-pack`, `/omg:multi-harness`.
+- 전체: `/omg`, `/omg:setup`, `/omg:gate`, `/omg:gate-always`, `/omg:no-english`, `/omg:insane-review`, `/omg:deep-onboarding`, `/omg:multi-harness`.
+
+### v0.29.0 묘비
+
+- `preset-pack`: 사용자의 직접 지시로 제거. 커스텀 모델 프리셋 배포를 접고 GJC 내장 프리셋만 쓴다. 업그레이드는 번들 소유 native `skills/preset-pack/`·`omg:preset-pack.md`와 `references/preset-pack.yml`만 정리하며, 사용자 `models.yml`과 과거 병합된 `daily`/`agent` 프로파일은 절대 삭제·수정하지 않는다.
 
 ### v0.26.0 묘비
 
@@ -67,7 +70,7 @@ New installs write `oh-my-gajae-code` runtime bindings. The old `oh-my-gjc` bind
 - `lazycodex-gjc`: 사용할 수 있는 Codex 인증/토큰이 없었고 GJC 네이티브 워크플로와 multi-harness가 위임을 충당해 제거했다.
 - 업그레이드는 번들이 소유한 native skill, command, runtime, receipt만 제거한다. 자격증명, `~/.codex`, `models.yml`, 사용자 LazyCodex/OMO, 다른 runtime은 절대 제거하지 않는다.
 
-모델 구성은 기본적으로 GJC 내장 프리셋을 쓴다. 설치 스크립트는 `models.yml`을 절대 수정하지 않으며, 커스텀 프리셋(daily/agent)은 사용자가 `/omg:preset-pack`을 명시 호출했을 때만 백업 후 이름 단위로 병합된다.
+모델 구성은 GJC 내장 프리셋을 그대로 쓴다. 설치 스크립트는 `models.yml`을 절대 수정하지 않으며, 이 스위트는 더 이상 커스텀 프리셋을 배포하지 않는다(`preset-pack`은 v0.29.0에서 제거됨).
 
 ## 3. 자세히
 
