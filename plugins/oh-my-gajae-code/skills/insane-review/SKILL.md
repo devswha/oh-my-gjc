@@ -112,6 +112,29 @@ python3 "$IR" --model pro --force-answer-after 90 --prompt "<질문>"
 ```
 
 
+### 2.5) lane 우선 경로 — sol-lane이 이 머신에 있을 때
+
+[sol-lane](https://github.com/devswha/sol-lane)은 이 엔진을 감싼 파이프라인 하니스다. 같은
+fail-closed 검증 위에 **회수 경로**(죽은 판의 답을 `harvest`로 무료 회수, `salvage`로 부분
+회수, `followup`으로 재패킹 없이 후속 질문)와 브라우저 직렬화 락이 있다. 실행 전 확인:
+
+```bash
+command -v lane >/dev/null 2>&1 || test -x ~/workspace/sol-lane/.venv/bin/lane
+```
+
+있으면 §3의 엔진 직접 실행 대신:
+
+```bash
+uv run --project ~/workspace/sol-lane lane review \
+  --root "$PWD" --include "<관련 파일 글롭, 쉼표 구분>" \
+  --stream "<질문 — 판정마다 파일:라인·코드조각 인용 강제>"
+```
+
+- 패킹·모델 검증·회수는 lane이 한다 — `--compress` 금지와 누락 감사(§3.5)는 그대로 네 책임.
+- 실패 안내의 `retry lane harvest <proj>` 줄을 사용자에게 그대로 보여줘라: 값 치른 메시지는
+  회수로 되살린다.
+- lane이 없으면 아래 §3의 `$IR` 직접 경로가 항상 유효하다(공개 배포 기본 경로).
+
 ### 3.2) 장기 실행 중계(기본 권장) — 백그라운드 + 로그 폴링
 Sol Pro 리뷰는 수 분 걸린다. 세션이 멈춘 것처럼 보이지 않게 **엔진을 백그라운드로 띄우고 로그를 폴링**해 Chrome에서 일어나는 일(패킹·모델 검증·생성 진행·실시간 응답)을 사용자에게 중계한다:
 ```bash

@@ -121,7 +121,22 @@ gjc `ask` 도구로 물어보고 → 선택대로 gjc가 실행 → `--ensure-en
    options = 후보 디렉토리들 + "프로젝트 전체" + "질문만(코드 없이)".
 2. **타겟 선별(완전한 집합은 네 판단)** — 코드면 의도에 직결된 **모듈/디렉토리를 통째로**(`--target <dir>`, 풀코드).
    더 넓으면 import·호출자·테스트·설정까지 닫는다(gjc `search`/`lsp`). **`--compress` 금지**(본문 누락). 순수 질문이면 생략.
-3. **실행** (정확성 리뷰는 풀코드 + 모델검증) — **백그라운드 + 중계가 기본**(SKILL §3.2):
+3. **실행** (정확성 리뷰는 풀코드 + 모델검증) — **lane 우선, 엔진 직접은 폴백**:
+
+   **lane 경로(이 머신에 sol-lane이 있을 때 — 먼저 확인하라):**
+   ```bash
+   command -v lane >/dev/null 2>&1 || test -x ~/workspace/sol-lane/.venv/bin/lane
+   ```
+   있으면 백그라운드 + 중계(SKILL §3.2)로:
+   ```bash
+   uv run --project ~/workspace/sol-lane lane review \
+     --root "$PWD" --include "<관련 파일 글롭, 쉼표 구분>" \
+     --stream "<의도 담은 질문 — 판정마다 파일:라인·코드조각 인용 강제>" \
+     > .insane-review/live.log 2>&1 &
+   ```
+   lane이 주는 것: 같은 fail-closed 검증에 더해 **회수 경로** — 죽은 판도 `lane harvest`(전송 없이 회수)·`lane salvage`로 살리고, 브라우저 락이 동시 실행을 직렬화한다. 실패 시 안내되는 `retry lane harvest` 줄을 그대로 사용자에게 보여줘라. **`--compress` 금지는 동일.**
+
+   **$IR 폴백(lane 없는 머신 — 기존 동작):**
    ```bash
    mkdir -p .insane-review && python3 -u "$IR" \
      --target <repo_or_dir> --include "<관련 파일 글롭 또는 생략=전체>" \
