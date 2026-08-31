@@ -98,29 +98,39 @@ Content is discovered by **convention directories** above; explicit paths in
   only tracked one and MUST contain placeholders, never real keys). Runtime state
   under `.gjc/` is gitignored.
 - **Document the real install paths** (verified): plugin management is the **shell CLI only** — `gjc plugin marketplace add <ref>` then `gjc plugin install <name>@<marketplace> …` (batch-capable), `gjc plugin list`. gjc has **no `/plugin` slash command** (Claude-Code syntax; a `/plugin …` line in a gjc session is just a chat message). Never write `/plugin …` in gjc install docs.
-- **Removed code is archived in `docs/removed/` (2026-07-21 user directive).** When you delete code or retire a capability, in the SAME change copy its removed source into `docs/removed/<name>/` and add an entry to `docs/removed/README.md` (original path(s), removal commit, release version). Git history is NOT a substitute — the archive is the browsable record. The archive is documentation only: never installed, executed, resolved by the suite-root binding, or referenced by `install.sh` / `install-skill.sh`. This complements (does not replace) the `AGENTS.md` tombstone that records rationale/boundary.
+- **Removed code is archived in `docs/removed/` (2026-07-21 user directive).** When you delete code or retire a capability, in the SAME change copy its removed source into `docs/removed/<name>/` and add an entry to `docs/removed/README.md` (original path(s), removal commit, release version). Git history is NOT a substitute — the archive is the browsable record. The archive is documentation only: never installed, executed, resolved by the suite-root binding, or referenced by `install.sh` / `install-skill.sh`. This complements (does not replace) the `AGENTS.md` tombstone that records rationale/boundary; when a tombstone outgrows one line of rationale/boundary, its full prose moves to `docs/removed/tombstones.md` in the same change.
 
 ## Per-plugin notes
 
 > **Note (single suite):** marketplace exposes only `oh-my-gjc`. The sections below retain
-> pre-integration plugin names as **capability notes**; removed capabilities remain only in `(REMOVED …)` tombstone sections.
+> pre-integration plugin names as **capability notes**; removed capabilities live in the
+> tombstone table below — full prose: `docs/removed/tombstones.md`.
 > All current suite files are in `plugins/oh-my-gjc/`.
 
-### `codex-cli-control` (REMOVED in 0.12.0)
-- 관제탑 발주·하코 승인(2026-07-13)으로 제거: skill `codex-cli-ask` + command `/omg:codex-ask` 명시 호출 0회 — 로컬 Codex 트래픽은 전량 제품 파이프라인(patina·flask)의 `codex exec` 직결로 스킬을 경유하지 않음. 업그레이드 시 `install-skill.sh`의 `cleanup_removed`가 네이티브 잔존물(`omg:codex-ask.md`, skill dir)을 청소한다. 과거 상세·보안계약은 git 히스토리(≤0.11.0)의 skills/codex-cli-ask/SKILL.md 참조.
+### Removed capabilities (tombstones)
 
-### `codex-deepwork` (REMOVED in 0.11.0)
-- 관제탑 발주·하코 승인(2026-07-12)으로 제거: 실사용 0회(자기시험 제외 전 세션 로그 집계) + `lazycodex`와 기능 중복. 파일-쓰기 자율 위임은 당시 `/omg:lazycodex-work` 소관이었으나 lazycodex도 0.12.0에서 제거됨 — 현재는 gjc 네이티브 워크플로(team/ultragoal) 소관. 업그레이드 시 `install-skill.sh`의 `cleanup_removed`가 네이티브 잔존물(`omg:codex-run.md`, skill dir)을 청소한다.
+> Full rationale/boundary/past-verification prose, verbatim: `docs/removed/tombstones.md`.
+> "네이티브 잔존물만" rows mean `install-skill.sh` `cleanup_removed` removes exactly that
+> skill directory + `omg:*.md` command and never touches user state.
 
-### `lazycodex` (REMOVED in 0.12.0)
-- 관제탑 발주·하코 승인(2026-07-13)으로 제거: `/omg:lazycodex-setup`·`/omg:lazycodex-work` 하니스 발원 세션 7월 0건. 파일-쓰기 자율 위임 수요는 gjc 네이티브 워크플로(team/ultragoal)로 충족. 업그레이드 시 `cleanup_removed`가 네이티브 잔존물(`omg:lazycodex-setup.md`·`omg:lazycodex-work.md`, skill dir)을 청소한다. 과거 상세는 git 히스토리(≤0.11.0)의 skills/lazycodex/SKILL.md 참조.
-
-### `time-left` and `lazycodex-gjc` (REMOVED in 0.25.0)
-- **User rationale:** ETA could not provide usable measurement; `lazycodex-gjc` had no usable Codex authentication/tokens, while GJC native workflows cover delegation. The associated `tools/sdk-lab` source is retired with `time-left`.
-- **Upgrade boundary:** cleanup removes only the suite-owned native skill, command, runtime, and receipt. It never removes credentials, `~/.codex`, `models.yml`, user LazyCodex/OMO, or other runtimes.
-
-### `codex-app-control` (REMOVED in 0.11.0)
-- 관제탑 발주·하코 승인(2026-07-12)으로 제거: 대상 Codex 데스크톱 앱 빌드 트랙이 07-03 아카이브(codex-wrapper-build)로 폐기됐고, GPT Pro 리뷰 용도는 `insane-review`(자체 엔진, codex-app 의존성 없음)가 전담. 업그레이드 시 `cleanup_removed`가 네이티브 잔존물을 청소한다. 과거 라이브 검증 레시피는 git 히스토리(≤0.10.0)의 skills/codex-app-*/SKILL.md 참조.
+| capability | removed | why | cleanup boundary |
+|---|---|---|---|
+| `codex-cli-control` | 0.12.0 | 관제탑 발주·하코 승인(2026-07-13)·명시 호출 0회 — patina·flask 파이프라인이 `codex exec` 직결 | 네이티브 잔존물만 |
+| `codex-deepwork` | 0.11.0 | 실사용 0회 + `lazycodex`와 중복 — 파일-쓰기 위임은 gjc team/ultragoal 소관 | 네이티브 잔존물만 |
+| `lazycodex` | 0.12.0 | 하니스 발원 세션 0건 — gjc 네이티브 워크플로로 충족 | 네이티브 잔존물만 |
+| `time-left` + `lazycodex-gjc` | 0.25.0 | ETA 측정 불가·유효한 Codex 토큰 없음 (`tools/sdk-lab` 동반 은퇴) | suite 소유 스킬·커맨드·런타임·영수증만; credentials·`~/.codex`·`models.yml`·사용자 LazyCodex/OMO 불가침 |
+| `codex-app-control` | 0.11.0 | 대상 앱 빌드 트랙 폐기 — GPT Pro 리뷰는 `insane-review`가 전담 | 네이티브 잔존물만 |
+| `multivendor-presets` | >v0.17.1 | 내장 프리셋 사용(하코 direct order); v0.22.0 재도입분도 v0.29.0 철회 | 네이티브 잔존물만; 사용자 `models.yml`·`sol` 프로필 불가침 |
+| `preset-pack` | 0.29.0 | 커스텀 프리셋 배포 폐지 — GJC 내장 프리셋만 사용(사용자 직접 지시) | 네이티브 잔존물만; `models.yml`·병합 `daily`/`agent` 프로파일 절대 불가침; 죽은 세션 복구는 `gjc -r <세션ID> --mpreset <내장 프리셋>` |
+| `release-gate` | >v0.17.1 | 저장소 운영 규칙이라 공개 기능 아님 — 검증·외부 리뷰는 일반 절차와 `extragoal`이 커버 | 네이티브 잔존물만 — **Release rules는 유지** |
+| `easy-answer`·`plain-layer`·`branch-flow` | >v0.17.1 | 중복 UX/정책 레이어 — 간결 직답 + gjc 네이티브 워크플로 + 각 리포 `AGENTS.md`로 대체 | 퇴역 스킬·커맨드·`easy-always` 마커만(백업 후); `models.yml` 불가침 |
+| `gjc-bugwatch` 공개면 | >v0.17.1 | `ops/gjc-bugwatch/`를 내부 운영 도구로만 유지 | 트리거 스킬·`/omg:bugwatch-scan`만 |
+| `session-observer` | 0.23.0 | 하코 직접 지시 — 터미널 세션 JSONL tail/tmux로 충족 | 네이티브 잔존물만 |
+| `fable` | 0.26.0 | Fable 감사·Opus 폴백 모두 무보고 스톨 | `omg:fable.md`만; `claude-fable-5` 프리셋 참조는 무관·유지 |
+| `adaptive-response`·`deep-onboarding`·`multi-harness-research` | 0.32.0 | 사용자 직접 제거(2026-08-18) — private 런타임 동반 은퇴 | suite 소유 스킬·커맨드·private 런타임·well-formed `gate-always` 마커만(백업 후); 마커 외 바이트·malformed 마커·외부/사용자 인증·설정 불가침 |
+| `ouroboros` | 0.33.0 | OMG 래퍼 스킬·커맨드만 제거 대상 — 외부 업스트림 패키지가 아님 | 래퍼만; 외부 Ouroboros 패키지·`~/.ouroboros`·브리지·MCP·Seeds·인증 전부 불가침 |
+| `gajae-app` | 0.14.0 | — (전문 참조) | 네이티브 스킬·커맨드만; claudecodeui 체크아웃·빌드·데이터·서비스 불가침 |
+| `tower` | 0.12.0 | 미사용 — 실관제탑(horcrux)은 자체 스크립트 | 네이티브 잔존물 + orphan 파일 일체; `TOWER_URL` 큐는 외부 서버 소관·무관 |
 
 ### `insane-review` (CLI pack pipeline verified; CDP path deferred)
 - Command `/omg:insane-review` + a native-installable skill (`skills/insane-review/SKILL.md`). Faithful port of `fivetaku/insane-review`. gjc scopes the complete relevant file set → repomix packs it (full code, line numbers, secretlint, packed-file audit) → drives the **logged-in ChatGPT web session over CDP** → selects+**verifies** GPT-5.6 Sol Pro (fail-closed) → harvests the review to the current project's `.insane-review/response_*.md`. Zero API cost (runs on the user's ChatGPT subscription). Also a web-only `agent-council` member via `--council` (see `references/council-setup.md`).
@@ -133,40 +143,6 @@ Content is discovered by **convention directories** above; explicit paths in
 - **Composer & menu robustness (v0.34.2):** `clear_composer` must read back an empty composer before `put_text` inserts (unverified clear aborts the run), `composer_has_prompt` requires exact normalized equality (the old 1.5x slack could transmit a leftover draft), radio selections verify via the checked radio OR the reopened top-level reasoning row (UIs where a successful selection closes the submenu), and the legacy receipt is read through `O_NOFOLLOW`+`fstat`. These implement the remaining first-review findings (#5, #6, #2-residual).
 - **Verified here (2026-07):** engine AST/`--help`/`--list-browsers`/`--check-env` on Linux; `--pack-only` end-to-end via `npx repomix@1.15.0` (packed-file audit + token count). The former cache-glob simulated-install check is historical, non-executable evidence only; current installs bind the exact suite root. CDP→ChatGPT harvest needs a logged-in Pro session and is deferred-environment.
 - Non-Goals: GPT-5.6 Sol Pro API (doesn't exist), auto-login, engine reimplementation on gjc `browser`. (읽기 전용 로컬 CLI Q&A capability는 0.12.0에서 제거됨.)
-
-### `multivendor-presets` (REMOVED after v0.17.1)
-- 하코 direct order (2026-07-15): 커스텀 프리셋보다 GJC 기본/내장 프리셋을 사용한다. 스킬, `/omg:presets`, `references/presets.yml`, 설치 시 `sol` 자동 병합을 제거했다.
-- 업그레이드 시 `cleanup_removed`가 네이티브 잔존물(`skills/multivendor-presets/`, `omg:presets.md`)만 청소한다. 기존 사용자 `models.yml`과 과거 병합된 `sol` 프로필은 사용자 설정이므로 자동 삭제·수정하지 않는다.
-- **하코 direct order (2026-07-19) 부분 번복 → 다시 철회 (2026-07-21):** v0.22.0에서 재도입한 커스텀 프리셋 배포(`preset-pack` 스킬 + `/omg:preset-pack`)는 v0.29.0에서 사용자 직접 지시로 다시 제거됐다. 아래 `preset-pack` 묘비 참조.
-
-### `preset-pack` (REMOVED in v0.29.0)
-- Direct user removal: 커스텀 모델 프리셋 배포를 접고 GJC 내장 프리셋만 쓴다. 정본 `references/preset-pack.yml`, 스킬 `skills/preset-pack/`, 커맨드 `/omg:preset-pack`을 제거했다.
-- 업그레이드 시 `cleanup_removed`가 네이티브 잔존물(`skills/preset-pack/`, `omg:preset-pack.md`)만 청소한다. 정본 fixture와 파스 동등하든 아니든 사용자 `~/.gjc/agent/models.yml`과 과거 병합된 `daily`/`agent` 프로파일은 사용자 설정이므로 절대 삭제·수정하지 않는다. 클램프로 죽은 세션 복구는 GJC 내장 프리셋(`gjc -r <세션ID> --mpreset <내장 프리셋>`)으로 대체한다. 과거 상세·좌석표는 git 히스토리(≤v0.28.0)의 skills/preset-pack/SKILL.md + references/preset-pack.yml 참조.
-
-### `release-gate` (REMOVED after v0.17.1)
-- 하코 direct order (2026-07-15): 공개 플러그인 기능이 아니라 이 저장소의 릴리스 운영 규칙에 가깝고, 검증은 일반 테스트 절차·외부 리뷰는 `extragoal`과 중복되어 제거했다.
-- 스킬과 `/omg:release`는 제거하지만 아래 **Release rules**는 이 저장소의 강제 규칙으로 유지한다(2026-07-19 자율화 개편 반영). 업그레이드는 네이티브 잔존물만 청소한다.
-
-### Public capability prune (REMOVED after v0.17.1)
-- `easy-answer`, `plain-layer`, and `branch-flow` were removed as redundant UX/policy layers; use concise direct answers and GJC native deep-interview/ralplan/team plus each repository's own `AGENTS.md`.
-- The public `gjc-bugwatch` skill and `/omg:bugwatch-scan` were removed; the repository-owned collector and `ops/gjc-bugwatch/` automation remain internal operations tooling.
-- Upgrade cleanup removes retired native skills/commands and retired `easy-always` marker blocks after backing up affected user files. It never modifies `models.yml`.
-
-### `session-observer` (REMOVED in 0.23.0)
-- 하코 직접 지시(2026-07-19, v0.22.0 출시 당일): "session-observer 삭제해" — 토큰-프리 관찰 수요는 터미널에서 세션 JSONL 직접 tail/tmux로 충분해 전용 스킬을 유지하지 않는다.
-- 스킬·커맨드·러너(`bin/session-observer.ts`)·테스트 제거. 업그레이드 시 `cleanup_removed`가 네이티브 잔존물(`skills/session-observer/`, `omg:session-observer.md`)을 청소한다. 과거 상세·경계는 git 히스토리(v0.22.0)의 skills/session-observer/SKILL.md 참조.
-
-### `fable` (REMOVED in v0.26.0)
-- Direct user removal: the current Fable audit and its Opus fallback both stalled without a report. Native cross-session review and `insane-review` remain.
-- Upgrade cleanup removes only the native `omg:fable.md`; `claude-fable-5` model preset references are unrelated and remain.
-
-### `adaptive-response`, `deep-onboarding`, and `multi-harness-research` (REMOVED in v0.32.0)
-- **Direct user request (2026-08-18):** retire `adaptive-response`, `/omg:gate`, `/omg:gate-always`, `deep-onboarding`, `/omg:deep-onboarding`, `multi-harness-research`, and `/omg:multi-harness`. The associated multi-harness private native runtime is retired.
-- **Upgrade boundary:** cleanup removes only suite-owned native skills, commands, the private runtime, and well-formed owned `gate-always` marker blocks after backup. It preserves marker-external bytes, malformed markers, multi-harness research artifacts, external and user authentication/configuration, credentials, models, and unrelated state.
-
-### `ouroboros` (REMOVED in v0.33.0)
-- **Direct user request (2026-08-18):** remove the OMG wrapper skill and `/omg:ouroboros-setup` command only. Ouroboros is an external upstream package, not an OMG-owned capability.
-- **Preservation boundary:** leave the external upstream Ouroboros package 0.51.7, `~/.ouroboros`, its upstream marketplace/plugin, GJC bridge extension and MCP state, Seeds, runs, authentication, and configuration untouched. Do not remove or modify external state.
 
 ### `oh-my-gjc` (core — absorbed my-workflows v0.3)
 - **The current focused suite has 5 skills and 5 commands.** Skills: `no-english`, `extragoal`, `insane-review`, `insane-search`, and `gpt-image`. Commands: bare `/omg` plus `/omg:setup`, `/omg:no-english`, `/omg:insane-review`, and `/omg:gpt-image`. `no-english` and `gpt-image` never auto-activate from ordinary natural language; only their explicit commands may load them. `insane-search` activates only after ordinary public-URL access is blocked/incomplete or for an explicit high-friction public-platform request, never for a normal web search.
@@ -181,17 +157,9 @@ Content is discovered by **convention directories** above; explicit paths in
 - **⚠ Ephemeral gjc harness runs MUST disable both notifications and SDK hosting.** Every throwaway `gjc -p` verify/audit/test invocation (external review or a `/tmp` clone) MUST be prefixed with `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`. In GJC 0.11 the canonical SDK v3 loopback bus publishes `.gjc/state/sdk/<id>.json` independently of managed notifications; disabling notifications alone does not suppress that endpoint. User working sessions keep both surfaces available — this rule applies only to disposable harness runs.
 - Non-Goals: reimplementing gjc-native workflows (team/ultragoal/ralplan/deep-interview), vendor auto-login, or shipping/auto-merging custom model presets (the suite no longer distributes presets — `preset-pack` removed in v0.29.0; use GJC built-in presets).
 
-### `gjc-bugwatch` public surface (REMOVED after v0.17.1)
-- The trigger skill and `/omg:bugwatch-scan` command are retired. `bin/collect.ts`, `bin/follow.ts`, their tests, and `ops/gjc-bugwatch/` remain repository-owned operations tooling, not installed public capability.
-- Internal automation remains drafts-only/read-only with redaction and no automatic issue/PR creation. Human-directed upstream PRs target `Yeachan-Heo/gajae-code` base `dev`. **의도적 유지(2026-07-19):** 상류 PR의 human 승인 게이트는 제3자 저장소에 하코 명의로 기여하는 외부 신원 경계라, 본 저장소 릴리스 자율화(승인 게이트 폐지)와 별개로 유지한다.
-
-
-### `gajae-app` (REMOVED in 0.14.0)
-- Native upgrade cleanup removes only `~/.gjc/agent/skills/gajae-app/` and `~/.gjc/agent/commands/omg:gajae-app.md`; it does not delete or modify any claudecodeui checkout, build output, data, or user service.
-- Target repository and self-host documentation: [devswha/claudecodeui SELF-HOST](https://github.com/devswha/claudecodeui/blob/feat/gjc-provider/docs/SELF-HOST.md). Historical release evidence: the `feat/gjc-provider` v0.2.0 release passed verification, extragoal cross-review, and 하코 approval.
-
-### `tower` (REMOVED in 0.12.0)
-- 관제탑 발주·하코 승인(2026-07-13)으로 제거: skill `tower` + command `/omg:tower-setup` 미사용 — 실관제탑(horcrux)은 자체 스크립트 구현으로 돌아 이 번들 tower를 경유하지 않음. skill/command와 함께 전용 orphan 파일(`bin/session_watch.py`·`bin/tower-notify.sh`·`bin/queue_store.py`·`bin/tower` CLI·`references/tower.config.example.json`)도 제거. 업그레이드 시 `cleanup_removed`가 네이티브 잔존물(`omg:tower-setup.md`, skill dir)을 청소한다. 과거 상세·검증 레시피는 git 히스토리(≤0.11.0)의 skills/tower/SKILL.md + bin/tower-notify.sh 참조. (gjc-bugwatch가 쓰는 `TOWER_URL` HTTP 큐는 외부 horcrux 관제탑 서버로 본 번들과 무관.)
+### `gjc-bugwatch` (internal operations only)
+- `bin/collect.ts`, `bin/follow.ts`, their tests, and `ops/gjc-bugwatch/` remain repository-owned operations tooling — never installed public capability. Internal automation stays drafts-only/read-only with redaction; no automatic issue/PR creation. Human-directed upstream PRs target `Yeachan-Heo/gajae-code` base `dev`.
+- **의도적 유지(2026-07-19):** 상류 PR의 human 승인 게이트는 제3자 저장소에 하코 명의로 기여하는 외부 신원 경계라, 본 저장소 릴리스 자율화(승인 게이트 폐지)와 별개로 유지한다.
 
 ### `example-plugin`
 - Reference template: one command + one skill. Copy to bootstrap a new plugin.
@@ -201,6 +169,9 @@ Content is discovered by **convention directories** above; explicit paths in
 - After completion criteria, focused verification, and any required independent review pass, the agent **MUST commit its own completed work to the current work branch and push it to that branch's remote without waiting for per-change approval**.
 - Stage only the intended task diff. Never absorb, revert, stash, or rewrite unrelated user work. Never force-push.
 - **`dev` must never drift behind `main`** (2026-09-01, adopted from patina's `docs/WORKFLOW.md`): after any commit lands on `main` — release, hotfix, or otherwise — immediately fast-forward `dev` to `main` and push both. A stale `dev` is the #1 way this workflow rots.
+- **Parallel sessions use git worktrees** (2026-09-01, adopted from patina's `docs/WORKFLOW.md`): one worktree + one branch per session, branched from the latest `main`, converging back at `main`. Never run two sessions in the same working directory on the same branch.
+- **Pre-push safety on shared branches:** `git fetch` first and confirm the push only *adds* commits — `git merge-base --is-ancestor origin/<branch> HEAD` — never a history rewrite.
+- **Delete merged branches** (local + remote, `git branch -d` + `git push origin --delete`) and `git fetch --prune` in the same change. Keep only `main`, `dev`, and genuinely in-flight branches.
 - **2026-07-19 하코 direct order ("승인해야 하는 것들 전부 제거"): 발행도 자율이다.** Merging to `main`, tagging, and publishing GitHub Releases require no human approval — only the release verification below.
 - Report the pushed commit and verification evidence to the control tower as `kind=report` (통보 목적, 승인 요청 아님).
 

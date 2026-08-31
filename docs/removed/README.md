@@ -17,8 +17,17 @@ archive is the browsable record.
   version that dropped it.
 - This archive is documentation only. It is never installed, executed, resolved
   by the suite-root binding, or referenced by `install.sh` / `install-skill.sh`.
+- Tombstone prose (rationale/boundary history) that outgrew `AGENTS.md` lives in
+  `tombstones.md` (moved there verbatim on 2026-09-01); `AGENTS.md` keeps a
+  one-line table row per removed capability.
 
 ## Entries
+
+### `AGENTS.md` tombstone prose — moved 2026-09-01
+
+`AGENTS.md` per-capability `(REMOVED …)` sections were compressed into a table;
+the verbatim originals live in `tombstones.md`.
+
 
 ### `ouroboros` — removed in v0.33.0 (commit `4dc72c8`)
 | archived file | original path |
@@ -62,5 +71,5 @@ Curated model-preset merger (`daily`/`agent`) into user `models.yml`.
 | `preset-pack/command-preset-pack.md` | `plugins/oh-my-gajae-code/templates/preset-pack.md` |
 | `preset-pack/preset-pack.yml` | `plugins/oh-my-gajae-code/references/preset-pack.yml` |
 
-Removal rationale and boundary: see the `preset-pack` tombstone in `AGENTS.md`
-and `docs/verification/omg-release-v0.29.0-2026-07-21.md`.
+Removal rationale and boundary: see the `preset-pack` section in
+`docs/removed/tombstones.md` and `docs/verification/omg-release-v0.29.0-2026-07-21.md`.
