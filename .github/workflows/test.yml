@@ -1,0 +1,26 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Static checks (manifest JSON + shell syntax)
+        run: |
+          python3 -m json.tool .claude-plugin/marketplace.json > /dev/null
+          python3 -m json.tool plugins/oh-my-gjc/.claude-plugin/plugin.json > /dev/null
+          bash -n install.sh
+          for f in plugins/oh-my-gjc/bin/*.sh; do bash -n "$f"; done
+
+      - name: Test suite
+        run: bun test plugins/oh-my-gjc/test

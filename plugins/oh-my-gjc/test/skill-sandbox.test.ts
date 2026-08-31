@@ -4,9 +4,14 @@ import { resolve } from "node:path";
 
 const harness = resolve(import.meta.dir, "../bin/skill_sandbox.py");
 const expectedSkills = ["extragoal", "gpt-image", "insane-review", "insane-search", "no-english"];
+// The harness drives the real local `gjc` binary inside a bubblewrap sandbox
+// (see bin/skill_sandbox.py: require_binary("bwrap") / require_binary("gjc")).
+// Environments without a local GJC install — e.g. CI runners — cannot run it;
+// skip explicitly instead of failing on missing prerequisites.
+const harnessAvailable = ["gjc", "bwrap"].every((binary) => spawnSync("which", [binary]).status === 0);
 
 describe("real OMG skill sandbox", () => {
-  test("loads every shipped skill through isolated GJC and a local model stub", () => {
+  test.skipIf(!harnessAvailable)("loads every shipped skill through isolated GJC and a local model stub", () => {
     const result = spawnSync("python3", [harness, "--json"], {
       cwd: resolve(import.meta.dir, "../../.."),
       encoding: "utf8",
