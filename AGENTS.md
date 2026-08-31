@@ -200,6 +200,7 @@ Content is discovered by **convention directories** above; explicit paths in
 
 - After completion criteria, focused verification, and any required independent review pass, the agent **MUST commit its own completed work to the current work branch and push it to that branch's remote without waiting for per-change approval**.
 - Stage only the intended task diff. Never absorb, revert, stash, or rewrite unrelated user work. Never force-push.
+- **`dev` must never drift behind `main`** (2026-09-01, adopted from patina's `docs/WORKFLOW.md`): after any commit lands on `main` — release, hotfix, or otherwise — immediately fast-forward `dev` to `main` and push both. A stale `dev` is the #1 way this workflow rots.
 - **2026-07-19 하코 direct order ("승인해야 하는 것들 전부 제거"): 발행도 자율이다.** Merging to `main`, tagging, and publishing GitHub Releases require no human approval — only the release verification below.
 - Report the pushed commit and verification evidence to the control tower as `kind=report` (통보 목적, 승인 요청 아님).
 
