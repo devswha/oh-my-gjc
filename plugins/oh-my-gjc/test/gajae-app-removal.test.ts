@@ -1,6 +1,6 @@
 /**
  * gajae-app ownership-transfer regression.
- * Run: bun test plugins/oh-my-gajae-code/test/gajae-app-removal.test.ts
+ * Run: bun test plugins/oh-my-gjc/test/gajae-app-removal.test.ts
  */
 import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
@@ -187,7 +187,7 @@ describe("removed capability upgrade cleanup", () => {
       [join(sandbox, "logs/gajae-app.log"), "logs remain"],
       [join(sandbox, "tailscale/state.json"), "Tailscale state remains"],
       [join(home, ".gjc/agent/models.yml"), "profiles:\n  sol:\n    display_name: user-owned\n"],
-      [join(home, ".local/share/oh-my-gajae-code/multi-harness/research.json"), "XDG research remains"],
+      [join(home, ".local/share/oh-my-gjc/multi-harness/research.json"), "XDG research remains"],
       [join(home, ".local/share/gjc/auth.json"), "GJC auth remains"],
       [join(home, ".claude/.credentials.json"), "Claude auth remains"],
     ]);
@@ -321,7 +321,7 @@ describe("removed capability upgrade cleanup", () => {
       expect(result.status).not.toBe(0);
       expect(readFileSync(sentinel, "utf8")).toBe("external user file remains");
       expect(existsSync(join(externalSkills, "no-english/SKILL.md"))).toBe(false);
-      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gajae-code/root"))).toBe(false);
+      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gjc/root"))).toBe(false);
     } finally {
       rmSync(sandbox, { recursive: true, force: true });
     }
@@ -344,7 +344,7 @@ describe("removed capability upgrade cleanup", () => {
       expect(result.status).not.toBe(0);
       expect(readFileSync(sentinel, "utf8")).toBe("external user command remains");
       expect(existsSync(join(home, ".gjc/agent/skills"))).toBe(false);
-      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gajae-code/root"))).toBe(false);
+      expect(existsSync(join(home, ".gjc/agent/runtimes/oh-my-gjc/root"))).toBe(false);
     } finally {
       rmSync(sandbox, { recursive: true, force: true });
     }

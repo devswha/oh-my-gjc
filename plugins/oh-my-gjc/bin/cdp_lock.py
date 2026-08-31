@@ -11,7 +11,7 @@ import tempfile
 class CdpLease:
     def __init__(self, port: int):
         uid = os.getuid() if hasattr(os, "getuid") else 0
-        self.path = Path(tempfile.gettempdir()) / f"oh-my-gajae-code-chatgpt-cdp-{uid}-{port}.lock"
+        self.path = Path(tempfile.gettempdir()) / f"oh-my-gjc-chatgpt-cdp-{uid}-{port}.lock"
         self.fd: int | None = None
 
     def acquire(self) -> "CdpLease":

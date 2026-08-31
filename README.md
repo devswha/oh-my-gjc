@@ -1,4 +1,4 @@
-# oh-my-gajae-code
+# oh-my-gjc
 
 Gajae Code (`gjc`)에 한국어 우선 표현과 외부 코드 리뷰를 더하는 단일 플러그인 스위트입니다.
 
@@ -7,13 +7,13 @@ Gajae Code (`gjc`)에 한국어 우선 표현과 외부 코드 리뷰를 더하�
 터미널에서 한 번 실행합니다.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 ```
 
 `gjc` 세션에서는 다음 프롬프트를 사용합니다.
 
 ```text
-Install oh-my-gajae-code by following https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/INSTALLATION.md — run the steps, verify, and report.
+Install oh-my-gjc by following https://raw.githubusercontent.com/devswha/oh-my-gjc/main/INSTALLATION.md — run the steps, verify, and report.
 ```
 
 한 번 설치하면 스킬 5개와 커맨드 5개(`/omg` 및 `/omg:*` 4개)가 모두 설치됩니다. 업그레이드할 때는 원샷 설치 명령을 다시 실행합니다.
@@ -21,8 +21,8 @@ Install oh-my-gajae-code by following https://raw.githubusercontent.com/devswha/
 설치가 안 되면 저장소를 받은 뒤 같은 설치 프로그램을 실행합니다.
 
 ```sh
-git clone --depth 1 https://github.com/devswha/oh-my-gajae-code.git oh-my-gajae-code
-bash oh-my-gajae-code/install.sh
+git clone --depth 1 https://github.com/devswha/oh-my-gjc.git oh-my-gjc
+bash oh-my-gjc/install.sh
 ```
 
 플러그인 관리는 터미널의 `gjc plugin ...` CLI에서만 합니다. `gjc`에는 `/plugin` 슬래시 커맨드가 없습니다.

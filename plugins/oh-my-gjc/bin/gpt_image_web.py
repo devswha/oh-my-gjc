@@ -198,7 +198,7 @@ def run(prompt: str, output_dir: Path, port: int, timeout: int) -> Path:
     info = cdp_info(port)
     if not dedicated_profile_ok(port, info):
         die(f"CDP {port} does not match the dedicated insane-review browser profile receipt.")
-    download_dir = Path(tempfile.mkdtemp(prefix="oh-my-gajae-code-gpt-image-"))
+    download_dir = Path(tempfile.mkdtemp(prefix="oh-my-gjc-gpt-image-"))
     created: list[Path] = []
     page = None
     try:

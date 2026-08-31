@@ -4,15 +4,15 @@
 
 ## v0.28.0 식별자 전환
 
-`oh-my-gajae-code`가 공식 저장소, 마켓플레이스·플러그인 식별자, 소스 경로, 로컬 체크아웃 이름입니다. 공식 설치 프로그램 URL은 다음과 같습니다.
+`oh-my-gjc`가 공식 저장소, 마켓플레이스·플러그인 식별자, 소스 경로, 로컬 체크아웃 이름입니다. 공식 설치 프로그램 URL은 다음과 같습니다.
 
 ```text
-https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh
+https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh
 ```
 
-이전 `https://raw.githubusercontent.com/devswha/oh-my-gjc/...` raw URL은 리디렉션되지 않습니다. 이전 GitHub 저장소 페이지와 Git remote는 리디렉션되지만, 현재 안내와 로컬 체크아웃에는 새 URL과 이름을 사용합니다.
+이전 `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/...` raw URL은 리디렉션되지 않습니다. 이전 GitHub 저장소 페이지와 Git remote는 리디렉션되지만, 현재 안내와 로컬 체크아웃에는 새 URL과 이름을 사용합니다.
 
-새 설치는 `oh-my-gajae-code` runtime binding만 작성합니다. 이전 `oh-my-gjc` binding은 최소 30일 또는 두 릴리스 동안 읽기 전용 fallback으로 유지하며, 이 전환 과정에서 다시 쓰거나 정리하지 않습니다. 기존 XDG 조사 데이터, 자격 증명, `models.yml`, 안정적인 내부 `oh-my-gjc:gate-always` 마커도 보존합니다.
+새 설치는 `oh-my-gjc` runtime binding만 작성합니다. 이전 `oh-my-gajae-code` binding은 최소 30일 또는 두 릴리스 동안 읽기 전용 fallback으로 유지하며, 이 전환 과정에서 다시 쓰거나 정리하지 않습니다. 기존 XDG 조사 데이터, 자격 증명, `models.yml`, 안정적인 내부 `oh-my-gjc:gate-always` 마커도 보존합니다.
 
 ## v0.29.0: `preset-pack` 제거
 

@@ -1,19 +1,19 @@
 {
-  "name": "oh-my-gajae-code",
+  "name": "oh-my-gjc",
   "owner": {
     "name": "devswha",
     "email": "devswha@gmail.com",
     "url": "https://github.com/devswha"
   },
   "metadata": {
-    "description": "oh-my-gajae-code — focused Gajae Code suite: 5 skills + 5 commands. Explicit Korean-first presentation control, external review, blocked-public-web retrieval, and explicit ChatGPT Images web generation.",
+    "description": "oh-my-gjc — focused Gajae Code suite: 5 skills + 5 commands. Explicit Korean-first presentation control, external review, blocked-public-web retrieval, and explicit ChatGPT Images web generation.",
     "version": "0.34.3"
   },
   "plugins": [
     {
-      "name": "oh-my-gajae-code",
-      "source": "./plugins/oh-my-gajae-code",
-      "description": "oh-my-gajae-code — focused Gajae Code suite with 5 skills and 5 commands. Skills: no-english, extragoal, insane-review, insane-search, gpt-image. Commands: /omg, /omg:setup, /omg:no-english, /omg:insane-review, /omg:gpt-image.",
+      "name": "oh-my-gjc",
+      "source": "./plugins/oh-my-gjc",
+      "description": "oh-my-gjc — focused Gajae Code suite with 5 skills and 5 commands. Skills: no-english, extragoal, insane-review, insane-search, gpt-image. Commands: /omg, /omg:setup, /omg:no-english, /omg:insane-review, /omg:gpt-image.",
       "version": "0.34.3",
       "category": "core"
     }

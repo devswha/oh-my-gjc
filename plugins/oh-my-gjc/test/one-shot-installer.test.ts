@@ -5,7 +5,7 @@ import { join, resolve } from "path";
 import { spawnSync } from "child_process";
 
 const installer = resolve(import.meta.dir, "../../..", "install.sh");
-const cacheDirectory = "oh-my-gajae-code___oh-my-gajae-code___";
+const cacheDirectory = "oh-my-gjc___oh-my-gjc___";
 const sandboxes: string[] = [];
 
 afterEach(() => {
@@ -81,22 +81,22 @@ printf '%s\\n' "$*" >> "$GJC_TEST_LOG"
 
 emit_success() {
   case "$INSTALL_OUTPUT" in
-    success) printf '✔ Installed oh-my-gajae-code from oh-my-gajae-code (%s)\\n' "$INSTALL_VERSION" ;;
-    nerd) printf '󰄬 Installed oh-my-gajae-code from oh-my-gajae-code (%s)\\n' "$INSTALL_VERSION" ;;
-    ascii) printf '[ok] Installed oh-my-gajae-code from oh-my-gajae-code (%s)\\n' "$INSTALL_VERSION" ;;
+    success) printf '✔ Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION" ;;
+    nerd) printf '󰄬 Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION" ;;
+    ascii) printf '[ok] Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION" ;;
     missing) ;;
     duplicate)
-      printf '✔ Installed oh-my-gajae-code from oh-my-gajae-code (%s)\\n' "$INSTALL_VERSION"
-      printf '✔ Installed oh-my-gajae-code from oh-my-gajae-code (%s)\\n' "$INSTALL_VERSION"
+      printf '✔ Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION"
+      printf '✔ Installed oh-my-gjc from oh-my-gjc (%s)\\n' "$INSTALL_VERSION"
       ;;
-    malformed) printf '✔ Installed oh-my-gajae-code from oh-my-gajae-code (1.2)\\n' ;;
-    ansi) printf '\\033[32m✔ Installed oh-my-gajae-code from oh-my-gajae-code (%s)\\033[39m\\n' "$INSTALL_VERSION" ;;
-    ansi-near-miss) printf '\\033[32m✔ Installed oh-my-gajae-code from oh-my-gajae-code (%s)\\033[39m extra\\n' "$INSTALL_VERSION" ;;
+    malformed) printf '✔ Installed oh-my-gjc from oh-my-gjc (1.2)\\n' ;;
+    ansi) printf '\\033[32m✔ Installed oh-my-gjc from oh-my-gjc (%s)\\033[39m\\n' "$INSTALL_VERSION" ;;
+    ansi-near-miss) printf '\\033[32m✔ Installed oh-my-gjc from oh-my-gjc (%s)\\033[39m extra\\n' "$INSTALL_VERSION" ;;
   esac
 }
 emit_stderr() {
   case "$INSTALL_STDERR_OUTPUT" in
-    stale-success) printf '✔ Installed oh-my-gajae-code from oh-my-gajae-code (99.0.0)\\n' >&2 ;;
+    stale-success) printf '✔ Installed oh-my-gjc from oh-my-gjc (99.0.0)\\n' >&2 ;;
   esac
 }
 
@@ -113,7 +113,7 @@ case "$*" in
   plugin\\ marketplace\\ add\\ *)
     if [ "$ADD_DUPLICATE" = "1" ] && [ ! -e "$GJC_DUPLICATE_SEEN" ]; then
       : > "$GJC_DUPLICATE_SEEN"
-      printf '%s\n' '✗ Failed to add marketplace: Marketplace "oh-my-gajae-code" already exists' >&2
+      printf '%s\n' '✗ Failed to add marketplace: Marketplace "oh-my-gjc" already exists' >&2
       exit 1
     fi
     if [ "$ADD_FAILS" = "1" ]; then
@@ -121,13 +121,13 @@ case "$*" in
       exit 9
     fi
     ;;
-  "plugin marketplace remove oh-my-gajae-code")
+  "plugin marketplace remove oh-my-gjc")
     if [ "$REMOVE_FAILS" = "1" ]; then exit 9; fi
     ;;
-  "plugin marketplace update oh-my-gajae-code")
+  "plugin marketplace update oh-my-gjc")
     if [ "$UPDATE_FAILS" = "1" ]; then exit 9; fi
     ;;
-  "plugin install oh-my-gajae-code@oh-my-gajae-code --force")
+  "plugin install oh-my-gjc@oh-my-gjc --force")
     case "$FORCE_OUTCOME" in
       success) create_native ;;
       unsupported)
@@ -144,7 +144,7 @@ case "$*" in
         ;;
     esac
     ;;
-  "plugin install oh-my-gajae-code@oh-my-gajae-code")
+  "plugin install oh-my-gjc@oh-my-gjc")
     create_native
     ;;
   *) exit 2 ;;
@@ -184,19 +184,19 @@ describe("one-shot installer", () => {
     const { calls, result, selectedRoot } = runInstaller();
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain("✔ Installed oh-my-gajae-code from oh-my-gajae-code (1.2.3)");
-    expect(result.stdout).toContain("✓ oh-my-gajae-code installed — one plugin, 5 skills + 5 commands (/omg + 4 /omg:*), all native surfaces installed.");
+    expect(result.stdout).toContain("✔ Installed oh-my-gjc from oh-my-gjc (1.2.3)");
+    expect(result.stdout).toContain("✓ oh-my-gjc installed — one plugin, 5 skills + 5 commands (/omg + 4 /omg:*), all native surfaces installed.");
     expect(result.stdout).toContain("(Optional: /omg:setup checks prerequisites.)");
     expect(result.stdout).not.toContain("gate always-on");
     expect(result.stdout).toContain("v0.28.0 cutover");
     expect(result.stdout).toContain("/omg:* commands remain stable.");
-    expect(result.stdout).toContain("https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh");
-    expect(result.stdout).toContain("Old raw.githubusercontent.com/devswha/oh-my-gjc URLs no longer work.");
-    expect(result.stdout).toContain("An old oh-my-gjc marketplace registration may remain until targeted CLI cleanup is proven.");
+    expect(result.stdout).toContain("https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh");
+    expect(result.stdout).toContain("Old raw.githubusercontent.com/devswha/oh-my-gajae-code URLs no longer work.");
+    expect(result.stdout).toContain("An old oh-my-gajae-code marketplace registration may remain until targeted CLI cleanup is proven.");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
       nativeCall(selectedRoot),
     ]);
   });
@@ -212,13 +212,13 @@ describe("one-shot installer", () => {
     const { calls, result, selectedRoot } = runInstaller({ addDuplicate: true });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stderr).toContain("already exists — rebinding its source to devswha/oh-my-gajae-code");
+    expect(result.stderr).toContain("already exists — rebinding its source to devswha/oh-my-gjc");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace remove oh-my-gajae-code",
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace remove oh-my-gjc",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
       nativeCall(selectedRoot),
     ]);
   });
@@ -229,8 +229,8 @@ describe("one-shot installer", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("could not remove the existing marketplace");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace remove oh-my-gajae-code",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace remove oh-my-gjc",
     ]);
   });
 
@@ -239,7 +239,7 @@ describe("one-shot installer", () => {
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("refusing to use an unverified existing source");
-    expect(calls).toEqual(["plugin marketplace add devswha/oh-my-gajae-code"]);
+    expect(calls).toEqual(["plugin marketplace add devswha/oh-my-gjc"]);
   });
 
   test("fails closed when the mandatory marketplace refresh fails", () => {
@@ -248,8 +248,8 @@ describe("one-shot installer", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("refusing to install from a possibly-stale catalog");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
     ]);
   });
 
@@ -267,8 +267,8 @@ describe("one-shot installer", () => {
     });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).not.toContain("✔ Installed oh-my-gajae-code from oh-my-gajae-code (99.0.0)");
-    expect(result.stderr).not.toContain("✔ Installed oh-my-gajae-code from oh-my-gajae-code (99.0.0)");
+    expect(result.stdout).not.toContain("✔ Installed oh-my-gjc from oh-my-gjc (99.0.0)");
+    expect(result.stderr).not.toContain("✔ Installed oh-my-gjc from oh-my-gjc (99.0.0)");
     expect(calls.at(-1)).toBe(nativeCall(selectedRoot));
     expect(calls.at(-1)).not.toContain("99.0.0");
   });
@@ -282,10 +282,10 @@ describe("one-shot installer", () => {
     });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain("✔ Installed oh-my-gajae-code from oh-my-gajae-code (2.0.0-rc.1)");
+    expect(result.stdout).toContain("✔ Installed oh-my-gjc from oh-my-gjc (2.0.0-rc.1)");
     expect(calls).toEqual([
       "plugin marketplace add /candidate/checkout",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
       nativeCall(selectedRoot),
     ]);
   });
@@ -305,15 +305,15 @@ describe("one-shot installer", () => {
     const { calls, result, selectedRoot } = runInstaller({ forceOutcome: "unsupported" });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain("✔ Installed oh-my-gajae-code from oh-my-gajae-code (1.2.3)");
+    expect(result.stdout).toContain("✔ Installed oh-my-gjc from oh-my-gjc (1.2.3)");
     expect(result.stderr).toContain("does not support --force");
     expect(result.stdout).not.toContain("unknown option");
     expect(result.stderr).not.toContain("unknown option");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
+      "plugin install oh-my-gjc@oh-my-gjc",
       nativeCall(selectedRoot),
     ]);
   });
@@ -325,9 +325,9 @@ describe("one-shot installer", () => {
     expect(result.stderr).toContain("refusing an unforced fallback");
     expect(result.stderr).not.toContain("should-not-leak");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
     ]);
   });
 
@@ -338,9 +338,9 @@ describe("one-shot installer", () => {
     expect(result.stderr).toContain("refusing an unforced fallback");
     expect(result.stderr).not.toContain("forceful");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
     ]);
   });
 
@@ -351,9 +351,9 @@ describe("one-shot installer", () => {
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain("could not identify the just-installed");
       expect(calls).toEqual([
-        "plugin marketplace add devswha/oh-my-gajae-code",
-        "plugin marketplace update oh-my-gajae-code",
-        "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+        "plugin marketplace add devswha/oh-my-gjc",
+        "plugin marketplace update oh-my-gjc",
+        "plugin install oh-my-gjc@oh-my-gjc --force",
       ]);
     });
   }
@@ -366,12 +366,12 @@ describe("one-shot installer", () => {
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("could not identify the just-installed");
-    expect(result.stdout).not.toContain("✔ Installed oh-my-gajae-code from oh-my-gajae-code (99.0.0)");
-    expect(result.stderr).not.toContain("✔ Installed oh-my-gajae-code from oh-my-gajae-code (99.0.0)");
+    expect(result.stdout).not.toContain("✔ Installed oh-my-gjc from oh-my-gjc (99.0.0)");
+    expect(result.stderr).not.toContain("✔ Installed oh-my-gjc from oh-my-gjc (99.0.0)");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
     ]);
   });
 
@@ -397,9 +397,9 @@ describe("one-shot installer", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("could not identify the just-installed");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
     ]);
   });
 
@@ -409,9 +409,9 @@ describe("one-shot installer", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("could not identify the just-installed");
     expect(calls).toEqual([
-      "plugin marketplace add devswha/oh-my-gajae-code",
-      "plugin marketplace update oh-my-gajae-code",
-      "plugin install oh-my-gajae-code@oh-my-gajae-code --force",
+      "plugin marketplace add devswha/oh-my-gjc",
+      "plugin marketplace update oh-my-gjc",
+      "plugin install oh-my-gjc@oh-my-gjc --force",
     ]);
   });
 

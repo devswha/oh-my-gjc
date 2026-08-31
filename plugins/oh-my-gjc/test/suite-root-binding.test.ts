@@ -38,14 +38,14 @@ function createSandbox(): Sandbox {
 
 function bindingPath(sandbox: Sandbox, scope: Scope): string {
   return scope === "user"
-    ? join(sandbox.home, ".gjc/agent/runtimes/oh-my-gajae-code/root")
-    : join(sandbox.project, ".gjc/runtimes/oh-my-gajae-code/root");
+    ? join(sandbox.home, ".gjc/agent/runtimes/oh-my-gjc/root")
+    : join(sandbox.project, ".gjc/runtimes/oh-my-gjc/root");
 }
 
 function legacyBindingPath(sandbox: Sandbox, scope: Scope): string {
   return scope === "user"
-    ? join(sandbox.home, ".gjc/agent/runtimes/oh-my-gjc/root")
-    : join(sandbox.project, ".gjc/runtimes/oh-my-gjc/root");
+    ? join(sandbox.home, ".gjc/agent/runtimes/oh-my-gajae-code/root")
+    : join(sandbox.project, ".gjc/runtimes/oh-my-gajae-code/root");
 }
 
 function run(sandbox: Sandbox, args: string[]) {
@@ -66,7 +66,7 @@ describe("suite root runtime binding", () => {
     const sandbox = createSandbox();
     const staleHigherCache = join(
       sandbox.home,
-      ".gjc/plugins/cache/plugins/oh-my-gajae-code___oh-my-gajae-code___99.0.0",
+      ".gjc/plugins/cache/plugins/oh-my-gjc___oh-my-gjc___99.0.0",
     );
     mkdirSync(staleHigherCache, { recursive: true });
     writeFileSync(join(staleHigherCache, "root"), "/stale/higher/cache");
@@ -127,7 +127,7 @@ describe("suite root runtime binding", () => {
     const userRetiredRuntime = join(sandbox.home, ".gjc/agent/runtimes/lazycodex-gjc/binding");
     const userRetiredRunner = join(sandbox.home, ".gjc/agent/runtimes/lazycodex-gjc/runner.mjs");
     const userMultiHarnessRuntime = join(sandbox.home, ".gjc/agent/runtimes/multi-harness-research");
-    const xdgResearchArtifact = join(sandbox.home, ".local/share/oh-my-gajae-code/multi-harness/keep.json");
+    const xdgResearchArtifact = join(sandbox.home, ".local/share/oh-my-gjc/multi-harness/keep.json");
     const externalOuroborosFiles = new Map<string, string>([
       [join(sandbox.home, ".local/lib/python3.12/site-packages/ouroboros/__init__.py"), "external package"],
       [join(sandbox.home, ".ouroboros/state.json"), "external Ouroboros state"],
@@ -215,7 +215,7 @@ describe("suite root runtime binding", () => {
 
   test("fails closed when a user binding path component is symlinked", () => {
     const sandbox = createSandbox();
-    const linkedParent = join(sandbox.home, ".gjc/agent/runtimes/oh-my-gajae-code");
+    const linkedParent = join(sandbox.home, ".gjc/agent/runtimes/oh-my-gjc");
     const external = join(sandbox.root, "external-runtime");
     mkdirSync(dirname(linkedParent), { recursive: true });
     mkdirSync(external);

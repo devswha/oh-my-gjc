@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# oh-my-gajae-code — OPT-IN auto-updater.
+# oh-my-gjc — OPT-IN auto-updater.
 #
 # Re-runs the trusted one-shot installer on a schedule so an installed suite
 # stays current without a manual `curl | bash`. The main install.sh NEVER
@@ -30,8 +30,8 @@
 #   omg-autoupdate.sh status
 set -euo pipefail
 
-CANONICAL_INSTALLER_URL="https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh"
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/oh-my-gajae-code"
+CANONICAL_INSTALLER_URL="https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/oh-my-gjc"
 STABLE_SELF="$STATE_DIR/omg-autoupdate.sh"
 LOG="$STATE_DIR/autoupdate.log"
 LOCK="$STATE_DIR/autoupdate.lock"
@@ -40,7 +40,7 @@ UNIT_NAME="omg-autoupdate"
 SYSTEMD_USER_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 SERVICE_UNIT="$SYSTEMD_USER_DIR/$UNIT_NAME.service"
 TIMER_UNIT="$SYSTEMD_USER_DIR/$UNIT_NAME.timer"
-CRON_TAG="# oh-my-gajae-code autoupdate (managed by omg-autoupdate.sh)"
+CRON_TAG="# oh-my-gjc autoupdate (managed by omg-autoupdate.sh)"
 DEFAULT_INTERVAL="daily"
 
 DRY_RUN=0
@@ -229,8 +229,8 @@ enable_systemd() {
   fi
   cat >"$SERVICE_UNIT" <<EOF
 [Unit]
-Description=oh-my-gajae-code auto-update (re-runs the trusted installer)
-Documentation=https://github.com/devswha/oh-my-gajae-code
+Description=oh-my-gjc auto-update (re-runs the trusted installer)
+Documentation=https://github.com/devswha/oh-my-gjc
 
 [Service]
 Type=oneshot
@@ -238,7 +238,7 @@ ExecStart=$exec_start
 EOF
   cat >"$TIMER_UNIT" <<EOF
 [Unit]
-Description=oh-my-gajae-code auto-update schedule
+Description=oh-my-gjc auto-update schedule
 
 [Timer]
 OnCalendar=$INTERVAL

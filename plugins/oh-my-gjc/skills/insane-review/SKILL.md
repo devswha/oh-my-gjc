@@ -12,10 +12,10 @@ description: GPT-5.6 Sol Pro(웹 전용·API 없음)를 gjc(Gajae Code) 안에�
 > **엔진은 hardened local engine이다.** 실제 패킹·CDP 구동·모델검증·턴판정·회수는 감사된 로컬 DOM·보안 패치를 포함한 `bin/pack_and_ask.py`(Playwright 기반)가 수행한다. 로직을 gjc의 `browser` 도구로 재구현하지 마라 — 이 엔진의 검증 경계를 유지한다.
 
 ## 엔진 경로 해석 (`$IR`) — 매 실행 전 1회
-`${CLAUDE_PLUGIN_ROOT}` 같은 치환은 gjc 커맨드/스킬 본문에서 동작하지 않는다. 네이티브 설치가 scope마다 기록한 정확한 suite root binding(`root`, mode `0600`)만 사용한다. 새 프로젝트 binding(`$PWD/.gjc/runtimes/oh-my-gajae-code/root`)과 새 user binding(`$HOME/.gjc/agent/runtimes/oh-my-gajae-code/root`)을 순서대로 읽는다. 둘 다 없을 때만 **읽기 전용·기간 한정 compatibility fallback**인 기존 `oh-my-gjc` 프로젝트/user binding을 같은 순서로 읽고, 그마저 없을 때만 이 checkout의 정확한 `plugins/oh-my-gajae-code/` asset으로 fallback한다. 기존 binding이나 user state는 쓰거나 지우지 않는다:
+`${CLAUDE_PLUGIN_ROOT}` 같은 치환은 gjc 커맨드/스킬 본문에서 동작하지 않는다. 네이티브 설치가 scope마다 기록한 정확한 suite root binding(`root`, mode `0600`)만 사용한다. 새 프로젝트 binding(`$PWD/.gjc/runtimes/oh-my-gjc/root`)과 새 user binding(`$HOME/.gjc/agent/runtimes/oh-my-gjc/root`)을 순서대로 읽는다. 둘 다 없을 때만 **읽기 전용·기간 한정 compatibility fallback**인 기존 `oh-my-gjc` 프로젝트/user binding을 같은 순서로 읽고, 그마저 없을 때만 이 checkout의 정확한 `plugins/oh-my-gjc/` asset으로 fallback한다. 기존 binding이나 user state는 쓰거나 지우지 않는다:
 ```bash
 resolve_omg_asset() (
-  fail() { echo "oh-my-gajae-code runtime binding is missing or invalid; rerun https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh." >&2; exit 1; }
+  fail() { echo "oh-my-gjc runtime binding is missing or invalid; rerun https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh." >&2; exit 1; }
   reject_symlinked_components() {
     local path="$1" current="/" component
     local -a components
@@ -29,13 +29,13 @@ resolve_omg_asset() (
   }
   local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir checkout
   local -a bindings=(
-    "$PWD/.gjc/runtimes/oh-my-gajae-code/root"
-    "$HOME/.gjc/agent/runtimes/oh-my-gajae-code/root"
+    "$PWD/.gjc/runtimes/oh-my-gjc/root"
+    "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"
   )
   # Bounded read-only compatibility fallback; never mutate legacy paths.
   local -a legacy_compatibility_bindings=(
-    "$PWD/.gjc/runtimes/oh-my-gjc/root"
-    "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"
+    "$PWD/.gjc/runtimes/oh-my-gajae-code/root"
+    "$HOME/.gjc/agent/runtimes/oh-my-gajae-code/root"
   )
   bindings+=("${legacy_compatibility_bindings[@]}")
   for binding in "${bindings[@]}"; do
@@ -61,7 +61,7 @@ resolve_omg_asset() (
       exit 0
     fi
   done
-  checkout="$PWD/plugins/oh-my-gajae-code"
+  checkout="$PWD/plugins/oh-my-gjc"
   reject_symlinked_components "$checkout"
   [ -d "$checkout" ] && [ ! -L "$checkout" ] || fail
   canonical_root="$(cd -P -- "$checkout" 2>/dev/null && pwd -P)" || fail
@@ -74,7 +74,7 @@ resolve_omg_asset() (
 IR="$(resolve_omg_asset "bin/pack_and_ask.py")" || exit 1
 echo "IR=$IR"
 ```
-Malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing binding fails closed. Do not select a plugin cache; bootstrap, upgrade, or repair by rerunning the hardened root installer at `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`.
+Malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing binding fails closed. Do not select a plugin cache; bootstrap, upgrade, or repair by rerunning the hardened root installer at `https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh`.
 
 ## 선행 조건 — 선택지 기반 온보딩 (사용자에게 CLI 타이핑 금지)
 

@@ -22,5 +22,5 @@ fi
 LOGDIR="${GJC_LOG_DIR:-${HOME}/.gjc/logs}"
 MIN="${GJC_BUGWATCH_MIN:-medium}"
 
-exec bun run "${REPO}/plugins/oh-my-gajae-code/bin/follow.ts" --dir "${LOGDIR}" --min "${MIN}" \
+exec bun run "${REPO}/plugins/oh-my-gjc/bin/follow.ts" --dir "${LOGDIR}" --min "${MIN}" \
 	| bun run "${REPO}/ops/gjc-bugwatch/trigger.ts"

@@ -1,19 +1,19 @@
-# oh-my-gajae-code (plugin)
+# oh-my-gjc (plugin)
 
 **Gajae Code(gjc)의 oh-my 단일 플러그인.** 한 번 설치로 스킬 5개 + 커맨드 5개
 (`/omg` + `/omg:*` 4개)가 전부 들어온다. `insane-review`와 `gpt-image`는 ChatGPT+크로미움이 필요하다.
 ## v0.28.0 identity cutover
 
-`oh-my-gajae-code` is the canonical repository, marketplace/plugin identity, source `./plugins/oh-my-gajae-code`, and local checkout name. `/omg:*` commands remain unchanged; the migration contract is below.
+`oh-my-gjc` is the canonical repository, marketplace/plugin identity, source `./plugins/oh-my-gjc`, and local checkout name. `/omg:*` commands remain unchanged; the migration contract is below.
 
 ## Quick Start
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh | bash
 
 # curl|bash가 금지된 환경:
-git clone --depth 1 https://github.com/devswha/oh-my-gajae-code.git oh-my-gajae-code
-bash oh-my-gajae-code/install.sh
+git clone --depth 1 https://github.com/devswha/oh-my-gjc.git oh-my-gjc
+bash oh-my-gjc/install.sh
 
 # 새 gjc 세션을 연 뒤 (또는 /move .):
 /omg
@@ -89,18 +89,18 @@ bin/omg-autoupdate.sh status            # 스케줄 여부 + 최근 로그
 bin/omg-autoupdate.sh disable           # 해제
 ```
 
-- 갱신은 신뢰된 canonical `install.sh` 재실행(또는 `--local` checkout)이다. **root 실행 금지**, 단일 실행 잠금, 모든 실행을 `${XDG_STATE_HOME:-~/.local/state}/oh-my-gajae-code/autoupdate.log`에 기록한다.
+- 갱신은 신뢰된 canonical `install.sh` 재실행(또는 `--local` checkout)이다. **root 실행 금지**, 단일 실행 잠금, 모든 실행을 `${XDG_STATE_HOME:-~/.local/state}/oh-my-gjc/autoupdate.log`에 기록한다.
 - `enable`은 이 스크립트의 안정 복사본을 상태 디렉터리에 두고 타이머가 그것을 가리키게 해서, 플러그인 캐시 경로가 버전마다 바뀌어도 스케줄이 깨지지 않는다.
 - 무인 원격 실행(`curl | bash`) 위험을 인지하고 쓰는 것이다. 오프라인·감사 필요 환경은 `--local`을 쓴다.
 - `install-skill.sh uninstall … user`는 이 타이머도 함께 해제한다.
 
 ## 마이그레이션
 
-v0.27.0은 이전 identity의 마지막 bridge release였다. `oh-my-gajae-code`가 canonical repository, marketplace/plugin identity, source, local checkout 이름이며, canonical installer는 `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`다.
+v0.27.0은 이전 identity의 마지막 bridge release였다. `oh-my-gjc`가 canonical repository, marketplace/plugin identity, source, local checkout 이름이며, canonical installer는 `https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh`다.
 
-이전 `https://raw.githubusercontent.com/devswha/oh-my-gjc/...` raw URL은 redirect하지 않는다. 이전 GitHub repository page와 Git remote는 redirect하지만, active install 문서와 새 checkout은 새 URL과 `oh-my-gajae-code` 이름만 쓴다.
+이전 `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/...` raw URL은 redirect하지 않는다. 이전 GitHub repository page와 Git remote는 redirect하지만, active install 문서와 새 checkout은 새 URL과 `oh-my-gjc` 이름만 쓴다.
 
-새 install은 `oh-my-gajae-code` runtime binding만 쓴다. 기존 `oh-my-gjc` binding은 최소 30일 또는 두 release 동안 read-only fallback으로만 읽고, rewrite·cleanup하지 않는다. 기존 XDG research data, credentials, `models.yml`은 보존한다.
+새 install은 `oh-my-gjc` runtime binding만 쓴다. 기존 `oh-my-gajae-code` binding은 최소 30일 또는 두 release 동안 read-only fallback으로만 읽고, rewrite·cleanup하지 않는다. 기존 XDG research data, credentials, `models.yml`은 보존한다.
 
 hardened installer 재실행은 이름이 바뀐 `gate-briefing`과 제거된 공개 기능
 (`multivendor-presets`, `preset-pack`, `release-gate`, `easy-answer`, `plain-layer`, `branch-flow`,

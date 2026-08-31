@@ -40,7 +40,7 @@ describe("gpt-image web contract", () => {
     expect(source).toContain("from pack_and_ask import cdp_binds_dedicated_profile");
     expect(reviewEngine).toContain("DevToolsActivePort");
     expect(reviewEngine).toContain("from cdp_lock import CdpLease");
-    expect(sharedLease).toContain("oh-my-gajae-code-chatgpt-cdp-");
+    expect(sharedLease).toContain("oh-my-gjc-chatgpt-cdp-");
     expect(sharedLease).toContain("another OMG ChatGPT CDP automation is running");
     expect(sharedLease).toContain("fcntl.flock");
     expect(source).not.toMatch(/subprocess|pip install|playwright install|launch_browser|auto-login/i);
@@ -72,8 +72,8 @@ describe("gpt-image web contract", () => {
   test("keeps the command explicit and binding-resolved without Claude variables", () => {
     const skill = readFileSync(skillPath, "utf8");
     const command = readFileSync(commandPath, "utf8");
-    expect(skill).toContain(".gjc/runtimes/oh-my-gajae-code/root");
-    expect(skill).not.toContain("oh-my-gjc");
+    expect(skill).toContain(".gjc/runtimes/oh-my-gjc/root");
+    expect(skill).not.toContain("oh-my-gajae-code");
     expect(skill).toContain('asset = Path("bin/gpt_image_web.py")');
     expect(command).toContain("--check-env");
     expect(command).not.toContain("${CLAUDE_PLUGIN_ROOT}");

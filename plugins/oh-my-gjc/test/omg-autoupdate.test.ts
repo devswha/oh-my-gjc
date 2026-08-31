@@ -1,6 +1,6 @@
 /**
  * opt-in auto-updater (bin/omg-autoupdate.sh) contract.
- * Run: bun test plugins/oh-my-gajae-code/test/omg-autoupdate.test.ts
+ * Run: bun test plugins/oh-my-gjc/test/omg-autoupdate.test.ts
  */
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
@@ -50,7 +50,7 @@ describe("omg-autoupdate.sh", () => {
       const r = run(["run", "--dry-run"], st);
       expect(r.status, r.stderr).toBe(0);
       expect(r.stdout).toContain("flock");
-      expect(r.stdout).toContain("update from https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh");
+      expect(r.stdout).toContain("update from https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh");
     } finally {
       rmSync(st, { recursive: true, force: true });
     }
@@ -81,7 +81,7 @@ describe("omg-autoupdate.sh", () => {
       const r = run(["enable", "--dry-run"], st);
       expect(r.status, r.stderr).toBe(0);
       expect(r.stdout).toContain("install stable copy");
-      expect(r.stdout).toContain(join(st, "oh-my-gajae-code/omg-autoupdate.sh"));
+      expect(r.stdout).toContain(join(st, "oh-my-gjc/omg-autoupdate.sh"));
       // systemd OnCalendar=daily OR cron 0 4 * * * fallback — both are "daily".
       expect(r.stdout).toMatch(/OnCalendar=daily|0 4 \* \* \*/);
     } finally {
@@ -92,7 +92,7 @@ describe("omg-autoupdate.sh", () => {
   test("a real run logs OK on success (rc 0) and propagates FAILED rc on installer error", () => {
     const st = mkdtempSync(join(tmpdir(), "omgau-"));
     const fake = mkdtempSync(join(tmpdir(), "omgfake-"));
-    const log = join(st, "oh-my-gajae-code/autoupdate.log");
+    const log = join(st, "oh-my-gjc/autoupdate.log");
     try {
       writeFileSync(join(fake, "install.sh"), "#!/usr/bin/env bash\necho ok\n");
       let r = run(["run", "--local", fake], st);

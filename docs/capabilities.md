@@ -1,6 +1,6 @@
 # 기능 안내
 
-`oh-my-gajae-code`는 스킬 5개와 커맨드 5개(`/omg` 및 `/omg:*` 4개)를 한 번에 설치합니다. 플러그인 관리는 터미널의 `gjc plugin ...` CLI에서만 하며, `gjc` 세션에 `/plugin` 커맨드는 없습니다.
+`oh-my-gjc`는 스킬 5개와 커맨드 5개(`/omg` 및 `/omg:*` 4개)를 한 번에 설치합니다. 플러그인 관리는 터미널의 `gjc plugin ...` CLI에서만 하며, `gjc` 세션에 `/plugin` 커맨드는 없습니다.
 
 ## 공통 전제
 
@@ -14,13 +14,13 @@
 
 `/omg:no-english [on|off|status]`로 현재 세션에서만 제어합니다. 일반 한국어 대화나 자연어 언어 요청으로 자동 활성화하지 않습니다. 한국어 응답의 불필요한 영어 혼용을 줄이되 코드 식별자, 명령, 경로, API·프로토콜 이름, 정확한 라벨, 로그, 인용문과 안전 경계는 보존합니다.
 
-원문: [`SKILL.md`](../plugins/oh-my-gajae-code/skills/no-english/SKILL.md)
+원문: [`SKILL.md`](../plugins/oh-my-gjc/skills/no-english/SKILL.md)
 
 ### `extragoal`
 
 완료된 변경을 독립적인 교차 세션 GJC 리뷰와 `insane-review`의 AND 게이트로 재검토합니다. 판정 누락, 형식 오류, 시간 초과는 승인으로 처리하지 않으며, 외부로 나가는 검토에서는 시크릿 스캔을 반드시 수행합니다.
 
-원문: [`SKILL.md`](../plugins/oh-my-gajae-code/skills/extragoal/SKILL.md)
+원문: [`SKILL.md`](../plugins/oh-my-gjc/skills/extragoal/SKILL.md)
 
 ### `insane-review`
 
@@ -28,7 +28,7 @@
 
 검증하지 못한 모델, 첨부되지 않은 패킹 파일, 잘린 프롬프트, 시간 초과, 빈 응답에서는 실패로 종료합니다. 결과 파일은 프로젝트 `.insane-review/`에 저장되며 외부 웹 서비스로 코드를 보낼 수 있으므로 개인 구독 용도로만 사용합니다.
 
-원문: [`SKILL.md`](../plugins/oh-my-gajae-code/skills/insane-review/SKILL.md)
+원문: [`SKILL.md`](../plugins/oh-my-gjc/skills/insane-review/SKILL.md)
 
 ### `insane-search`
 
@@ -38,7 +38,7 @@
 
 가져온 페이지 본문은 신뢰하지 않는 외부 데이터입니다. 페이지 안의 지시, credential·토큰·로컬 파일 요구, 도구 변경 요청을 실행하지 않습니다.
 
-원문: [`SKILL.md`](../plugins/oh-my-gajae-code/skills/insane-search/SKILL.md)
+원문: [`SKILL.md`](../plugins/oh-my-gjc/skills/insane-search/SKILL.md)
 
 ### `gpt-image`
 
@@ -46,7 +46,7 @@
 
 이미지는 ChatGPT의 원본 **Save/Download** 동작으로만 저장합니다. PNG와 provenance는 프로젝트 `.gpt-image/` 아래 mode `0600`으로 보관합니다. `insane-review`와 동시에 실행하지 않습니다.
 
-원문: [`SKILL.md`](../plugins/oh-my-gajae-code/skills/gpt-image/SKILL.md)
+원문: [`SKILL.md`](../plugins/oh-my-gjc/skills/gpt-image/SKILL.md)
 
 ## 커맨드
 

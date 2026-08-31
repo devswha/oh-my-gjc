@@ -25,8 +25,8 @@ cwd = Path.cwd()
 home = Path.home()
 asset = Path("bin/gpt_image_web.py")
 bindings = [
-    cwd / ".gjc/runtimes/oh-my-gajae-code/root",
-    home / ".gjc/agent/runtimes/oh-my-gajae-code/root",
+    cwd / ".gjc/runtimes/oh-my-gjc/root",
+    home / ".gjc/agent/runtimes/oh-my-gjc/root",
 ]
 
 for binding in bindings:
@@ -49,7 +49,7 @@ for binding in bindings:
     except (OSError, UnicodeError):
         continue
 
-checkout = cwd / "plugins/oh-my-gajae-code" / asset
+checkout = cwd / "plugins/oh-my-gjc" / asset
 try:
     if not checkout.is_symlink() and checkout.is_file():
         print(checkout.resolve(strict=True))

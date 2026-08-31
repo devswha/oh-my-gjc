@@ -23,7 +23,7 @@ SCRIPT = Path(__file__).with_name("record_provenance.py")
 MODULE_SPEC = importlib.util.spec_from_file_location("record_provenance_under_test", SCRIPT)
 PROVENANCE = importlib.util.module_from_spec(MODULE_SPEC)
 MODULE_SPEC.loader.exec_module(PROVENANCE)
-PLUGIN_NAME = "oh-my-gajae-code"
+PLUGIN_NAME = "oh-my-gjc"
 PLUGIN_SOURCE = "./plugins/{}".format(PLUGIN_NAME)
 CACHE_PREFIX = "{}___{}___".format(PLUGIN_NAME, PLUGIN_NAME)
 # Historical v0.27 identity; retained only for explicit rejection coverage.
@@ -307,7 +307,7 @@ class RecordProvenanceTest(unittest.TestCase):
     def test_payload_aggregate_digest_uses_v2_domain_separator(self):
         payloads = {"fixture.txt": b"fixture payload\n"}
         expected = hashlib.sha256()
-        expected.update(b"oh-my-gajae-code plugin payload v2\x00")
+        expected.update(b"oh-my-gjc plugin payload v2\x00")
         for relative_path in sorted(payloads):
             path_bytes = relative_path.encode("utf-8")
             payload = payloads[relative_path]
@@ -793,7 +793,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self._write_json(marketplace_path, self._marketplace_document())
         self._commit_candidate_changes()
         marketplace_path.write_text(
-            '{"name":"oh-my-gajae-code","name":"wrong","metadata":{"version":"1.2.3"},"plugins":[]}\n',
+            '{"name":"oh-my-gjc","name":"wrong","metadata":{"version":"1.2.3"},"plugins":[]}\n',
             encoding="utf-8",
         )
         self._commit_candidate_changes()
@@ -802,7 +802,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self._write_json(marketplace_path, self._marketplace_document())
         self._commit_candidate_changes()
         self._candidate_marker(".claude-plugin/plugin.json").write_text(
-            '{"name":"oh-my-gajae-code","name":"wrong","version":"1.2.3"}\n',
+            '{"name":"oh-my-gjc","name":"wrong","version":"1.2.3"}\n',
             encoding="utf-8",
         )
         self._commit_candidate_changes()
@@ -811,7 +811,7 @@ class RecordProvenanceTest(unittest.TestCase):
         self.temporary_directory.cleanup()
         self.setUp()
         self._cache_marker(self.cache, ".claude-plugin/plugin.json").write_text(
-            '{"name":"oh-my-gajae-code","name":"wrong","version":"1.2.3"}\n',
+            '{"name":"oh-my-gjc","name":"wrong","version":"1.2.3"}\n',
             encoding="utf-8",
         )
         self._assert_failure_untouched("cache plugin manifest contains duplicate JSON key 'name'")

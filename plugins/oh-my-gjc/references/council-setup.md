@@ -12,7 +12,7 @@ council worker는 셸 없이 execFile 하므로 `command`엔 **엔진의 절대�
 새 suite binding을 프로젝트→user 순서로 먼저 확인하고, 둘 다 없을 때만 **읽기 전용·기간 한정 compatibility fallback**인 기존 `oh-my-gjc` binding을 프로젝트→user 순서로 확인한다. 모두 없을 때만 정확한 현재 checkout asset을 쓴다. 기존 binding이나 user state는 절대 쓰거나 지우지 않는다:
 ```bash
 resolve_omg_asset() (
-  fail() { echo "oh-my-gajae-code runtime binding is missing or invalid; rerun https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh." >&2; exit 1; }
+  fail() { echo "oh-my-gjc runtime binding is missing or invalid; rerun https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh." >&2; exit 1; }
   reject_symlinked_components() {
     local path="$1" current="/" component
     local -a components
@@ -26,13 +26,13 @@ resolve_omg_asset() (
   }
   local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir checkout
   local -a bindings=(
-    "$PWD/.gjc/runtimes/oh-my-gajae-code/root"
-    "$HOME/.gjc/agent/runtimes/oh-my-gajae-code/root"
+    "$PWD/.gjc/runtimes/oh-my-gjc/root"
+    "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"
   )
   # Bounded read-only compatibility fallback; never mutate legacy paths.
   local -a legacy_compatibility_bindings=(
-    "$PWD/.gjc/runtimes/oh-my-gjc/root"
-    "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"
+    "$PWD/.gjc/runtimes/oh-my-gajae-code/root"
+    "$HOME/.gjc/agent/runtimes/oh-my-gajae-code/root"
   )
   bindings+=("${legacy_compatibility_bindings[@]}")
   for binding in "${bindings[@]}"; do
@@ -58,7 +58,7 @@ resolve_omg_asset() (
       exit 0
     fi
   done
-  checkout="$PWD/plugins/oh-my-gajae-code"
+  checkout="$PWD/plugins/oh-my-gjc"
   reject_symlinked_components "$checkout"
   [ -d "$checkout" ] && [ ! -L "$checkout" ] || fail
   canonical_root="$(cd -P -- "$checkout" 2>/dev/null && pwd -P)" || fail
@@ -71,7 +71,7 @@ resolve_omg_asset() (
 IR="$(resolve_omg_asset "bin/pack_and_ask.py")" || exit 1
 printf '%s\n' "$IR"
 ```
-Malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing bindings fail closed; repair with `https://raw.githubusercontent.com/devswha/oh-my-gajae-code/main/install.sh`, never a plugin cache.
+Malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing bindings fail closed; repair with `https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh`, never a plugin cache.
 
 ## council.config.yaml 에 멤버 추가
 
@@ -90,7 +90,7 @@ council:
       color: "BLUE"
     # ── GPT-5.6 Sol Pro (웹 전용, insane-review 경유) ──
     - name: gpt-pro
-      command: "python3 /ABS/PATH/oh-my-gajae-code/bin/pack_and_ask.py --council --model pro --require-model \"GPT-5.6\" --force-answer-after 120"
+      command: "python3 /ABS/PATH/oh-my-gjc/bin/pack_and_ask.py --council --model pro --require-model \"GPT-5.6\" --force-answer-after 120"
       emoji: "🌐"
       color: "MAGENTA"
   settings:
@@ -98,7 +98,7 @@ council:
     timeout: 600   # ⚠️ Pro 리즈닝이 길다 — 기본 120s로는 SIGTERM될 수 있어 늘린다
 ```
 
-- `/ABS/PATH/oh-my-gajae-code/bin/pack_and_ask.py`는 위 resolver가 출력한 **절대경로** 그대로. (경로에 공백 없게.)
+- `/ABS/PATH/oh-my-gjc/bin/pack_and_ask.py`는 위 resolver가 출력한 **절대경로** 그대로. (경로에 공백 없게.)
 - `--require-model "GPT-5.6"`: council 경로에서도 활성 모델명을 검증(불일치/미확정이면 fail-closed로 전송 중단). 빼면 effort만 검증되고 기반 모델은 무엇이든 통과한다.
 - `--force-answer-after 120`: 120초 후 "지금 답변 받기"로 리즈닝을 끊어 회수 시간을 bound. council `timeout`은 그보다 넉넉히(예: 600).
 - council은 멤버를 **병렬 detached**로 띄운다. gpt-pro는 자기 브라우저 탭을 새로 열므로 다른 멤버와 충돌하지 않지만, **동시에 두 개의 insane-review 잡이 같은 브라우저를 몰면 안 된다**(한 council 잡에 gpt-pro 멤버는 하나).
@@ -110,7 +110,7 @@ council:
 ## 검증 방법
 ```bash
 # 위 binding 검증에서 출력된 절대경로를 그대로 사용한다.
-IR="/ABS/PATH/oh-my-gajae-code/bin/pack_and_ask.py"
+IR="/ABS/PATH/oh-my-gjc/bin/pack_and_ask.py"
 [ -f "$IR" ] && [ ! -L "$IR" ] || { echo "engine missing" >&2; exit 1; }
 # 단독으로 council 계약 확인: stdout엔 응답만, stderr엔 로그
 python3 "$IR" --council --model pro --require-model "GPT-5.6" \

@@ -29,7 +29,7 @@ mkdir -p "$(dirname "${LOG}")"
 
 ts() { date -Iseconds; }
 
-JSON="$(bun run plugins/oh-my-gajae-code/bin/collect.ts \
+JSON="$(bun run plugins/oh-my-gjc/bin/collect.ts \
 	--days "${DAYS}" --fresh-only --hide-resolved --json 2>>"${LOG}" || echo '[]')"
 
 # Pipe the candidate array into trigger.ts --daily; it decides whether to inject.

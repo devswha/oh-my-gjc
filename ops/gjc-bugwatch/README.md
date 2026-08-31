@@ -1,7 +1,7 @@
 # ops/gjc-bugwatch — automation lane (outside the plugin)
 
 Promotes the **manual** gjc-bugwatch lane to an **automatic cadence** without weakening
-the plugin's safety contract. The plugin (`plugins/oh-my-gajae-code`) stays
+the plugin's safety contract. The plugin (`plugins/oh-my-gjc`) stays
 **drafts-only, read-only, redacted, no-fabrication**. Everything here is glue —
 systemd/cron/tmux — and
 **never submits anything**. It only *injects a triage instruction* into the operator's
@@ -47,7 +47,7 @@ the user unit (enable + linger) and replaces its managed daily cron entry (~08:2
   all remain human-gated via the horcrux queue.
 - **tmux send-keys never contains a tilde (`~`).** Injected payloads use absolute paths;
   `injectTmux` throws if a `~` slips in.
-- **Automation stays outside the plugin.** `plugins/oh-my-gajae-code` is untouched; its
+- **Automation stays outside the plugin.** `plugins/oh-my-gjc` is untouched; its
   drafts-only / read-only / redaction / no-fabrication contract is intact.
 
 ## Configuration (env)

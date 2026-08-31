@@ -41,7 +41,7 @@ describe("insane-search port contract", () => {
     const templates = readdirSync(join(pluginRoot, "templates")).sort();
 
     expect(skill).not.toContain("${CLAUDE_PLUGIN_ROOT}");
-    expect(skill).toContain(".gjc/runtimes/oh-my-gajae-code/root");
+    expect(skill).toContain(".gjc/runtimes/oh-my-gjc/root");
     expect(skill).not.toContain("AskUserQuestion");
     expect(skill).not.toMatch(/\b(?:star this|github star|별점|스타)\b/i);
     expect(templates).toEqual(["gpt-image.md", "insane-review.md", "no-english.md", "omg.md", "setup.md"]);
