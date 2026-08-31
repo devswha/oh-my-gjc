@@ -325,41 +325,34 @@ cleanup_retired_gate_markers() {
       echo "! gate-always marker cleanup skipped (temporary file failed): $file" >&2
       continue
     }
-    if ! node - "$file" "$content" <<'NODE'
-const fs = require("fs");
-const [input, output] = process.argv.slice(2);
-const source = fs.readFileSync(input, "utf8");
-const lines = source.match(/[^\n]*(?:\n|$)/g) || [];
-if (lines[lines.length - 1] === "") lines.pop();
-const markers = new Map([
-  ["<!-- BEGIN oh-my-gjc:gate-always -->", "<!-- END oh-my-gjc:gate-always -->"],
-  ["<!-- BEGIN my-workflows:gate-always -->", "<!-- END my-workflows:gate-always -->"],
-]);
-const endMarkers = new Set(markers.values());
-const seen = new Set();
-const kept = [];
-let expectedEnd = null;
-let bad = false;
-for (const raw of lines) {
-  let line = raw.endsWith("\n") ? raw.slice(0, -1) : raw;
-  if (line.endsWith("\r")) line = line.slice(0, -1);
-  if (markers.has(line)) {
-    if (expectedEnd !== null || seen.has(line)) bad = true;
-    seen.add(line);
-    expectedEnd = markers.get(line);
-    continue;
-  }
-  if (endMarkers.has(line)) {
-    if (expectedEnd !== line) bad = true;
-    expectedEnd = null;
-    continue;
-  }
-  if (expectedEnd === null) kept.push(raw);
-}
-if (seen.size === 0 || expectedEnd !== null || bad) process.exit(1);
-fs.writeFileSync(output, kept.join(""));
-NODE
-    then
+    if ! awk -v ends_nl="$(if [ -n "$(tail -c 1 "$file")" ]; then printf 0; else printf 1; fi)" '
+      BEGIN {
+        b1 = "<!-- BEGIN oh-my-gjc:gate-always -->"; e1 = "<!-- END oh-my-gjc:gate-always -->"
+        b2 = "<!-- BEGIN my-workflows:gate-always -->"; e2 = "<!-- END my-workflows:gate-always -->"
+      }
+      { raw[NR] = $0 }
+      END {
+        for (i = 1; i <= NR; i++) {
+          line = raw[i]; sub(/\r$/, "", line)
+          if (line == b1 || line == b2) {
+            count++
+            if (inside != "" || seen[line]++ > 0) bad = 1
+            inside = (line == b1) ? e1 : e2
+            continue
+          }
+          if (line == e1 || line == e2) {
+            if (inside != line) bad = 1
+            inside = ""
+            continue
+          }
+          if (inside == "") {
+            if (i < NR || ends_nl) printf "%s\n", raw[i]
+            else printf "%s", raw[i]
+          }
+        }
+        if (count == 0 || inside != "" || bad) exit 1
+      }
+    ' "$file" > "$content"; then
       rm -f "$content"
       echo "! gate-always marker cleanup skipped (malformed markers): $file" >&2
       continue
