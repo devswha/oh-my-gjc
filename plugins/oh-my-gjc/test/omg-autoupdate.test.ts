@@ -2,8 +2,8 @@
  * opt-in auto-updater (bin/omg-autoupdate.sh) contract.
  * Run: bun test plugins/oh-my-gjc/test/omg-autoupdate.test.ts
  */
-import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
+import { afterAll, describe, expect, test } from "bun:test";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawnSync } from "child_process";
@@ -12,12 +12,26 @@ const pluginRoot = join(import.meta.dir, "..");
 const script = join(pluginRoot, "bin/omg-autoupdate.sh");
 const repoRoot = join(pluginRoot, "..", "..");
 
+// The updater requires a `gjc` binary on PATH as an installability precondition
+// (command -v only — never invoked by the code paths below). CI runners have no
+// gjc, so mount an inert stub to keep the contract testable everywhere.
+const stubBin = mkdtempSync(join(tmpdir(), "omgau-bin-"));
+writeFileSync(join(stubBin, "gjc"), "#!/bin/sh\nexit 0\n");
+chmodSync(join(stubBin, "gjc"), 0o755);
+afterAll(() => rmSync(stubBin, { recursive: true, force: true }));
+
 function run(args: string[], stateHome: string, extraEnv: Record<string, string> = {}) {
   return spawnSync("bash", [script, ...args], {
     encoding: "utf8",
-    env: { ...process.env, XDG_STATE_HOME: stateHome, ...extraEnv },
+    env: {
+      ...process.env,
+      PATH: `${stubBin}:${process.env.PATH ?? ""}`,
+      XDG_STATE_HOME: stateHome,
+      ...extraEnv,
+    },
   });
 }
+
 
 // Force the cron fallback deterministically (systemd_user_available needs a
 // non-empty XDG_RUNTIME_DIR), so cron-schedule validation is actually exercised.
