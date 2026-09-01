@@ -125,12 +125,12 @@ gjc `ask` 도구로 물어보고 → 선택대로 gjc가 실행 → `--ensure-en
 
    **lane 경로(이 머신에 sol-lane이 있을 때 — 먼저 확인하라):**
    ```bash
-   command -v lane >/dev/null 2>&1 || test -x ~/workspace/sol-lane/.venv/bin/lane
+   LANE="$(command -v lane 2>/dev/null)" \
+     || { R="${SOL_LANE_ROOT:-$HOME/workspace/sol-lane}"; [ -x "$R/.venv/bin/lane" ] && LANE="$R/.venv/bin/lane"; }
    ```
-   있으면 백그라운드 + 중계(SKILL §3.2)로:
+   `$LANE`가 있으면 백그라운드 + 중계(SKILL §3.2)로:
    ```bash
-   uv run --project ~/workspace/sol-lane lane review \
-     --root "$PWD" --include "<관련 파일 글롭, 쉼표 구분>" \
+   "$LANE" review --root "$PWD" --include "<관련 파일 글롭, 쉼표 구분>" \
      --stream "<의도 담은 질문 — 판정마다 파일:라인·코드조각 인용 강제>" \
      > .insane-review/live.log 2>&1 &
    ```

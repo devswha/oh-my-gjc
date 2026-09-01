@@ -420,4 +420,45 @@ print(module.missing_explicit_include_paths("package.json,package-lock.json,src/
       "skills/insane-review/references/upstream-LICENSE",
     );
   });
+
+  test("resolves the optional sol-lane path without a personal checkout hardcode", () => {
+    const distributed = [
+      join(pluginRoot, "skills/insane-review/SKILL.md"),
+      join(pluginRoot, "templates/insane-review.md"),
+    ];
+
+    for (const path of distributed) {
+      const body = read(path);
+      // lane is optional; when referenced it must resolve, never assume one checkout.
+      expect(body).toContain("SOL_LANE_ROOT");
+      expect(body).not.toContain("uv run --project ~/workspace/sol-lane");
+      expect(body).not.toContain("test -x ~/workspace/sol-lane");
+      // the $IR fallback must survive as the public default path.
+      expect(body).toContain("$IR");
+    }
+  });
+
+  test("lane resolution honours PATH, the override, and absence", () => {
+    const skill = read(join(pluginRoot, "skills/insane-review/SKILL.md"));
+    const block = skill.match(/```bash\n(lane_cmd\(\)[\s\S]*?)```/);
+    expect(block, "lane_cmd block missing from SKILL.md").not.toBeNull();
+    const script = `set -u\n${block![1]}\necho "LANE=[$LANE]"\n`;
+
+    const run = (env: Record<string, string>) =>
+      spawnSync("bash", ["-c", script], {
+        encoding: "utf8",
+        env: { ...process.env, ...env },
+      });
+
+    const syntax = spawnSync("bash", ["-n", "-c", script], { encoding: "utf8" });
+    expect(syntax.status, syntax.stderr).toBe(0);
+
+    const absent = run({ HOME: "/nonexistent-home", SOL_LANE_ROOT: "/nonexistent-lane" });
+    expect(absent.status, absent.stderr).toBe(0);
+    expect(absent.stdout.trim()).toBe("LANE=[]");
+
+    const onPath = run({ HOME: "/nonexistent-home", PATH: `${pluginRoot}/test/fixtures-lane:${process.env.PATH}` });
+    expect(onPath.status, onPath.stderr).toBe(0);
+    expect(onPath.stdout.trim()).toBe("LANE=[lane]");
+  });
 });

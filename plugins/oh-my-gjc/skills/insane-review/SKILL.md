@@ -123,14 +123,19 @@ fail-closed 검증 위에 **회수 경로**(죽은 판의 답을 `harvest`로 �
 회수, `followup`으로 재패킹 없이 후속 질문)와 브라우저 직렬화 락이 있다. 실행 전 확인:
 
 ```bash
-command -v lane >/dev/null 2>&1 || test -x ~/workspace/sol-lane/.venv/bin/lane
+lane_cmd() {
+  if command -v lane >/dev/null 2>&1; then printf 'lane\n'; return 0; fi
+  # 체크아웃 위치는 사람마다 다르다 — 명시 override를 먼저 존중한다.
+  local root="${SOL_LANE_ROOT:-$HOME/workspace/sol-lane}"
+  [ -x "$root/.venv/bin/lane" ] && printf '%s\n' "$root/.venv/bin/lane"
+}
+LANE="$(lane_cmd)"
 ```
 
-있으면 §3의 엔진 직접 실행 대신:
+`$LANE`가 비어 있지 않으면 §3의 엔진 직접 실행 대신:
 
 ```bash
-uv run --project ~/workspace/sol-lane lane review \
-  --root "$PWD" --include "<관련 파일 글롭, 쉼표 구분>" \
+"$LANE" review --root "$PWD" --include "<관련 파일 글롭, 쉼표 구분>" \
   --stream "<질문 — 판정마다 파일:라인·코드조각 인용 강제>"
 ```
 
