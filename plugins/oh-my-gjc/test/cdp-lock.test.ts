@@ -87,6 +87,48 @@ print("recovered")
     expect(output).toEqual(["True", "False", "True", "recovered"]);
   });
 
+  test("grants exactly one holder under real multi-process contention", () => {
+    // acquire() now retries on a raced lease. A retry loop is exactly the kind of
+    // change that can quietly turn a rejection into a second grant, so contend for
+    // real across processes rather than asserting on a single-process path.
+    const output = runPython(`
+import multiprocessing, os, time
+
+LOCK = ${JSON.stringify(lock)}
+
+def worker(port, q):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("cdp_lock", LOCK)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    try:
+        lease = module.CdpLease(port).acquire()
+        q.put("granted")
+        time.sleep(0.4)              # hold the critical section
+        q.put("bound" if lease.still_binding() else "unbound")
+        lease.release()
+    except RuntimeError:
+        q.put("rejected")
+
+if __name__ == "__main__":
+    q = multiprocessing.Queue()
+    procs = [multiprocessing.Process(target=worker, args=(46100, q)) for _ in range(8)]
+    for p in procs: p.start()
+    for p in procs: p.join()
+    seen = []
+    while not q.empty(): seen.append(q.get())
+    print(seen.count("granted"))
+    print(seen.count("rejected"))
+    print(seen.count("unbound"))
+`);
+
+    expect(output).toEqual([
+      "1", // exactly one holder, never two
+      "7", // everyone else is rejected outright
+      "0", // and the holder's lease stayed bound for its whole critical section
+    ]);
+  });
+
   test("refuses to send while the lease no longer binds", () => {
     // still_binding() is only useful if the long-running consumer consults it
     // before the irreversible step; a send burns a Pro message.
