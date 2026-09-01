@@ -90,6 +90,7 @@ describe("pack_and_ask security and advanced-menu contracts", () => {
     expect(source).toContain("reconfigure(line_buffering=True)");
     expect(source).toContain("── 실시간 응답(생성 중) ──");
     expect(source).toContain("base_copy=base_copy, stream=args.stream");
+    expect(source).toContain("not (stream and stream_header)");
     expect(skill).toContain("### 3.2) 장기 실행 중계");
     expect(skill).toContain("--stream");
     expect(command).toContain("--stream");
@@ -368,5 +369,35 @@ print(module._slider_effort_verified(success, "pro"))
     const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout.trim().split("\n")).toEqual(["'Pro'", "None", "True"]);
+  });
+
+  test("records the verified pre-menu effort pill instead of Default", () => {
+    const script = `
+import importlib.util
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+print(module.verified_effort_label(slider_label=None, slider_used=False, checked_label=None, pill_label_before="최대"))
+print(module.verified_effort_label(slider_label="Pro", slider_used=True, checked_label=None, pill_label_before=None))
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual(["최대", "Pro"]);
+  });
+
+  test("fails closed when an explicit include file is missing from the pack", () => {
+    const script = `
+import importlib.util
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+print(module.missing_explicit_include_paths("package.json,package-lock.json,src/**", ["package.json", "src/app.ts"]))
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim()).toBe("['package-lock.json']");
+    const source = read(engine);
+    expect(source).toContain('cmd.append("--no-default-patterns")');
+    expect(source).toContain('cmd.append("--no-gitignore")');
   });
 });

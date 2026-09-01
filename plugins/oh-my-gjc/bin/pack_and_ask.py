@@ -159,9 +159,23 @@ DEFAULT_PROMPT = (
 # ===========================================================================
 # 1) repomix 패킹 (버전 핀 + timeout + returncode + 권한 + 시크릿 노트)
 # ===========================================================================
+def missing_explicit_include_paths(include: str | None, packed_paths: list[str]) -> list[str]:
+    if not include:
+        return []
+    exact_includes = {
+        item.strip().removeprefix("./")
+        for item in include.split(",")
+        if item.strip() and not re.search(r"[*?[\]{}]", item)
+    }
+    normalized_packed = {item.strip().removeprefix("./") for item in packed_paths}
+    return sorted(exact_includes - normalized_packed)
+
+
 def pack_repo(target: Path, *, include: str | None, ignore: str | None,
               compress: bool, style: str, token_budget: int | None,
-              out_path: Path, line_numbers: bool = True) -> tuple[Path, int | None]:
+              out_path: Path, line_numbers: bool = True,
+              no_default_patterns: bool = False,
+              no_gitignore: bool = False) -> tuple[Path, int | None]:
     if shutil.which("npx") is None:
         sys.exit("❌ npx가 없습니다. Node.js를 설치하세요.")
 
@@ -208,6 +222,10 @@ def pack_repo(target: Path, *, include: str | None, ignore: str | None,
         cmd += ["--include", include]
     if ignore:
         cmd += ["--ignore", ignore]
+    if no_default_patterns:
+        cmd.append("--no-default-patterns")
+    if no_gitignore:
+        cmd.append("--no-gitignore")
     if token_budget:
         cmd += ["--token-budget", str(token_budget)]
 
@@ -292,6 +310,15 @@ def pack_repo(target: Path, *, include: str | None, ignore: str | None,
             pass
         reason = "0개" if n_files == 0 else "확인 불가(repomix 파일수 파싱 실패)"
         sys.exit(f"❌ 패킹 파일 수 {reason} — 대상 경로/--include/--ignore를 확인하세요(빈·불명 컨텍스트 전송 방지).")
+    # An explicit file path is a closed request, unlike a glob. If repomix's
+    # default ignore rules silently drop it (for example package-lock.json),
+    # sending the incomplete pack would invalidate the requested review scope.
+    if include and flist:
+        missing_exact = missing_explicit_include_paths(include, flist)
+        if missing_exact:
+            sys.exit("❌ 명시한 파일이 패킹에서 누락됨: "
+                     + ", ".join(missing_exact)
+                     + " — repomix 기본 ignore를 확인하고 필요하면 --no-default-patterns를 사용하세요.")
     if compress:
         print("  ⚠️  위 파일들은 본문이 압축됨(⋮----) — 제어흐름 누락. 리뷰엔 부적합.")
     if tokens and tokens > 120_000:
@@ -1602,12 +1629,23 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
     verified = model_verified and effort_verified
 
     verified_model = after["model"] or "Unknown Model"
-    verified_effort = (_exact_effort_pill(page, want_l)
-                       if slider_used else after["effort_checked"]) or "Default"
+    verified_effort = verified_effort_label(
+        slider_label=_exact_effort_pill(page, want_l),
+        slider_used=slider_used,
+        checked_label=after["effort_checked"],
+        pill_label_before=pill_effort_before,
+    )
     verified_model_name = f"{verified_model} ({verified_effort})"
 
     print(f"  {'✓' if verified else '⚠️'} 최종 모델 검증: model={after['model']} (기대:{require_model}), effort={after['effort_checked']} (기대:{want}) -> 결과={'OK' if verified else '실패'}")
     return verified, verified_model_name
+
+
+def verified_effort_label(*, slider_label: str | None, slider_used: bool,
+                          checked_label: str | None, pill_label_before: str | None) -> str:
+    return ((slider_label if slider_used else checked_label)
+            or pill_label_before
+            or "Default")
 
 
 def write_response_artifact(path: Path, body: str) -> None:
@@ -1881,7 +1919,10 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
                 if force_tries >= FORCE_MAX_TRIES:
                     print(f"    ⚠️  {elapsed}s — '지금 답변 받기' 버튼 {FORCE_MAX_TRIES}회 실패 → 자연완료 대기")
 
-        if elapsed - last_status >= STATUS_INTERVAL and elapsed > 0:
+        # Once live body streaming starts, status lines would splice themselves
+        # into arbitrary prose positions because streamed chunks need not end in
+        # a newline. The body itself is then the liveness signal.
+        if elapsed - last_status >= STATUS_INTERVAL and elapsed > 0 and not (stream and stream_header):
             st = "⏳ 생성중" if is_streaming(page) else "정지(확인중)"
             print(f"    {elapsed}s | {st}")
             last_status = elapsed
@@ -2116,6 +2157,10 @@ def main():
     ap.add_argument("--target", default=None, help="분석 대상 폴더(생략 시 프롬프트만 = 의견 모드)")
     ap.add_argument("--include", default=None, help='repomix --include 글롭')
     ap.add_argument("--ignore", default=None, help="repomix --ignore 글롭")
+    ap.add_argument("--no-default-patterns", action="store_true",
+                    help="repomix 기본 제외 패턴 비활성화(명시 파일이 기본 제외될 때만)")
+    ap.add_argument("--no-gitignore", action="store_true",
+                    help="repomix .gitignore 제외 비활성화(의도적으로 ignored 파일을 검토할 때만)")
     ap.add_argument("--compress", action="store_true",
                     help="tree-sitter 골격만(토큰 절감) — 본문 제거되니 정확성 리뷰엔 쓰지 마라")
     ap.add_argument("--no-line-numbers", action="store_true",
@@ -2253,7 +2298,9 @@ def main():
         pack_path, tokens = pack_repo(
             target, include=args.include, ignore=eff_ignore, compress=args.compress,
             style=args.style, token_budget=args.token_budget, out_path=pack_path,
-            line_numbers=not args.no_line_numbers)
+            line_numbers=not args.no_line_numbers,
+            no_default_patterns=args.no_default_patterns,
+            no_gitignore=args.no_gitignore)
         if args.pack_only:
             print(f"\n[pack-only] 산출물: {pack_path}")
             return
