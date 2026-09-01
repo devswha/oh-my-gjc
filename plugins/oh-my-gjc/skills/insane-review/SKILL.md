@@ -7,6 +7,10 @@ description: GPT-5.6 Sol Pro(웹 전용·API 없음)를 gjc(Gajae Code) 안에�
 
 **왜 존재하나:** GPT-5.6 Sol Pro는 **웹(구독)에서만** 쓸 수 있고 **API가 없다.** 그래서 Codex CLI·API provider·agent-council의 기존 API 멤버로는 못 부른다. 이 스킬은 **구독 ChatGPT 웹을 CDP로 자동화해 Pro를 gjc 안으로 끌어오는 유일한 경로**다. API 비용 0, 사용자의 요금제로 동작.
 
+이 스킬은 [`fivetaku/insane-review`](https://github.com/fivetaku/insane-review) 0.5.3을
+포크해 독자 하드닝한 것이다. 정확한 SHA, MIT 고지, 상류와의 차이는
+`references/upstream.md`와 `references/upstream-LICENSE`에 보존한다.
+
 핵심 가치는 "통째 패킹"이 아니라 **"의도 파악 → 관련 타겟만 정밀 선별 → 그것만 패킹"** 이다. 이 선별을 gjc(너)가 수행하는 것이 이 도구의 차별점이다.
 
 > **엔진은 hardened local engine이다.** 실제 패킹·CDP 구동·모델검증·턴판정·회수는 감사된 로컬 DOM·보안 패치를 포함한 `bin/pack_and_ask.py`(Playwright 기반)가 수행한다. 로직을 gjc의 `browser` 도구로 재구현하지 마라 — 이 엔진의 검증 경계를 유지한다.

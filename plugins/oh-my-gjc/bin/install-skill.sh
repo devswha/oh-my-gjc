@@ -71,6 +71,8 @@ GPT_IMAGE_ASSETS=(
 INSANE_REVIEW_ASSETS=(
   bin/pack_and_ask.py
   bin/cdp_lock.py
+  skills/insane-review/references/upstream.md
+  skills/insane-review/references/upstream-LICENSE
 )
 # Upgrades sweep only native files and dedicated runtime state owned by capabilities
 # retired from this suite.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 
@@ -399,5 +399,25 @@ print(module.missing_explicit_include_paths("package.json,package-lock.json,src/
     const source = read(engine);
     expect(source).toContain('cmd.append("--no-default-patterns")');
     expect(source).toContain('cmd.append("--no-gitignore")');
+  });
+
+  test("preserves upstream MIT provenance at the audited fork point", () => {
+    const references = join(pluginRoot, "skills/insane-review/references");
+    const provenance = read(join(references, "upstream.md"));
+    const licensePath = join(references, "upstream-LICENSE");
+
+    expect(provenance).toContain("fivetaku/insane-review");
+    expect(provenance).toContain("0.5.3");
+    expect(provenance).toContain("2b3c926737031600e166dbce7dbd8d15b17be9eb");
+    expect(existsSync(licensePath)).toBe(true);
+    expect(read(licensePath)).toMatch(/\bMIT License\b/);
+    expect(read(licensePath)).toContain("Copyright (c) 2026 fivetaku");
+
+    expect(read(join(pluginRoot, "skills/insane-review/SKILL.md"))).toContain(
+      "references/upstream.md",
+    );
+    expect(read(join(pluginRoot, "bin/install-skill.sh"))).toContain(
+      "skills/insane-review/references/upstream-LICENSE",
+    );
   });
 });
