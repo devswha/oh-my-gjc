@@ -2687,6 +2687,13 @@ def main():
                         put_text(page, send_prompt)
                         if not composer_has_prompt(page, send_prompt):
                             raise RuntimeError("프롬프트가 입력창에 온전히 안 들어감 → 중단(첨부만/잘린 전송 방지, fail-closed)")
+                    # 전송은 되돌릴 수 없고 Pro 메시지를 태운다. 그 직전에 CDP
+                    # 단일비행이 여전히 유효한지 확인한다 — 리스 파일이 지워졌다면
+                    # 우리 flock은 orphan inode를 지키고 있고, 다른 실행이 같은
+                    # 브라우저를 동시에 몰 수 있다.
+                    if not cdp_lease.still_binding():
+                        raise RuntimeError(
+                            "CDP 단일비행 리스가 무효화됨(리스 파일 교체/삭제) → 전송 중단(fail-closed)")
                     click_send(page)
                     # 전송 직후 대화 URL을 결속한다 — 스트림이 끊겨도 이 URL로
                     # 재로드해 같은 대화에서 답을 회수할 수 있다(재전송 아님).

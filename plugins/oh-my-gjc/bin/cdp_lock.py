@@ -6,6 +6,11 @@ import os
 from pathlib import Path
 import stat
 import tempfile
+import time
+
+
+class _LeaseRaced(Exception):
+    """The lease file changed identity while we were acquiring it."""
 
 
 class CdpLease:
@@ -15,6 +20,21 @@ class CdpLease:
         self.fd: int | None = None
 
     def acquire(self) -> "CdpLease":
+        # flock binds to an inode, not a path: if the lease file is replaced between
+        # our open() and our lock, we can end up holding an orphaned inode while a
+        # second process locks the live one — both then drive the same CDP browser.
+        # Retry a bounded number of times; each attempt re-validates the binding.
+        last: Exception | None = None
+        for _ in range(5):
+            try:
+                return self._acquire_once()
+            except _LeaseRaced as exc:
+                last = exc
+                time.sleep(0.05)
+        raise RuntimeError(
+            f"CDP lease kept being replaced during acquisition: {last}")
+
+    def _acquire_once(self) -> "CdpLease":
         flags = os.O_RDWR | os.O_CREAT
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
@@ -42,6 +62,19 @@ class CdpLease:
                     msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
                 except OSError as exc:
                     raise RuntimeError("another OMG ChatGPT CDP automation is running") from exc
+            # flock binds to the inode, not the path. If the lease file was replaced
+            # between our open() and our lock (tmp reaper, a stray rm, another run
+            # recreating it), we are now holding a lock on an orphaned inode while a
+            # second process locks the live one — both would drive the same CDP
+            # browser. Confirm the path still resolves to the inode we locked.
+            if os.name != "nt":
+                try:
+                    on_disk = os.stat(self.path)
+                except FileNotFoundError:
+                    # our inode is now unlinked: the lock we hold guards nothing
+                    raise _LeaseRaced("lease file vanished during acquisition") from None
+                if (on_disk.st_dev, on_disk.st_ino) != (info.st_dev, info.st_ino):
+                    raise _LeaseRaced("lease file was replaced during acquisition")
             os.ftruncate(fd, 0)
             os.write(fd, str(os.getpid()).encode("ascii"))
             os.fsync(fd)
@@ -65,6 +98,22 @@ class CdpLease:
             finally:
                 os.close(fd)
             raise
+
+    def still_binding(self) -> bool:
+        """Does the lease path still resolve to the inode we locked?
+
+        If a tmp reaper or a stray rm unlinked our file, our flock now guards an
+        orphan: another run will create a fresh file, lock that, and drive the same
+        CDP browser concurrently. Callers that hold the lease across a long
+        automation re-check this before acting on the browser."""
+        if self.fd is None or os.name == "nt":
+            return self.fd is not None
+        try:
+            held = os.fstat(self.fd)
+            on_disk = os.stat(self.path)
+        except OSError:
+            return False
+        return (held.st_dev, held.st_ino) == (on_disk.st_dev, on_disk.st_ino)
 
     def release(self) -> None:
         if self.fd is None:

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const lock = resolve(import.meta.dir, "../bin/cdp_lock.py");
@@ -57,6 +58,47 @@ print("reacquired")
       "0", // no descriptor leaked
       "reacquired", // and the lock is genuinely free again
     ]);
+  });
+
+  test("detects a lease whose file was replaced underneath it", () => {
+    // HIGH finding from the same Pro review: flock binds to an inode, not a path.
+    // A tmp reaper or a stray rm leaves the holder guarding an orphan while the
+    // next run creates a fresh file, locks that, and drives the same CDP browser.
+    const output = runPython(`
+import importlib.util, os
+spec = importlib.util.spec_from_file_location("cdp_lock", ${JSON.stringify(lock)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+held = module.CdpLease(45010).acquire()
+print(held.still_binding())          # bound to the inode we locked
+os.unlink(held.path)
+print(held.still_binding())          # our inode is orphaned -> not binding
+usurper = module.CdpLease(45010).acquire()
+print(usurper.still_binding())       # the new holder owns the live file
+usurper.release()
+held.release()
+
+after = module.CdpLease(45010).acquire()
+after.release()
+print("recovered")
+`);
+
+    expect(output).toEqual(["True", "False", "True", "recovered"]);
+  });
+
+  test("refuses to send while the lease no longer binds", () => {
+    // still_binding() is only useful if the long-running consumer consults it
+    // before the irreversible step; a send burns a Pro message.
+    const engineSource = readFileSync(
+      resolve(import.meta.dir, "../bin/pack_and_ask.py"),
+      "utf8",
+    );
+    expect(engineSource).toContain("if not cdp_lease.still_binding():");
+    const guard = engineSource.indexOf("if not cdp_lease.still_binding():");
+    const send = engineSource.indexOf("click_send(page)", guard);
+    expect(guard).toBeGreaterThan(-1);
+    expect(send).toBeGreaterThan(guard); // the check precedes the send
   });
 
   test("still rejects a genuinely concurrent holder", () => {
