@@ -89,7 +89,7 @@ describe("pack_and_ask security and advanced-menu contracts", () => {
     expect(source).toContain('ap.add_argument("--stream"');
     expect(source).toContain("reconfigure(line_buffering=True)");
     expect(source).toContain("── 실시간 응답(생성 중) ──");
-    expect(source).toContain("base_ids=base_ids, stream=args.stream");
+    expect(source).toContain("base_ids=base_ids, conv_url=conv_url,");
     expect(source).toContain("not (stream and stream_header)");
     expect(skill).toContain("### 3.2) 장기 실행 중계");
     expect(skill).toContain("--stream");
@@ -470,6 +470,93 @@ print(module.new_assistant_target(fresh, base).inner_text())
       "True",               // fresh turn present -> complete
       "this run's answer",  // and it is the fresh one, not the previous answer
     ]);
+  });
+
+  test("recovers a lost render stream by reloading the bound conversation", () => {
+    // Reproduced live 2026-09-01: the assistant turn stayed empty with no streaming
+    // indicator while the answer already existed server-side. Recovery is a reload of
+    // the bound conversation, never a resend (a resend burns another Pro message).
+    const script = `
+import importlib.util
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.time.sleep = lambda _: None
+module.STALL_RELOAD_SECS = 0
+module.MIN_WAIT_SECS = 0
+
+class Node:
+    def __init__(self, mid, text): self.mid, self.text, self.role = mid, text, "assistant"
+    def get_attribute(self, n): return self.mid if n == "data-message-id" else None
+    def inner_text(self): return self.text
+    def evaluate_handle(self, js, sel): return None
+class Page:
+    def __init__(self): self.goto_calls = []
+    def query_selector(self, sel): return None
+    def query_selector_all(self, sel):
+        if "dialog" in sel or "alert" in sel: return []
+        if "assistant" in sel: return [Node("m9", "")]
+        if "user" in sel: return [1, 2]
+        return []
+    def eval_on_selector_all(self, s, j): return ["m9"]
+    def evaluate(self, js): return "https://chatgpt.com/c/xyz"
+    def goto(self, url, **k): self.goto_calls.append(url)
+
+bound = Page()
+status, _ = module.wait_for_turn_response(bound, max_wait=1, base_user=1,
+                                          base_assistant=0, base_ids=set(),
+                                          conv_url="https://chatgpt.com/c/xyz")
+print(len(bound.goto_calls))
+print(status)
+unbound = Page()
+module.wait_for_turn_response(unbound, max_wait=1, base_user=1, base_assistant=0,
+                              base_ids=set(), conv_url=None)
+print(len(unbound.goto_calls))
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    // engine progress lines are indented; the assertions print at column 0
+    const emitted = result.stdout.split("\n").filter((l) => /^\S/.test(l.trimEnd()) && l.trim());
+    expect(emitted).toEqual([
+      "3",         // reloads are capped at STALL_MAX_RELOADS
+      "timeout",   // an unrecovered stall still fails closed, never a partial save
+      "0",         // without a bound conversation there is nothing safe to reload
+    ]);
+    // recovery reloads the bound conversation; it never resends (that burns a message)
+    expect(result.stdout).toContain("결속 대화 재로드 3/3");
+  });
+
+  test("reads the live SPA location instead of the cached page.url", () => {
+    const script = `
+import importlib.util
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.time.sleep = lambda _: None
+
+class Page:
+    url = "https://chatgpt.com/"   # stale Playwright cache after pushState
+    def evaluate(self, js): return "https://chatgpt.com/c/abc12345-def6"
+class Fresh:
+    def evaluate(self, js): return "https://chatgpt.com/"
+
+print(module.current_url(Page()))
+print(module.capture_conv_url(Page(), timeout_secs=1))
+print(module.capture_conv_url(Fresh(), timeout_secs=1) is None)
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual([
+      "https://chatgpt.com/c/abc12345-def6",
+      "https://chatgpt.com/c/abc12345-def6",
+      "True",
+    ]);
+    // the stale cache must not survive as executable code (prose may still cite it)
+    const codeUses = read(engine)
+      .split("\n")
+      .filter((line) => /(?:^|[\s(=,])page\.url\b/.test(line))
+      .filter((line) => !/^\s*#/.test(line) && !line.includes("`page.url`"));
+    expect(codeUses).toEqual([]);
   });
 
   test("detects a quota block from dialog surfaces without scanning answer prose", () => {

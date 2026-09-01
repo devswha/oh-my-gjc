@@ -146,6 +146,10 @@ LOGIN_WALL_SELECTORS = [
 ]
 
 MAX_WAIT_SECS = int(os.environ.get("INSANE_REVIEW_MAX_WAIT", "1200"))  # 기본 20분(--max-wait/env로 변경)
+# 클라이언트 스트림 유실 복구: assistant 턴이 빈 채 스트리밍 표시도 없이 멈추면 서버엔
+# 답이 이미 있고 재로드하면 즉시 보인다(2026-09-01 실측 재현). 재전송이 아니라 재로드다.
+STALL_RELOAD_SECS = int(os.environ.get("INSANE_REVIEW_STALL_RELOAD", "45"))
+STALL_MAX_RELOADS = 3
 MIN_WAIT_SECS = 20
 STABLE_CHECK_SECS = 8
 STATUS_INTERVAL = 15
@@ -1080,6 +1084,30 @@ def count_msgs_strict(page, selectors) -> int:
             return 0  # 전 셀렉터 조회 성공 + 전부 0 — 실제로 없음
         time.sleep(0.3)
     raise RuntimeError(f"기준 메시지 수 조회 실패({selectors}): {str(last_exc)[:60]} → 전송 중단(fail-closed)")
+
+
+def current_url(page) -> str:
+    """페이지의 '실제' 현재 URL.
+
+    Playwright `page.url`은 로컬 캐시라 SPA pushState를 CDP 왕복 없이 반영하지
+    않는다(폴링해도 스테일). location.href 평가만이 신뢰할 수 있다."""
+    try:
+        return page.evaluate("() => location.href") or ""
+    except Exception:
+        return ""
+
+
+def capture_conv_url(page, timeout_secs: int = 40) -> str | None:
+    """전송 후 SPA가 발급하는 대화 URL(/c/<id>)을 포착. 실패 시 None.
+
+    이 URL이 있어야 스트림이 끊겨도 같은 대화를 재로드해 답을 회수할 수 있다."""
+    deadline = time.monotonic() + timeout_secs
+    while time.monotonic() < deadline:
+        url = current_url(page)
+        if re.search(r"/c/[0-9a-f-]{8,}", url):
+            return url
+        time.sleep(1)
+    return None
 
 
 def msg_id_set(page) -> set:
@@ -2068,7 +2096,7 @@ def click_answer_now(page) -> bool:
 
 def wait_for_turn_response(page, force_after=None, max_wait=None,
                            base_user: int = 0, base_assistant: int = 0,
-                           base_ids: set | None = None,
+                           base_ids: set | None = None, conv_url: str | None = None,
                            stream: bool = False) -> tuple[str, str]:
     """새 user 턴(전송 전 기준개수 대비 증가) 기준 응답 회수.
     base_user/base_assistant: 전송 직전의 메시지 수 — 이전 응답을 성공으로 오인하지 않도록 결속.
@@ -2096,6 +2124,8 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
     print(f"    응답 대기 중... (최대 {mw}s"
           + (f", {force_after}s 후 '지금 답변 받기' 재시도" if force_after else "") + ")")
     stable_since = None
+    stall_since = None
+    reloads = 0
     last_text = ""
     while time.monotonic() - start < mw:
         elapsed = int(time.monotonic() - start)
@@ -2132,6 +2162,7 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
                 elif not live.startswith(streamed):
                     streamed = live
             stable_since = None
+            stall_since = None
             time.sleep(2)
             continue
 
@@ -2150,9 +2181,29 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
             if blocked:
                 print(f"    ⛔ 사용량 한도 차단 감지 → 대기 중단: {blocked[:80]}")
                 return ("quota", "")
+            # 스트림 유실 복구: 빈 턴 + 스트리밍 표시 없음이 지속되면 서버엔 답이
+            # 이미 있고 재로드하면 보인다. 재전송이 아니므로 메시지를 더 쓰지 않는다.
+            if not cur.strip():
+                stall_since = stall_since or time.monotonic()
+                if (conv_url and time.monotonic() - stall_since >= STALL_RELOAD_SECS
+                        and reloads < STALL_MAX_RELOADS):
+                    reloads += 1
+                    print(f"    🔄 {elapsed}s — 응답 렌더 스톨 → 결속 대화 재로드 "
+                          f"{reloads}/{STALL_MAX_RELOADS}")
+                    try:
+                        page.goto(conv_url, wait_until="domcontentloaded", timeout=30000)
+                    except Exception:
+                        pass
+                    stall_since = None
+                    stable_since = None
+                    time.sleep(3)
+                    continue
+            else:
+                stall_since = None
             stable_since = None
             time.sleep(2)
             continue
+        stall_since = None
         if normalize(cur) != normalize(last_text):
             last_text = cur
             stable_since = time.monotonic()
@@ -2255,7 +2306,7 @@ def project_home_ok(page, url: str) -> bool:
     try:
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
         time.sleep(2)
-        return "/g/g-p-" in page.url and find_input(page) is not None
+        return "/g/g-p-" in current_url(page) and find_input(page) is not None
     except Exception:
         return False
 
@@ -2293,7 +2344,8 @@ def find_project_url(page, name: str) -> str | None:
                 except Exception:
                     pass
                 time.sleep(1.2)
-                return page.url if "/g/g-p-" in page.url else None
+                url = current_url(page)
+                return url if "/g/g-p-" in url else None
             # 가상화/접힘 대비: 스크롤 컨테이너를 끝까지 내려 더 로드한 뒤 재시도
             page.evaluate("""() => { for (const el of document.querySelectorAll('nav *, aside *')) {
                 if (el.scrollHeight > el.clientHeight + 20) el.scrollTop = el.scrollHeight; } }""")
@@ -2325,7 +2377,8 @@ def create_project(page, name: str) -> str | None:
             name_input.press("Enter")  # 텍스트 매칭 실패 시 언어무관 폴백
         page.wait_for_url("**/g/g-p-**", wait_until="commit", timeout=15000)
         time.sleep(2)
-        return page.url if "/g/g-p-" in page.url else None
+        url = current_url(page)
+        return url if "/g/g-p-" in url else None
     except Exception:
         try:
             page.keyboard.press("Escape")  # 모달 닫고 폴백
@@ -2635,10 +2688,18 @@ def main():
                         if not composer_has_prompt(page, send_prompt):
                             raise RuntimeError("프롬프트가 입력창에 온전히 안 들어감 → 중단(첨부만/잘린 전송 방지, fail-closed)")
                     click_send(page)
+                    # 전송 직후 대화 URL을 결속한다 — 스트림이 끊겨도 이 URL로
+                    # 재로드해 같은 대화에서 답을 회수할 수 있다(재전송 아님).
+                    conv_url = capture_conv_url(page)
+                    if conv_url:
+                        print(f"  🔗 대화 결속: {conv_url}")
+                    else:
+                        print("  ⚠️  대화 URL 포착 실패 — 스톨 시 재로드 복구 불가")
                     status, text = wait_for_turn_response(page, force_after=args.force_answer_after,
                                                           max_wait=args.max_wait,
                                                           base_user=base_user, base_assistant=base_assistant,
-                                                          base_ids=base_ids, stream=args.stream)
+                                                          base_ids=base_ids, conv_url=conv_url,
+                                                          stream=args.stream)
                     if status == "not_sent":
                         print("  ⚠️  user 턴 미생성(전송 안 됨) → 재시도")
                         continue

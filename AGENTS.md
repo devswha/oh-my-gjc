@@ -144,6 +144,14 @@ Content is discovered by **convention directories** above; explicit paths in
   equality). Quota blocks are detected from `role=dialog`/`role=alert` surfaces only — never from
   answer prose — and exit immediately instead of burning the full wait. Copy/stop/user/assistant
   selectors are fallback lists, so one `data-testid` rename no longer kills the run.
+- **Bound conversation and stall recovery (sol-lane 0.6.0/0.6.5).** The send path captures the
+  SPA conversation URL (`/c/<id>`) and the wait loop reloads it when the assistant turn stays
+  empty with no streaming indicator for `INSANE_REVIEW_STALL_RELOAD` seconds (default 45, max 3
+  reloads). Reproduced live 2026-09-01: the client stream died while the answer existed
+  server-side, and without a bound URL the completed answer was unrecoverable. Recovery is a
+  reload, never a resend — a resend burns another Pro message and forks the chat. Live SPA
+  location is read via `location.href`; Playwright's cached `page.url` does not reflect
+  pushState and is no longer used anywhere in the engine.
 - **Sibling fork — `sol-lane` (`github.com/devswha/sol-lane`).** Both engines fork
   `fivetaku/insane-review` v0.5.3 (`2b3c926`, 2026-06-28) and have since diverged: the OMG copy
   carries the CDP-listener profile proof, `rejection_reason`, `write_response_artifact`, and the
