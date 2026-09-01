@@ -47,8 +47,23 @@ class CdpLease:
             os.fsync(fd)
             self.fd = fd
             return self
-        except Exception:
-            os.close(fd)
+        except BaseException:
+            # BaseException, not Exception: a KeyboardInterrupt between os.open and
+            # `self.fd = fd` would otherwise leak the descriptor AND the lock we may
+            # already hold — and since __enter__ raised, __exit__ never runs to
+            # release it. The next run would then block on a lease nobody owns.
+            try:
+                if os.name != "nt":
+                    import fcntl
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+                else:
+                    import msvcrt
+                    os.lseek(fd, 0, os.SEEK_SET)
+                    msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass  # lock was never acquired; closing the fd is enough
+            finally:
+                os.close(fd)
             raise
 
     def release(self) -> None:
