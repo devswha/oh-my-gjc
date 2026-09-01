@@ -1110,6 +1110,29 @@ def capture_conv_url(page, timeout_secs: int = 40) -> str | None:
     return None
 
 
+# 대화 URL은 두 형태다: 일반 채팅 https://chatgpt.com/c/<id>,
+# 프로젝트 안이면 https://chatgpt.com/g/g-p-<...>/c/<id>.
+CONV_URL_RE = re.compile(r"https://chatgpt\.com(?:/g/[A-Za-z0-9._-]+)?/c/[0-9a-f-]{8,}")
+
+
+def resolve_followup_target(value: str) -> str:
+    """후속 질문 대상 대화 URL을 확정한다.
+
+    값은 대화 URL 자체이거나, 이전 실행이 남긴 response_*.md 경로다. 파일이면
+    헤더의 '- 대화: <url>' 줄에서 읽는다. 확정 못 하면 중단한다 — 엉뚱한 대화에
+    질문을 흘리는 것이 조용히 틀린 답을 받는 경로이기 때문이다."""
+    value = value.strip()
+    if CONV_URL_RE.fullmatch(value):
+        return value
+    candidate = Path(value)
+    if not candidate.is_file():
+        sys.exit(f"❌ --followup 값이 대화 URL도, 존재하는 응답 파일도 아님: {value}")
+    match = CONV_URL_RE.search(candidate.read_text(encoding="utf-8", errors="replace"))
+    if not match:
+        sys.exit(f"❌ 응답 파일에 대화 URL이 없음(구버전 산출물일 수 있음): {value}")
+    return match.group(0)
+
+
 def msg_id_set(page) -> set:
     """현재 DOM의 data-message-id 집합(역할 무관). 실패 시 빈 집합.
 
@@ -2431,6 +2454,9 @@ def main():
     ap.add_argument("--token-budget", type=int, default=None)
     ap.add_argument("--attach", action="store_true",
                     help="첨부 강제 — 첨부 실패 시 붙여넣기 폴백 없이 중단(기본은 작은 pack에 한해 인라인 폴백)")
+    ap.add_argument("--followup", default=None, metavar="CHAT_URL|RESPONSE_MD",
+                    help="기존 대화에 재패킹 없이 후속 질문(코드 재전송·모델 재선택 없음). "
+                         "값은 대화 URL 또는 이전 response_*.md 경로")
     ap.add_argument("--prompt", default=None)
     ap.add_argument("--prompt-file", default=None)
     ap.add_argument("--model", default=None, help='추론단계 선택(예: "pro")')
@@ -2540,6 +2566,18 @@ def main():
     label = "prompt"
     verified_model_name = None
 
+    # 후속 질문: 기존 대화로 돌아가 프롬프트만 보낸다. 코드는 이미 그 대화에
+    # 첨부돼 있으므로 재패킹하지 않고, 모델도 그 대화에 고정돼 있으므로 다시
+    # 고르지 않는다 — 재선택은 조작 실패로 멀쩡한 대화를 깨뜨릴 뿐이다.
+    followup_url = None
+    if args.followup:
+        if args.target:
+            sys.exit("❌ --followup은 --target과 함께 쓸 수 없습니다(재패킹 없이 이어서 묻는 모드).")
+        if args.pack_only:
+            sys.exit("❌ --followup은 --pack-only와 함께 쓸 수 없습니다.")
+        followup_url = resolve_followup_target(args.followup)
+        label = "followup"
+
     if args.target:
         target = Path(args.target).resolve()
         if not target.exists():
@@ -2569,7 +2607,10 @@ def main():
     else:
         if args.pack_only:
             sys.exit("❌ --pack-only는 --target이 필요합니다.")
-        print("\n[프롬프트-only] 레포 없이 질문만 전송")
+        if followup_url:
+            print(f"\n[후속] 기존 대화에 이어서 질문 — {followup_url}")
+        else:
+            print("\n[프롬프트-only] 레포 없이 질문만 전송")
 
     if sync_playwright is None:
         sys.exit("❌ playwright 미설치. pip install playwright")
@@ -2597,6 +2638,7 @@ def main():
 
     print("\n[3/3] ChatGPT 투입 & 응답 회수")
     response = ""
+    conv_url = None
     attempts = max(1, args.retries + 1)
     for attempt in range(1, attempts + 1):
         if attempt > 1:
@@ -2611,7 +2653,8 @@ def main():
                 page = ctx.new_page()
                 _guard_dialogs(ctx, page)
                 try:
-                    page.goto(CHATGPT_URL, wait_until="load", timeout=60000)
+                    entry_url = followup_url or CHATGPT_URL
+                    page.goto(entry_url, wait_until="load", timeout=60000)
                     time.sleep(3)
                     for _ in range(10):
                         if find_input(page):
@@ -2620,9 +2663,18 @@ def main():
                     if not looks_logged_in(page):
                         raise RuntimeError("ChatGPT 로그인 안 됨/입력창 없음 — 해당 브라우저에서 chatgpt.com 로그인 확인")
 
+                    if followup_url:
+                        # 목표 대화에 실제로 들어왔는지 확인한다. SPA가 조용히
+                        # 리디렉트했는데 계속 진행하면 엉뚱한 대화에 질문이 흘러간다.
+                        landed = current_url(page)
+                        if not CONV_URL_RE.fullmatch(landed.split("?")[0].rstrip("/")):
+                            raise RuntimeError(f"후속 대상 대화에 진입 실패(현재: {landed[:80]}) → 중단(fail-closed)")
+                        conv_url = landed
+                        print(f"  🔗 대화 재진입: {conv_url}")
+
                     # 프로젝트 그룹핑(기본 on): 현재 폴더명 프로젝트로 채팅을 정리(일반 채팅목록 오염 방지).
                     # 어떤 실패(예외 포함)에도 하드중단 X — 컴포저가 확인되는 일반 채팅으로 폴백(#3).
-                    if not args.no_project:
+                    if not args.no_project and not followup_url:
                         proj_url = ensure_project(page, project_name, project_cache_key, project_cache_path)
                         entered = False
                         if proj_url:
@@ -2653,7 +2705,11 @@ def main():
                                 pass
 
                     print(f"  현재 pill: {read_model_pills(page)}")
-                    if args.model:
+                    if args.model and followup_url:
+                        # 그 대화는 이미 검증된 모델로 시작됐다. 재선택은 이득 없이
+                        # 조작 실패로 멀쩡한 대화를 깨뜨릴 위험만 있다.
+                        print("  ↩︎  후속 질문 — 모델/추론단계는 기존 대화 설정을 그대로 사용(재선택 생략)")
+                    elif args.model:
                         print(f"  모델/추론단계 선택: '{args.model}'"
                                + (f" (모델명 검증='{args.require_model}')" if args.require_model else ""))
                         verified, v_name = select_model(page, args.model, require_model=args.require_model)
@@ -2697,11 +2753,12 @@ def main():
                     click_send(page)
                     # 전송 직후 대화 URL을 결속한다 — 스트림이 끊겨도 이 URL로
                     # 재로드해 같은 대화에서 답을 회수할 수 있다(재전송 아님).
-                    conv_url = capture_conv_url(page)
-                    if conv_url:
-                        print(f"  🔗 대화 결속: {conv_url}")
-                    else:
-                        print("  ⚠️  대화 URL 포착 실패 — 스톨 시 재로드 복구 불가")
+                    if not followup_url:
+                        conv_url = capture_conv_url(page)
+                        if conv_url:
+                            print(f"  🔗 대화 결속: {conv_url}")
+                        else:
+                            print("  ⚠️  대화 URL 포착 실패 — 스톨 시 재로드 복구 불가")
                     status, text = wait_for_turn_response(page, force_after=args.force_answer_after,
                                                           max_wait=args.max_wait,
                                                           base_user=base_user, base_assistant=base_assistant,
@@ -2750,7 +2807,9 @@ def main():
     pack_line = (f"- 패킹: `{pack_path.name}`" + (f" (~{tokens:,} tokens)\n" if tokens else "\n")
                  if pack_path is not None else "- 패킹: (없음 / 프롬프트-only)\n")
     model_line = f"- 모델: `{verified_model_name}`\n" if verified_model_name else ""
-    body = (f"# {label} — GPT 응답 (구독 ChatGPT)\n\n" + pack_line + model_line
+    # 대화 URL을 남긴다 — 이걸로 재패킹 없이 후속 질문(--followup)을 던질 수 있다.
+    conv_line = f"- 대화: {conv_url}\n" if conv_url else ""
+    body = (f"# {label} — GPT 응답 (구독 ChatGPT)\n\n" + pack_line + model_line + conv_line
             + f"- 프롬프트: {prompt[:80]}...\n\n---\n\n{response}\n")
     try:
         write_response_artifact(resp_path, body)

@@ -152,6 +152,13 @@ Content is discovered by **convention directories** above; explicit paths in
   reload, never a resend — a resend burns another Pro message and forks the chat. Live SPA
   location is read via `location.href`; Playwright's cached `page.url` does not reflect
   pushState and is no longer used anywhere in the engine.
+- **Followup on a bound conversation (`--followup`).** A response artifact records its
+  conversation URL, and passing that artifact (or the URL) back re-enters the same chat to ask
+  again without re-packing, without project grouping, and without re-driving the model menu —
+  the conversation already holds the attachment and the verified model, so re-selection can only
+  break it. Landing anywhere other than a `/c/<id>` conversation aborts rather than leaking the
+  question into the wrong chat. Changed code is a new run, never a followup: that conversation's
+  attachment is the old code.
 - **Sibling fork — `sol-lane` (`github.com/devswha/sol-lane`).** Both engines fork
   `fivetaku/insane-review` v0.5.3 (`2b3c926`, 2026-06-28) and have since diverged: the OMG copy
   carries the CDP-listener profile proof, `rejection_reason`, `write_response_artifact`, and the

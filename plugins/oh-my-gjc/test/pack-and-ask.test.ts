@@ -421,6 +421,62 @@ print(module.missing_explicit_include_paths("package.json,package-lock.json,src/
     );
   });
 
+  test("resolves a followup anchor from a URL or a prior response artifact", () => {
+    const script = `
+import importlib.util, tempfile, pathlib
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+plain = "https://chatgpt.com/c/6a96c4f0-38a0-83e8-8b19-64a1192f24e8"
+project = "https://chatgpt.com/g/g-p-abc123-proj/c/6a96c4f0-38a0-83e8-8b19-64a1192f24e8"
+print(module.resolve_followup_target(plain) == plain)
+print(module.resolve_followup_target(project) == project)
+
+# an artifact carries the conversation in its header, so answers chain
+tmp = pathlib.Path(tempfile.mkdtemp()) / "response_x.md"
+tmp.write_text(chr(10).join(["# x", "- 대화: " + project, "", "---", "", "body"]), encoding="utf-8")
+print(module.resolve_followup_target(str(tmp)) == project)
+
+# a look-alike host must never be accepted as a chatgpt conversation
+print(module.CONV_URL_RE.fullmatch("https://evil.com/c/6a96c4f0-38a0") is None)
+print(module.CONV_URL_RE.fullmatch("https://chatgpt.com/") is None)
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual(["True", "True", "True", "True", "True"]);
+  });
+
+  test("refuses a followup that cannot name one existing conversation", () => {
+    const cases: [string[], string][] = [
+      [["--followup", "https://chatgpt.com/c/6a96c4f0-38a0-83e8-8b19-64a1192f24e8",
+        "--target", ".", "--prompt", "x"], "--target"],
+      [["--followup", "/nonexistent/none.md", "--prompt", "x"], "존재하는 응답 파일도 아님"],
+    ];
+    for (const [args, expected] of cases) {
+      const result = spawnSync("python3", [engine, ...args], {
+        cwd: pluginRoot,
+        encoding: "utf8",
+      });
+      expect(result.status).not.toBe(0);
+      expect(result.stdout + result.stderr).toContain(expected);
+    }
+  });
+
+  test("skips packing, project grouping, and model reselection on a followup", () => {
+    // The point of a followup is that the code is already attached to that
+    // conversation: re-packing wastes tokens and re-driving the model menu can
+    // only break a conversation that is already on the verified model.
+    const source = read(engine);
+    expect(source).toContain("if not args.no_project and not followup_url:");
+    expect(source).toContain("if args.model and followup_url:");
+    expect(source).toContain("entry_url = followup_url or CHATGPT_URL");
+    // landing on the wrong conversation must abort, not leak the question there
+    expect(source).toContain("후속 대상 대화에 진입 실패");
+    // and the artifact records the conversation so answers can be chained
+    expect(source).toContain('conv_line = f"- 대화: {conv_url}');
+  });
+
   test("identifies the answered turn by message-id, not a global copy-button delta", () => {
     // Regression: a user turn also carries a copy button, so a global count delta
     // reported "complete" while the fresh assistant node was still empty — the run
