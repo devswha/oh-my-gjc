@@ -114,10 +114,30 @@ def _guard_dialogs(ctx, page=None):
 
 INPUT_SELECTORS = ["#prompt-textarea", 'div[contenteditable="true"]']
 FILE_INPUT_SELECTOR = 'input[type="file"]'
-COPY_BTN = 'button[data-testid="copy-turn-action-button"]'
-STREAMING_BTN = 'button[data-testid="stop-button"]'
-USER_MSG_SELECTOR = '[data-message-author-role="user"]'
-ASSISTANT_MSG_SELECTOR = '[data-message-author-role="assistant"]'
+# 폴백 리스트(첫 항목=현행 실측 셀렉터, 이후=구조적 폴백) — INPUT_SELECTORS와 같은 컨벤션.
+# 단일점 셀렉터는 ChatGPT가 data-testid를 한 번 바꾸면 그대로 즉사한다(2026-08-27 실측).
+COPY_BTN_SELECTORS = [
+    'button[data-testid="copy-turn-action-button"]',
+    'button[aria-label="Copy"]',
+    'button[data-testid*="copy"]',
+]
+STREAMING_BTN_SELECTORS = [
+    'button[data-testid="stop-button"]',
+    'button[aria-label="Stop streaming"]',
+    'button[data-testid*="stop"]',
+]
+USER_MSG_SELECTORS = ['[data-message-author-role="user"]', 'article[data-turn="user"]',
+                      'section[data-turn="user"]']
+ASSISTANT_MSG_SELECTORS = ['[data-message-author-role="assistant"]',
+                           'article[data-turn="assistant"]', 'section[data-turn="assistant"]']
+
+# 사용량 한도(쿼터) 차단 배너 감지 문구 — dialog/alert 표면에서만 대조(오탐 방지).
+# 본문 응답 텍스트는 절대 스캔하지 않는다: 리뷰 답변이 "usage limit"을 논하면 오탐이 된다.
+QUOTA_HINTS = [
+    "usage limit", "reached your limit", "limit reached", "you've hit",
+    "reached the current usage cap", "try again later", "upgrade to",
+    "사용량 한도", "한도에 도달", "사용 한도", "요금제를 업그레이드",
+]
 LOGIN_WALL_SELECTORS = [
     'button[data-testid="login-button"]',
     'a[href*="auth/login"]',
@@ -998,31 +1018,122 @@ def find_input(page):
     return None
 
 
-def count_msgs(page, selector: str) -> int:
-    try:
-        return len(page.query_selector_all(selector))
-    except Exception:
-        return 0
+def _q(page, selectors):
+    """폴백 리스트에서 첫 매치 노드(없으면 None)."""
+    if isinstance(selectors, str):
+        selectors = [selectors]
+    for sel in selectors:
+        try:
+            node = page.query_selector(sel)
+        except Exception:
+            continue
+        if node is not None:
+            return node
+    return None
 
 
-def count_msgs_strict(page, selector: str) -> int:
+def _qa(page, selectors):
+    """폴백 리스트에서 첫 비어있지 않은 query_selector_all 결과(없으면 [])."""
+    if isinstance(selectors, str):
+        selectors = [selectors]
+    for sel in selectors:
+        try:
+            nodes = page.query_selector_all(sel)
+        except Exception:
+            continue
+        if nodes:
+            return nodes
+    return []
+
+
+def count_msgs(page, selectors) -> int:
+    if isinstance(selectors, str):
+        selectors = [selectors]
+    for sel in selectors:
+        try:
+            n = len(page.query_selector_all(sel))
+        except Exception:
+            continue
+        if n:
+            return n
+    return 0
+
+
+def count_msgs_strict(page, selectors) -> int:
     """기준개수 포착 전용 — 조회 실패를 0으로 숨기지 않는다. 재시도 후에도 실패하면 예외(fail-closed).
     base_* 가 조회실패로 0이 되면 기존 DOM이 '새 턴'으로 오인돼 이전 답변을 저장할 수 있으므로 이를 차단한다."""
+    if isinstance(selectors, str):
+        selectors = [selectors]
     last_exc = None
     for _ in range(3):
+        clean_zero = True
+        for sel in selectors:
+            try:
+                n = len(page.query_selector_all(sel))
+            except Exception as exc:
+                last_exc = exc
+                clean_zero = False
+                continue
+            if n:
+                return n
+        if clean_zero:
+            return 0  # 전 셀렉터 조회 성공 + 전부 0 — 실제로 없음
+        time.sleep(0.3)
+    raise RuntimeError(f"기준 메시지 수 조회 실패({selectors}): {str(last_exc)[:60]} → 전송 중단(fail-closed)")
+
+
+def msg_id_set(page) -> set:
+    """현재 DOM의 data-message-id 집합(역할 무관). 실패 시 빈 집합.
+
+    빈 집합이 base로 쓰이면 '아무것도 제외하지 않음'이므로 신규 판정이 느슨해질 수
+    있다 — 호출자는 count 기준선과 AND로 묶어서 쓴다(단독 fail-open 금지)."""
+    try:
+        return set(page.eval_on_selector_all(
+            "[data-message-id]", 'els => els.map(e => e.getAttribute("data-message-id"))'))
+    except Exception:
+        return set()
+
+
+def new_assistant_nodes(page, base_ids: set):
+    """base_ids에 없는 '신규' assistant 턴 노드들(순서 유지)."""
+    fresh = []
+    for node in _qa(page, ASSISTANT_MSG_SELECTORS):
         try:
-            return len(page.query_selector_all(selector))
-        except Exception as exc:
-            last_exc = exc
-            time.sleep(0.3)
-    raise RuntimeError(f"기준 메시지 수 조회 실패({selector}): {str(last_exc)[:60]} → 전송 중단(fail-closed)")
+            if (node.get_attribute("data-message-id") or "") not in base_ids:
+                fresh.append(node)
+        except Exception:
+            continue
+    return fresh
 
 
 def is_streaming(page) -> bool:
     try:
-        return page.query_selector(STREAMING_BTN) is not None
+        return _q(page, STREAMING_BTN_SELECTORS) is not None
     except Exception:
         return False
+
+
+def detect_quota_block(page) -> str | None:
+    """쿼터/한도 차단 감지 — role=dialog/alert 표면만 스캔한다.
+
+    응답 본문은 절대 보지 않는다(리뷰 답변이 한도를 논하면 오탐). 매칭 문구를
+    반환하고, 실패는 조용히 None(대기 루프를 깨지 않는다)."""
+    try:
+        for sel in ('[role="dialog"]', '[role="alert"]'):
+            for node in page.query_selector_all(sel):
+                try:
+                    txt = (node.inner_text() or "").strip()
+                except Exception:
+                    continue
+                if not txt:
+                    continue
+                low = txt.lower()
+                for hint in QUOTA_HINTS:
+                    if hint.lower() in low:
+                        return txt[:200]
+    except Exception:
+        return None
+    return None
 
 
 def normalize(text: str | None) -> str:
@@ -1048,7 +1159,7 @@ def rejection_reason(response: str, prompt: str) -> str | None:
 
 
 def last_assistant_node(page):
-    nodes = page.query_selector_all(ASSISTANT_MSG_SELECTOR)
+    nodes = _qa(page, ASSISTANT_MSG_SELECTORS)
     return nodes[-1] if nodes else None
 
 
@@ -1062,42 +1173,120 @@ def last_assistant_text(page) -> str:
     return ""
 
 
-def last_turn_complete(page, base_assistant: int = 0, base_copy: int = 0) -> bool:
-    """마지막 assistant 턴이 '완료'됐다는 강한 신호: stop-button 사라짐 + 새 copy 버튼 등장.
-    base_assistant/base_copy: 전송 전 개수 — assistant 노드와 copy 버튼이 모두 늘었을 때만 새 턴 완료로 인정."""
+def node_copy_button(node):
+    """그 턴 '자신의' copy 버튼. 전역 마지막 버튼을 집지 않는다.
+
+    실측(sol-lane 0.6.5): copy 버튼은 메시지 div 바깥의 턴 컨테이너 툴바에 있어
+    closest('[data-turn]')에서 찾아야 하고, user 턴에도 copy 버튼이 있어 전역
+    개수로는 assistant 턴을 구분할 수 없다."""
+    for sel in COPY_BTN_SELECTORS:
+        try:
+            btn = node.evaluate_handle(
+                """(el, sel) => {
+                    const turn = el.closest('[data-turn]') || el.parentElement;
+                    return turn ? turn.querySelector(sel) : null;
+                }""", sel)
+        except Exception:
+            continue
+        try:
+            element = btn.as_element() if btn else None
+        except Exception:
+            element = None
+        if element is not None:
+            return element
+    return None
+
+
+def turn_terminal(page, node) -> bool:
+    """대상 턴이 끝났는가: 스트리밍 아님 + (그 턴의 copy 버튼 또는 전송 버튼 복귀).
+
+    전역 copy 버튼 '개수 증가'를 필수 조건으로 삼던 옛 설계를 대체한다 — 그 방식은
+    user 턴의 copy 버튼과 셀렉터 불일치 때문에 델타가 깨졌다(sol-lane 0.6.5 P0)."""
+    if is_streaming(page):
+        return False
+    if node_copy_button(node) is not None:
+        return True
+    # copy 버튼이 늦게 붙는 UI: 전송 버튼이 되살아났으면 턴은 끝난 것이다.
+    try:
+        send = _q(page, ['button[data-testid="send-button"]', 'button[aria-label*="Send" i]'])
+        if send is not None and send.is_enabled():
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def last_turn_complete(page, base_assistant: int = 0, base_ids: set | None = None) -> bool:
+    """신규 assistant 턴이 완료됐는지. 대상 턴 = message-id 차집합의 신규 노드.
+
+    base_assistant(개수 기준선)와 AND로 묶는다 — id 조회가 실패해 빈 집합이
+    돌아와도 개수 기준선이 이전 응답을 새 턴으로 오인하는 것을 막는다."""
     if is_streaming(page):
         return False
     try:
-        # 전송 전보다 assistant 노드·copy 버튼이 늘지 않았으면 '이전 응답'이므로 완료로 보지 않음(fail-closed)
-        if count_msgs(page, ASSISTANT_MSG_SELECTOR) <= base_assistant:
+        if count_msgs(page, ASSISTANT_MSG_SELECTORS) <= base_assistant:
             return False
-        return len(page.query_selector_all(COPY_BTN)) > base_copy
+        node = new_assistant_target(page, base_ids)
+        return node is not None and turn_terminal(page, node)
     except Exception:
         return False
 
 
-def copy_last_turn(page, base_copy: int = 0) -> str | None:
-    """새 턴의 copy 버튼을 눌러 클립보드로 회수(파이프 안전 검증 포함).
-    base_copy: 전송 전 copy 버튼 수 — 그보다 늘었을 때만(=새 응답 버튼) 회수해 이전 응답 오인을 막는다."""
+def new_assistant_target(page, base_ids: set | None):
+    """회수 대상 assistant 노드 — 신규 id가 있으면 그것, 없으면 마지막 노드."""
+    if base_ids is not None:
+        fresh = new_assistant_nodes(page, base_ids)
+        if fresh:
+            return fresh[-1]
+        if base_ids:
+            # 기준 id가 있었는데 신규가 없다 → 아직 우리 턴이 아니다(fail-closed)
+            return None
+    return last_assistant_node(page)
+
+
+def copy_turn(page, node, expected: str = "") -> str | None:
+    """대상 턴의 copy 버튼으로 회수 + 클립보드 오염 대조.
+
+    대기 중 사용자가 다른 것을 복사했을 수 있으므로 그 턴의 DOM 텍스트와
+    대조해 통과할 때만 클립보드 값을 인정한다(불일치 시 None → DOM 폴백)."""
     if pyperclip is None:
         return None
-    try:
-        btns = page.query_selector_all(COPY_BTN)
-        if len(btns) <= base_copy:   # 새 copy 버튼이 아직 없음 → 이전 응답 회수 방지(fail-closed)
-            return None
-        btn = btns[-1]  # 증가가 확인됐으므로 마지막이 새 응답의 copy 버튼
-        for _ in range(3):
+    btn = node_copy_button(node)
+    if btn is None:
+        return None
+    for _ in range(3):
+        try:
             pyperclip.copy("__INSANE_REVIEW_SENTINEL__")
             btn.click(force=True)
             time.sleep(1)
             txt = pyperclip.paste()
-            # sentinel이 그대로면 복사 실패 → stale 반환 방지
-            if txt and txt != "__INSANE_REVIEW_SENTINEL__" and txt.strip():
+        except Exception:
+            return None
+        if txt and txt != "__INSANE_REVIEW_SENTINEL__" and txt.strip():
+            if clipboard_matches(txt, expected):
                 return txt
-            time.sleep(0.5)
-        return None
-    except Exception:
-        return None
+            return None
+        time.sleep(0.5)
+    return None
+
+
+def clipboard_matches(clip: str, expected: str) -> bool:
+    """클립보드가 그 턴의 DOM 텍스트와 같은 답인지(경합 오염 차단).
+
+    80자 미만은 정규화 전체 일치를 요구한다 — 짧은 답에서 앞/뒤 조각만 보면
+    사실상 무조건 통과였다. 그 이상은 시작·중간·끝 3조각을 대조한다."""
+    want = normalize(expected)
+    got = normalize(clip)
+    if not want:
+        return True
+    if not got:
+        return False
+    if len(want) < 80:
+        return got == want
+    for piece in (want[:40], want[len(want) // 2:len(want) // 2 + 40], want[-40:]):
+        if piece and piece not in got:
+            return False
+    return True
 
 
 # ---- 모델 스위처 ----
@@ -1878,12 +2067,14 @@ def click_answer_now(page) -> bool:
 
 
 def wait_for_turn_response(page, force_after=None, max_wait=None,
-                           base_user: int = 0, base_assistant: int = 0, base_copy: int = 0,
+                           base_user: int = 0, base_assistant: int = 0,
+                           base_ids: set | None = None,
                            stream: bool = False) -> tuple[str, str]:
     """새 user 턴(전송 전 기준개수 대비 증가) 기준 응답 회수.
     base_user/base_assistant: 전송 직전의 메시지 수 — 이전 응답을 성공으로 오인하지 않도록 결속.
+    base_ids: 전송 직전 data-message-id 집합 — 회수 대상을 그 차집합의 신규 턴으로 한정한다.
     stream=True면 생성 중인 assistant 텍스트를 stdout에 증분 출력(완료 판정에는 영향 없음).
-    반환: (status, text) — status ∈ {'ok','timeout','not_sent'}."""
+    반환: (status, text) — status ∈ {'ok','timeout','not_sent','quota'}."""
     mw = max_wait if max_wait else MAX_WAIT_SECS
     start = time.monotonic()
     last_status = 0
@@ -1894,7 +2085,7 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
     # 1) 우리 user 턴이 '새로' 떴는지 확인(전송 전 기준보다 증가). 안 떴으면 not_sent → 호출자가 재전송
     sent = False
     while time.monotonic() - start < 25:
-        if count_msgs(page, USER_MSG_SELECTOR) > base_user:
+        if count_msgs(page, USER_MSG_SELECTORS) > base_user:
             sent = True
             break
         time.sleep(1)
@@ -1945,8 +2136,20 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
             continue
 
         # 완료 신호 + 텍스트 안정성 (새 assistant 턴이 실제로 생겼을 때만 완료로 인정)
-        cur = last_assistant_text(page)
-        if not last_turn_complete(page, base_assistant=base_assistant, base_copy=base_copy) or not cur.strip():
+        target = new_assistant_target(page, base_ids)
+        cur = ""
+        if target is not None:
+            try:
+                cur = target.inner_text() or ""
+            except Exception:
+                cur = ""
+        if not last_turn_complete(page, base_assistant=base_assistant, base_ids=base_ids) or not cur.strip():
+            # 완료되지 않은 채 멈춰 있으면 쿼터 배너를 확인한다 — 한도 차단은
+            # 최대 대기(기본 20분)까지 침묵하던 경로였다.
+            blocked = detect_quota_block(page)
+            if blocked:
+                print(f"    ⛔ 사용량 한도 차단 감지 → 대기 중단: {blocked[:80]}")
+                return ("quota", "")
             stable_since = None
             time.sleep(2)
             continue
@@ -1956,8 +2159,8 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
             time.sleep(2)
             continue
         if stable_since and (time.monotonic() - stable_since) >= STABLE_CHECK_SECS:
-            # 회수: copy 우선, 실패 시 DOM
-            txt = copy_last_turn(page, base_copy=base_copy)
+            # 회수: 그 턴의 copy 버튼 우선(클립보드 오염 대조), 실패 시 DOM
+            txt = copy_turn(page, target, expected=cur)
             if txt and txt.strip():
                 print(f"    ✅ 응답 수신: {len(txt)}자 ({int(time.monotonic()-start)}s, copy)")
                 return ("ok", txt)
@@ -1966,7 +2169,13 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
                 return ("ok", cur)
         time.sleep(2)
 
-    fallback = last_assistant_text(page)
+    target = new_assistant_target(page, base_ids)
+    fallback = ""
+    if target is not None:
+        try:
+            fallback = target.inner_text() or ""
+        except Exception:
+            fallback = ""
     return ("timeout", fallback) if fallback else ("timeout", "")
 
 
@@ -2413,9 +2622,9 @@ def main():
 
                     # 전송 직전 기준개수 포착(턴-스코프 결속 — 이전 응답을 성공으로 오인 방지).
                     # 조회 실패를 0으로 숨기면 기존 DOM이 '새 턴'으로 오인되므로 fail-closed 카운터 사용.
-                    base_user = count_msgs_strict(page, USER_MSG_SELECTOR)
-                    base_assistant = count_msgs_strict(page, ASSISTANT_MSG_SELECTOR)
-                    base_copy = count_msgs_strict(page, COPY_BTN)
+                    base_user = count_msgs_strict(page, USER_MSG_SELECTORS)
+                    base_assistant = count_msgs_strict(page, ASSISTANT_MSG_SELECTORS)
+                    base_ids = msg_id_set(page)
 
                     put_text(page, send_prompt)
                     # 보낼 텍스트 '전체'가 입력창에 들어갔는지 검증 — 아니면 composer 비우고 1회 재입력, 그래도 불일치면 중단
@@ -2429,10 +2638,13 @@ def main():
                     status, text = wait_for_turn_response(page, force_after=args.force_answer_after,
                                                           max_wait=args.max_wait,
                                                           base_user=base_user, base_assistant=base_assistant,
-                                                          base_copy=base_copy, stream=args.stream)
+                                                          base_ids=base_ids, stream=args.stream)
                     if status == "not_sent":
                         print("  ⚠️  user 턴 미생성(전송 안 됨) → 재시도")
                         continue
+                    if status == "quota":
+                        # 한도 차단은 재시도해도 같은 벽이다 — 메시지만 더 태운다.
+                        sys.exit("❌ ChatGPT 사용량 한도에 막혔습니다. 한도가 풀린 뒤 다시 실행하세요.")
                     if status == "timeout":
                         print("  ⚠️  타임아웃 — 미완성 응답은 성공저장 안 함(fail-closed) → 재시도")
                         continue

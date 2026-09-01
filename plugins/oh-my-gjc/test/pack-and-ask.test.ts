@@ -89,7 +89,7 @@ describe("pack_and_ask security and advanced-menu contracts", () => {
     expect(source).toContain('ap.add_argument("--stream"');
     expect(source).toContain("reconfigure(line_buffering=True)");
     expect(source).toContain("── 실시간 응답(생성 중) ──");
-    expect(source).toContain("base_copy=base_copy, stream=args.stream");
+    expect(source).toContain("base_ids=base_ids, stream=args.stream");
     expect(source).toContain("not (stream and stream_header)");
     expect(skill).toContain("### 3.2) 장기 실행 중계");
     expect(skill).toContain("--stream");
@@ -419,6 +419,123 @@ print(module.missing_explicit_include_paths("package.json,package-lock.json,src/
     expect(read(join(pluginRoot, "bin/install-skill.sh"))).toContain(
       "skills/insane-review/references/upstream-LICENSE",
     );
+  });
+
+  test("identifies the answered turn by message-id, not a global copy-button delta", () => {
+    // Regression: a user turn also carries a copy button, so a global count delta
+    // reported "complete" while the fresh assistant node was still empty — the run
+    // then saved the PREVIOUS answer as this run's result (sol-lane 0.6.5 P0).
+    const script = `
+import importlib.util
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.time.sleep = lambda _: None
+
+class Node:
+    def __init__(self, mid, text, role="assistant"):
+        self.mid, self.text, self.role = mid, text, role
+    def get_attribute(self, n): return self.mid if n == "data-message-id" else None
+    def inner_text(self): return self.text
+    def evaluate_handle(self, js, sel): return Btn()
+class Btn:
+    def as_element(self): return self
+    def click(self, **k): pass
+    def is_enabled(self): return True
+class Page:
+    def __init__(self, nodes): self.nodes = nodes
+    def query_selector(self, sel): return None
+    def query_selector_all(self, sel):
+        if "dialog" in sel or "alert" in sel: return []
+        if "assistant" in sel: return [n for n in self.nodes if n.role == "assistant"]
+        if "user" in sel: return [n for n in self.nodes if n.role == "user"]
+        return []
+    def eval_on_selector_all(self, sel, js): return [n.mid for n in self.nodes]
+
+old = Node("m1", "previous answer")
+user = Node("m2", "question", role="user")
+base = {"m1", "m2"}
+stale = Page([old, user])
+print(module.last_turn_complete(stale, base_assistant=1, base_ids=base))
+print(module.new_assistant_target(stale, base) is None)
+fresh = Page([old, user, Node("m3", "this run's answer")])
+print(module.last_turn_complete(fresh, base_assistant=1, base_ids=base))
+print(module.new_assistant_target(fresh, base).inner_text())
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual([
+      "False",              // no fresh turn yet -> never "complete"
+      "True",               // and nothing is offered for harvest
+      "True",               // fresh turn present -> complete
+      "this run's answer",  // and it is the fresh one, not the previous answer
+    ]);
+  });
+
+  test("detects a quota block from dialog surfaces without scanning answer prose", () => {
+    const script = `
+import importlib.util
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+class Node:
+    def __init__(self, text): self.text = text
+    def inner_text(self): return self.text
+class Page:
+    def __init__(self, dialogs=(), body=""): self.dialogs, self.body = dialogs, body
+    def query_selector_all(self, sel):
+        if "dialog" in sel or "alert" in sel: return [Node(d) for d in self.dialogs]
+        return [Node(self.body)] if self.body else []
+
+print(bool(module.detect_quota_block(Page(dialogs=["You've reached your limit. Try again later."]))))
+print(module.detect_quota_block(Page(dialogs=["\u{C0AC}\u{C6A9}\u{B7C9} \u{D55C}\u{B3C4}\u{C5D0} \u{B3C4}\u{B2EC}"])) is not None)
+print(module.detect_quota_block(Page(body="the usage limit handling in this module")) is None)
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual(["True", "True", "True"]);
+  });
+
+  test("survives a removed primary selector via the fallback list", () => {
+    const script = `
+import importlib.util
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+class Page:
+    def query_selector_all(self, sel):
+        if sel == '[data-message-author-role="assistant"]':
+            raise RuntimeError("selector removed by a UI change")
+        if sel == 'article[data-turn="assistant"]':
+            return [object()]
+        return []
+
+print(module.count_msgs(Page(), module.ASSISTANT_MSG_SELECTORS))
+print(len(module.COPY_BTN_SELECTORS) > 1 and len(module.STREAMING_BTN_SELECTORS) > 1)
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual(["1", "True"]);
+  });
+
+  test("rejects a clipboard that raced against the harvested turn", () => {
+    const script = `
+import importlib.util
+spec = importlib.util.spec_from_file_location("pack_and_ask", ${JSON.stringify(engine)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+print(module.clipboard_matches("something the user copied", "the short answer"))
+print(module.clipboard_matches("the short answer", "the short answer"))
+long_answer = "finding " * 40
+print(module.clipboard_matches(long_answer, long_answer))
+print(module.clipboard_matches("", "the short answer"))
+`;
+    const result = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual(["False", "True", "True", "False"]);
   });
 
   test("resolves the optional sol-lane path without a personal checkout hardcode", () => {

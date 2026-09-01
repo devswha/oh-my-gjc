@@ -135,6 +135,15 @@ Content is discovered by **convention directories** above; explicit paths in
 ### `insane-review` (CLI pack pipeline verified; CDP path deferred)
 - Command `/omg:insane-review` + a native-installable skill (`skills/insane-review/SKILL.md`). Faithful port of `fivetaku/insane-review`. gjc scopes the complete relevant file set → repomix packs it (full code, line numbers, secretlint, packed-file audit) → drives the **logged-in ChatGPT web session over CDP** → selects+**verifies** GPT-5.6 Sol Pro (fail-closed) → harvests the review to the current project's `.insane-review/response_*.md`. Zero API cost (runs on the user's ChatGPT subscription). Also a web-only `agent-council` member via `--council` (see `references/council-setup.md`).
 - **Native install required — WHY (history + current):** on gjc 0.8.2 (`main` & `dev`, verified then) gjc surfaced NEITHER plugin skills NOR plugin commands as first-class: (1) the skill registry dropped non-native skills (`skills.ts`: `if (provider !== "native") return false`); (2) the marketplace slash-command provider (`discovery/claude-plugins.ts`) was never registered because `discovery/index.ts` omitted `import "./claude-plugins"`, so a plugin's `commands/*.md` were not advertised as `/<plugin>:<command>` in ANY session (proven via ACP `available_commands_update`: zero marketplace-plugin commands, only builtins + native `skill:*`). **Current state (gjc 0.9.x): plugin `commands/*.md` ARE auto-exposed — but under the wrong `<plugin>:<name>` namespace — while plugin skills still don't surface** (see the `oh-my-gjc` core section below); native install stays REQUIRED either way. `bin/install-skill.sh` copies SKILL.md into `~/.gjc/agent/skills/insane-review/` (user) or `<cwd>/.gjc/skills/` (project) and installs canonical commands from `templates/` as `~/.gjc/agent/commands/omg:<name>.md` (the filename IS the native command name; the 0.8.0-era deprecation tombstones were dropped in 0.8.1). Applies to every marketplace plugin, not just this one.
+- **Turn identification, quota, and selector resilience (backported from sol-lane 0.6.1/0.6.5).**
+  The answered turn is the `data-message-id` set difference, AND-ed with a strict count baseline;
+  completion requires that turn's own copy button (or a restored send button), never a global
+  copy-button count delta — user turns also carry copy buttons, so the old delta reported
+  "complete" while the fresh node was still empty and saved the PREVIOUS answer as the result.
+  Clipboard harvest is validated against that turn's DOM text (short answers require full
+  equality). Quota blocks are detected from `role=dialog`/`role=alert` surfaces only — never from
+  answer prose — and exit immediately instead of burning the full wait. Copy/stop/user/assistant
+  selectors are fallback lists, so one `data-testid` rename no longer kills the run.
 - **Sibling fork — `sol-lane` (`github.com/devswha/sol-lane`).** Both engines fork
   `fivetaku/insane-review` v0.5.3 (`2b3c926`, 2026-06-28) and have since diverged: the OMG copy
   carries the CDP-listener profile proof, `rejection_reason`, `write_response_artifact`, and the
