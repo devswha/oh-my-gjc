@@ -87,6 +87,53 @@ print("recovered")
     expect(output).toEqual(["True", "False", "True", "recovered"]);
   });
 
+  test("leaks nothing when open fails or is interrupted right after it", () => {
+    // Second Pro review of this file: os.open() sat outside the cleanup try, and
+    // release() cleared self.fd before entering its try. Both leave a bytecode
+    // boundary where an interrupt strands a descriptor nobody can close.
+    const output = runPython(`
+import importlib.util, errno, os
+spec = importlib.util.spec_from_file_location("cdp_lock", ${JSON.stringify(lock)})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+def fds():
+    return len(os.listdir("/proc/self/fd"))
+
+lease = module.CdpLease(46310)   # construct first: patching os.open breaks tempfile
+base = fds()
+
+real_open = os.open
+os.open = lambda *a, **k: (_ for _ in ()).throw(PermissionError(errno.EACCES, "denied"))
+try:
+    lease.acquire()
+    print("OPEN_FAILURE_NOT_RAISED")
+except PermissionError:
+    print(fds() - base)          # open() failed outright: nothing to close
+finally:
+    os.open = real_open
+
+real_fstat = os.fstat
+def interrupt(fd):
+    raise KeyboardInterrupt("interrupted immediately after open")
+os.fstat = interrupt
+try:
+    module.CdpLease(46311).acquire()
+    print("INTERRUPT_NOT_RAISED")
+except KeyboardInterrupt:
+    print(fds() - base)          # interrupted after open: fd still reclaimed
+finally:
+    os.fstat = real_fstat
+
+held = lease.acquire()           # a failed attempt must not poison the lease
+held.release()
+print(fds() - base)
+print("usable")
+`);
+
+    expect(output).toEqual(["0", "0", "0", "usable"]);
+  });
+
   test("grants exactly one holder under real multi-process contention", () => {
     // acquire() now retries on a raced lease. A retry loop is exactly the kind of
     // change that can quietly turn a rejection into a second grant, so contend for

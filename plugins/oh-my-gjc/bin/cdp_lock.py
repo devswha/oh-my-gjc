@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Cross-process single-flight lease for OMG ChatGPT CDP automation."""
+"""Cross-process single-flight lease for OMG ChatGPT CDP automation.
+
+Scope, stated honestly: this serialises *cooperating* runs of this suite. The lock
+is an flock on an inode, so a lease file deleted or replaced after a check is a
+TOCTOU window no amount of re-checking closes — `still_binding()` narrows it to the
+moment before an irreversible step (see pack_and_ask's pre-send check) rather than
+eliminating it. Deleting the lease file out from under a running automation is
+outside the threat model; it is not a defence against a hostile local process,
+which can simply drive the CDP port directly.
+"""
 from __future__ import annotations
 
 import os
@@ -38,8 +47,12 @@ class CdpLease:
         flags = os.O_RDWR | os.O_CREAT
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
-        fd = os.open(self.path, flags, 0o600)
+        # Assign inside the try: between `fd = os.open(...)` and entering the block
+        # there is a bytecode boundary where an interrupt would strand the descriptor
+        # with nobody holding a reference to close it.
+        fd = -1
         try:
+            fd = os.open(self.path, flags, 0o600)
             info = os.fstat(fd)
             if not stat.S_ISREG(info.st_mode):
                 raise RuntimeError(f"CDP lease is not a regular file: {self.path}")
@@ -85,6 +98,8 @@ class CdpLease:
             # `self.fd = fd` would otherwise leak the descriptor AND the lock we may
             # already hold — and since __enter__ raised, __exit__ never runs to
             # release it. The next run would then block on a lease nobody owns.
+            if fd < 0:
+                raise  # open() itself failed; there is nothing to clean up
             try:
                 if os.name != "nt":
                     import fcntl
@@ -118,8 +133,11 @@ class CdpLease:
     def release(self) -> None:
         if self.fd is None:
             return
-        fd, self.fd = self.fd, None
+        # Clear self.fd *inside* the try, not before it: an interrupt landing between
+        # "steal the descriptor" and "enter the cleanup block" would otherwise leave
+        # the fd owned by nobody — release() had already forgotten it.
         try:
+            fd = self.fd
             if os.name != "nt":
                 import fcntl
                 fcntl.flock(fd, fcntl.LOCK_UN)
@@ -128,6 +146,7 @@ class CdpLease:
                 os.lseek(fd, 0, os.SEEK_SET)
                 msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
         finally:
+            self.fd = None
             os.close(fd)
 
     def __enter__(self) -> "CdpLease":
