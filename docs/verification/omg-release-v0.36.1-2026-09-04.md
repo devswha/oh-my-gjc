@@ -40,4 +40,4 @@ The scoped live canary packed two complete self-contained files containing the a
 
 The search automation improvements and actual installed public fetch (`strong_ok`, no browser/login/model) were verified in [v0.36.0 evidence](omg-release-v0.36.0-2026-09-04.md). Search code is unchanged by this patch.
 
-Publication, final Git-range scanning and the operator's v0.36.1 upgrade will be recorded after completion. Existing GJC sessions should be reopened to load the refreshed native instructions.
+Behavior candidate: `8e50e37ed4d545d9113e5dfe60436a6edf1f87ed`. `gitleaks git . --log-opts=16cb311..8e50e37 --redact --no-banner` completed with rc=0 and no leaks. The release-preparation followup changes documentation only; the final range is scanned again before publication. Publication and the operator's v0.36.1 upgrade will be recorded after completion. Existing GJC sessions should be reopened to load the refreshed native instructions.
