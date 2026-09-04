@@ -95,7 +95,7 @@ Malformed, symlinked, non-canonical, multiline, control-character-containing, or
 **커맨드 Step 0이 이걸 자동화한다.** gjc가 `--check-env`/`--ensure-env`를 직접 돌려 마지막 `STATUS node=… deps=… browser=… login=… saved_browser=…`을 파싱하고, 막힌 단계마다 gjc **`ask` 도구 선택지**로 물어본 뒤 gjc가 대신 실행한다(`--install`, 브라우저 실행, 재점검). 초보자는 클릭만으로 따라온다.
 
 - **deps**(`playwright`·`pyperclip`): 없으면 "지금 자동 설치" 선택 → `--check-env --install`. (`npx`/repomix는 `npx -y`로 완전 자동.)
-- **browser**: 크로미움 계열 브라우저가 디버그포트(9222)에 **전용 프로필**로 떠 있어야 함(주 브라우저와 격리; Chrome 136+는 전용 프로필 없으면 CDP가 안 열림). 없으면 `--check-env`/`--list-browsers`의 `BROWSERS …` 목록으로 브라우저를 고르게 한 뒤 gjc가 `python3 "$IR" --launch-browser "<이름>"`(크로스플랫폼 mac/win/linux·전용 프로필·선택 자동 저장)을 실행. (쿠키는 전용 프로필에 보존 → 로그인 유지.)
+- **browser**: 크로미움 계열 브라우저가 디버그포트(9222)에 **전용 프로필**로 떠 있어야 함(주 브라우저와 격리; Chrome 136+는 전용 프로필 없으면 CDP가 안 열림). Linux에서 DISPLAY/WAYLAND_DISPLAY가 없고 사용자 소유 X11 소켓이 정확히 하나면 그 화면을 자동으로 사용한다. 여러 화면이나 다른 사용자 화면은 추측하지 않는다. 없으면 `--check-env`/`--list-browsers`의 `BROWSERS …` 목록으로 브라우저를 고르게 한 뒤 gjc가 `python3 "$IR" --launch-browser "<이름>"`(크로스플랫폼 mac/win/linux·전용 프로필·선택 자동 저장)을 실행. (쿠키는 전용 프로필에 보존 → 로그인 유지.)
 - **login**: 로그인 프로브가 `login=no`면, "방금 연 브라우저에서 chatgpt.com 로그인" 후 "로그인 완료" 선택 → 재점검. **로그인은 자동 불가 → 반드시 사용자에게 요청**(에러로 끝내지 말 것).
 - **로그인 상태 불명**: `login=unknown`은 로그아웃이 아니다. 로딩·접속·UI 상태를 진단하고 멈춘다. 반복 로그인, 프로필 삭제, 개인 브라우저 쿠키 복사는 하지 않는다.
 - **현재 Pro 모델**: 모델을 지정하지 않은 요청은 `--model pro --require-model current`로 실제 선택 모델을 읽어 고정하고 Pro 강도를 검증한다. 사용자가 Astra 등 특정 모델을 지정하면 UI의 정확한 이름을 `--require-model "<모델명>"`에 전달한다. Sol이나 다른 패밀리로 대체하지 않는다. 모델명이 모호하거나 Pro 증거가 없으면 전송하지 않는다.

@@ -62,3 +62,7 @@ The independent original-source review confirmed the setup-path and model-label 
 ## Published installation follow-through
 
 v0.36.0 was published and the operator installation was updated from 0.35.0. The actual installed search environment was explicitly prepared once, automatically reused on the next invocation, and returned `strong_ok` for the public h1 canary without a browser/login/model. See [release and operator evidence](omg-release-v0.36.0-2026-09-04.md). The Astra web response requirement remains pending-environment.
+
+## Live validation follow-through
+
+The earlier environment limitation was resolved by finding the existing user-owned X0 display. Normal GUI Chrome reused the existing login, Astra/maximum selection was verified, and the final scoped code attachment received a completed APPROVE response. See [v0.36.1 live evidence](omg-release-v0.36.1-2026-09-04.md). Earlier pending-environment entries above describe their original observation time.

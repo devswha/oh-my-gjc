@@ -63,7 +63,7 @@ class Keyboard:
  def press(self, _): pass
 class Page:
  keyboard = Keyboard()
-m._exact_effort_pill = lambda *args: 'Pro'
+m.read_model_pills = lambda *args: ['6 Astra' + chr(10) + 'Pro']
 m._open_switcher = lambda page: True
 m.selected_model_in_open_menu = lambda page: '6 Astra'
 seen = []

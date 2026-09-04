@@ -844,6 +844,32 @@ def cdp_binds_dedicated_profile(port: int, info: dict) -> bool:
     return _listener_binds_dedicated_profile(port)
 
 
+X11_SOCKET_DIR = Path("/tmp/.X11-unix")
+
+
+def browser_launch_env() -> dict[str, str] | None:
+    """Honor explicit display settings; otherwise use one owned local X11 socket."""
+    env = dict(os.environ)
+    if host_os() != "linux" or env.get("DISPLAY") or env.get("WAYLAND_DISPLAY"):
+        return env
+    displays = []
+    try:
+        if X11_SOCKET_DIR.is_symlink():
+            return None
+        for candidate in X11_SOCKET_DIR.iterdir():
+            if not re.fullmatch(r"X[0-9]+", candidate.name):
+                continue
+            info = candidate.lstat()
+            if stat.S_ISSOCK(info.st_mode) and info.st_uid == os.getuid():
+                displays.append(":" + candidate.name[1:])
+    except OSError:
+        return None
+    if len(displays) != 1:
+        return None
+    env["DISPLAY"] = displays[0]
+    return env
+
+
 def launch_browser_exe(path: str) -> bool:
     """전용 프로필 + 디버그 포트로 크로미움 직접 실행한 뒤 소유 프로필을 검증한다."""
     if not _prepare_browser_profile():
@@ -851,9 +877,12 @@ def launch_browser_exe(path: str) -> bool:
     if is_port_open(CDP_PORT):
         print(f"  ❌ CDP {CDP_PORT}이 이미 사용 중 — --ensure-env로 기존 전용 브라우저를 확인하세요")
         return False
-    if host_os() == "linux" and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
-        print("  ❌ GUI 디스플레이 없음(DISPLAY/WAYLAND_DISPLAY) — 데스크톱 세션에서 전용 브라우저를 실행하세요; 재로그인 문제가 아닙니다")
+    launch_env = browser_launch_env()
+    if launch_env is None:
+        print("  ❌ GUI 디스플레이를 확정할 수 없음 — DISPLAY/WAYLAND_DISPLAY를 지정하세요; 재로그인 문제가 아닙니다")
         return False
+    if launch_env.get("DISPLAY") != os.environ.get("DISPLAY"):
+        print(f"  사용자 소유 X11 디스플레이 확인: {launch_env['DISPLAY']}")
     cmd = [path, f"--remote-debugging-port={CDP_PORT}",
            "--remote-debugging-address=127.0.0.1",
            f"--user-data-dir={BROWSER_PROFILE_DIR}",
@@ -867,6 +896,7 @@ def launch_browser_exe(path: str) -> bool:
                 "stdin": subprocess.DEVNULL,
                 "stdout": subprocess.DEVNULL,
                 "stderr": subprocess.DEVNULL,
+                "env": launch_env,
             }
             if os.name == "nt":
                 popen_kwargs["creationflags"] = (
@@ -928,8 +958,7 @@ def probe_login() -> str:
             _guard_dialogs(ctx, page)
             try:
                 page.goto(CHATGPT_URL, wait_until="load", timeout=30000)
-                time.sleep(2)
-                return login_state(page)
+                return wait_for_login_state(page)
             finally:
                 try:
                     page.close()
@@ -958,13 +987,14 @@ def inspect_session(require_model: str = "current", want: str = "pro") -> dict:
             _guard_dialogs(context, page)
             try:
                 page.goto(CHATGPT_URL, wait_until="load", timeout=30000)
-                result["login"] = login_state(page)
+                result["login"] = wait_for_login_state(page)
                 if result["login"] != "ok":
                     return result
-                pill = _exact_effort_pill(page, want)
+                pills = read_model_pills(page)
                 if not _open_switcher(page):
                     return result
                 result["model"] = selected_model_in_open_menu(page)
+                pill = _effort_from_pills(pills, want, require_model=result["model"]) if result["model"] else None
                 row = _find_menu_row(page, ("추론", "reasoning"))
                 lines = _menu_text(row).splitlines() if row else []
                 result["effort"] = (lines[-1].strip() if len(lines) >= 2
@@ -1465,7 +1495,7 @@ def read_model_pills(page) -> list[str]:
     return out
 
 
-def _drive_effort_slider(page, slider, want_l: str) -> str | None:
+def _drive_effort_slider(page, slider, want_l: str, *, require_model: str | None = None) -> str | None:
     """Select an effort level from the August 2026 slider and verify via the pill."""
     try:
         slider.click(force=True)
@@ -1476,7 +1506,7 @@ def _drive_effort_slider(page, slider, want_l: str) -> str | None:
             page.keyboard.press("ArrowLeft")
             time.sleep(0.35)
         for _ in range(9):
-            label = _exact_effort_pill(page, want_l)
+            label = _exact_effort_pill(page, want_l, require_model=require_model)
             at_maximum = slider.get_attribute("aria-valuenow") == slider.get_attribute("aria-valuemax")
             if label and (want_l != "pro" or at_maximum):
                 return label
@@ -1489,27 +1519,33 @@ def _drive_effort_slider(page, slider, want_l: str) -> str | None:
     return None
 
 
-def _exact_effort_pill(page, want_l: str) -> str | None:
+def _effort_from_pills(pills: list[str], want_l: str, *, require_model: str | None = None) -> str | None:
     """Return an exact effort label, never a model or unrelated Pro-containing pill.
 
     want_l이 별칭 그룹('pro' 등)이면 그 후보 라벨들도 정확 매칭한다."""
     wanted = {c.casefold() for c in _effort_candidates(want_l)}
-    for pill in read_model_pills(page):
+    for pill in pills:
         lines = [line.strip() for line in pill.splitlines() if line.strip()]
+        if require_model is not None and (not lines or not _model_name_matches(lines[0], require_model)):
+            continue
         for line in lines:
             if line.casefold() in wanted:
                 return line[:40]
     return None
 
 
-def _slider_effort_verified(page, want_l: str) -> bool:
+def _exact_effort_pill(page, want_l: str, *, require_model: str | None = None) -> str | None:
+    return _effort_from_pills(read_model_pills(page), want_l, require_model=require_model)
+
+
+def _slider_effort_verified(page, want_l: str, *, require_model: str | None = None) -> bool:
     try:
         slider = page.query_selector('[role="slider"]')
         if slider is None:
             return False
         at_maximum = slider.get_attribute("aria-valuenow") == slider.get_attribute("aria-valuemax")
         is_top = want_l.strip().casefold() in {"pro", "max", "ultra", "최대", "울트라"}
-        return _exact_effort_pill(page, want_l) is not None and (not is_top or at_maximum)
+        return _exact_effort_pill(page, want_l, require_model=require_model) is not None and (not is_top or at_maximum)
     except Exception:
         return False
 
@@ -1722,7 +1758,7 @@ def _select_advanced_model_and_effort(page, want: str, require_model: str) -> tu
         slider = page.query_selector('[role="slider"]')
         if slider is None:
             return False, None
-        selected_effort = _drive_effort_slider(page, slider, want.lower())
+        selected_effort = _drive_effort_slider(page, slider, want.lower(), require_model=require_model)
         slider_used = selected_effort is not None
     if selected_effort is None:
         return False, None
@@ -1739,7 +1775,7 @@ def _select_advanced_model_and_effort(page, want: str, require_model: str) -> tu
     verified_model = model_text.splitlines()[-1].strip()
     verified_effort = effort_text.splitlines()[-1].strip()
     wanted_efforts = {c.casefold() for c in _effort_candidates(want)}
-    effort_ok = (_slider_effort_verified(page, want.strip().casefold())
+    effort_ok = (_slider_effort_verified(page, want.strip().casefold(), require_model=require_model)
                  if slider_used else verified_effort.casefold() in wanted_efforts)
     verified = _model_name_matches(verified_model, require_model) and effort_ok
     try:
@@ -1794,6 +1830,29 @@ def read_menu_state(page) -> dict:
     return state
 
 
+def select_listed_model(page, require_model: str) -> dict | None:
+    """Select one exact visible model in the direct picker and read checked evidence."""
+    candidates = []
+    try:
+        for item in page.query_selector_all('[role="menuitem"], [role="menuitemradio"], [role="option"]'):
+            lines = _menu_text(item).splitlines()
+            if lines and item.is_visible() and _model_name_matches(lines[0], require_model):
+                candidates.append(item)
+        if len(candidates) != 1:
+            return None
+        candidates[0].dispatch_event("click")
+        time.sleep(0.8)
+        if not _ensure_switcher_menu(page):
+            return None
+        after = read_menu_state(page)
+        if (after["model_source"] == "checked" and after["model"]
+                and _model_name_matches(after["model"], require_model)):
+            return after
+    except Exception:
+        pass
+    return None
+
+
 def select_model(page, want: str, require_model: str | None = None) -> tuple[bool, str | None]:
     """모델 스위처를 열고 want(추론단계, 예: 'pro')를 선택 + 검증.
     require_model 지정 시 모델명(예: 'GPT-5.6')이 일치하지 않으면 False(실패) 반환.
@@ -1801,7 +1860,7 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
     want_l = want.lower()
     # 2026-08-31 실측: 메뉴가 열리면 composer pill이 DOM에서 사라지고 effort 표시는
     # pill('5.6 Sol|최대')의 둘째 줄에만 남는다 — 열기 '전에' 스냅숏해 already 판정에 쓴다.
-    pill_effort_before = _exact_effort_pill(page, want_l)
+    pills_before = read_model_pills(page)
     if not _open_switcher(page):
         print("  ❌ 모델 스위처를 못 찾음 → 검증 실패(전송 안 함)")
         return False, None
@@ -1813,6 +1872,8 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
             print("  ❌ 현재 선택 모델을 확인할 수 없음 → 전송 안 함")
             return False, None
         print(f"  현재 모델 고정: {require_model}")
+
+    pill_effort_before = _effort_from_pills(pills_before, want_l, require_model=require_model)
 
     if require_model:
         advanced_result = _select_advanced_model_and_effort(page, want, require_model)
@@ -1833,12 +1894,26 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
                 pass
             return False, None
         if not _model_name_matches(before["model"], require_model):
-            print(f"  ❌ 모델 불일치: 기대 '{require_model}' ≠ 메뉴 '{before['model']}' → 중단(전송 안 함)")
+            # New picker UI exposes models directly rather than Advanced/Model rows.
+            # Never carry the previous model's Pro pill across this change.
+            pill_effort_before = None
+            switched = select_listed_model(page, require_model)
+            if switched is None:
+                print(f"  ❌ 요청 모델 '{require_model}' 선택/검증 실패 → 전송 안 함")
+                page.keyboard.press("Escape")
+                return False, None
             try:
                 page.keyboard.press("Escape")
             except Exception:
-                pass
-            return False, None
+                return False, None
+            time.sleep(0.5)
+            pill_effort_before = _exact_effort_pill(page, want_l, require_model=require_model)
+            if not _open_switcher(page):
+                return False, None
+            before = read_menu_state(page)
+            if (before["model_source"] != "checked" or not before["model"]
+                    or not _model_name_matches(before["model"], require_model)):
+                return False, None
 
     # 추론단계 클릭 대상 탐색
     clicked = None
@@ -1861,7 +1936,7 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
         except Exception:
             slider = None
         if slider is not None:
-            label = _drive_effort_slider(page, slider, want_l)
+            label = _drive_effort_slider(page, slider, want_l, require_model=require_model)
             if not label:
                 print(f"  ❌ 추론단계 슬라이더에서 '{want}' 단계를 못 찾음 → 중단(전송 안 함)")
                 try:
@@ -1937,17 +2012,17 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
         if name_ok and not src_ok:
             print(f"  ❌ 활성 모델 확정 불가(체크표시 없음 + 메뉴에 모델 {len(after['models'])}개: {after['models']}) → fail-closed")
 
-    effort_verified = (_slider_effort_verified(page, want_l)
+    effort_verified = (_slider_effort_verified(page, want_l, require_model=require_model)
                        if slider_used else
                        (after["effort_checked"] is not None
                         and after["effort_checked"].strip().casefold() in _effort_candidates(want_l))
                        or (already_pill and (pill_effort_before is not None
-                                             or _exact_effort_pill(page, want_l) is not None)))
+                                             or _exact_effort_pill(page, want_l, require_model=require_model) is not None)))
     verified = model_verified and effort_verified
 
     verified_model = after["model"] or "Unknown Model"
     verified_effort = verified_effort_label(
-        slider_label=_exact_effort_pill(page, want_l),
+        slider_label=_exact_effort_pill(page, want_l, require_model=require_model),
         slider_used=slider_used,
         checked_label=after["effort_checked"],
         pill_label_before=pill_effort_before,
@@ -2394,6 +2469,16 @@ def login_state(page) -> str:
 
 def looks_logged_in(page) -> bool:
     return login_state(page) == "ok"
+
+
+def wait_for_login_state(page, timeout_secs: float = 15) -> str:
+    """Allow client hydration; a visible login wall is terminal, missing UI is not."""
+    deadline = time.monotonic() + timeout_secs
+    while True:
+        state = login_state(page)
+        if state != "unknown" or time.monotonic() >= deadline:
+            return state
+        time.sleep(0.25)
 
 
 # ===========================================================================

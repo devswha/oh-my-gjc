@@ -88,7 +88,7 @@ A malformed, symlinked, non-canonical, multiline, control-character-containing, 
 python3 "$IR" --ensure-env
 ```
 `--ensure-env`는 **저장된 브라우저가 있고 CDP가 닫혀 있으면 조용히 1회 자동 기동**한 뒤 상태를 보고한다
-(저장값-only·첫감지 폴백 없음, `browser=wrong`이면 자동기동 안 함). **즉 최초 1회 온보딩 이후엔 브라우저를 다시 묻지 않고 알아서 뜬다.**
+(저장값-only·첫감지 폴백 없음, `browser=wrong`이면 자동기동 안 함). Linux에서 환경변수만 빠졌다면 사용자 소유 X11 소켓이 정확히 하나인 경우 해당 화면을 사용한다. 화면이 모호하거나 없으면 DISPLAY/WAYLAND_DISPLAY를 지정하도록 안내하고 반복 기동하지 않는다. **즉 최초 1회 온보딩 이후엔 브라우저를 다시 묻지 않고 알아서 뜬다.**
 마지막 줄 `STATUS node=… deps=… browser=… login=… saved_browser=…`을 파싱한다. **전부 ok가 아니면**, 막힌 첫 단계를
 gjc `ask` 도구로 물어보고 → 선택대로 gjc가 실행 → `--ensure-env`를 다시 돌려 재확인한다(최대 3~4회 반복).
 질문·선택지는 **사용자의 현재 대화 언어**로 작성한다.

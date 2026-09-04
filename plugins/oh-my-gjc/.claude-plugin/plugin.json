@@ -1,6 +1,6 @@
 {
   "name": "oh-my-gjc",
-  "version": "0.36.0",
+  "version": "0.36.1",
   "description": "oh-my-gjc — focused Gajae Code suite with 5 skills and 5 commands. Skills: no-english, extragoal, insane-review, insane-search, gpt-image. Commands: /omg, /omg:setup, /omg:no-english, /omg:insane-review, /omg:gpt-image.",
   "author": {
     "name": "devswha",

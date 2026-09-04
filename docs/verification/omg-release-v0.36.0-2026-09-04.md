@@ -54,3 +54,7 @@ The verified changes were published as v0.36.0. The canonical hardened installer
 - Installed `pack_and_ask.py --inspect-session`: **rc=1**, browser down / login unknown. Actual Astra Pro selection and response harvest remain unverified, as described above.
 
 Existing GJC sessions must be reopened to load the refreshed native command/skill bodies. This evidence update changes documentation only; it does not alter the reviewed runtime.
+
+## Live validation follow-through
+
+The earlier environment limitation was resolved by finding the existing user-owned X0 display. Normal GUI Chrome reused the existing login, Astra/maximum selection was verified, and the final scoped code attachment received a completed APPROVE response. See [v0.36.1 live evidence](omg-release-v0.36.1-2026-09-04.md). Earlier pending-environment entries above describe their original observation time.
