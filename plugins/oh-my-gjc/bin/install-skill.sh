@@ -47,6 +47,7 @@ EXPECTED_COMMANDS=(omg setup no-english insane-review gpt-image)
 EXPECTED_RUNTIMES=()
 INSANE_SEARCH_ASSETS=(
   bin/insane_search.py
+  bin/setup_insane_search.py
   skills/insane-search/engine/__init__.py
   skills/insane-search/engine/__main__.py
   skills/insane-search/engine/content_safety.py

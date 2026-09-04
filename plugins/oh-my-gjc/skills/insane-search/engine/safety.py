@@ -30,7 +30,7 @@ def _ip_blocked(ip_str: str) -> bool:
         ip = ipaddress.ip_address(ip_str)
     except ValueError:
         return False
-    return (ip.is_private or ip.is_loopback or ip.is_link_local
+    return (not ip.is_global or ip.is_private or ip.is_loopback or ip.is_link_local
             or ip.is_reserved or ip.is_multicast or ip.is_unspecified)
 
 
@@ -46,6 +46,8 @@ def resolve_public(url: str, allow_private: bool = False) -> tuple[list[str], st
         return [], f"parse_error:{e}"
     if p.scheme not in ALLOWED_SCHEMES:
         return [], f"scheme:{p.scheme or 'none'}"
+    if p.username is not None or p.password is not None:
+        return [], "credentials_in_url"
     host = p.hostname
     if not host:
         return [], "no_host"

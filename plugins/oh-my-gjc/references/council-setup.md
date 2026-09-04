@@ -1,7 +1,6 @@
-# GPT-5.6 Sol Pro를 agent-council 웹 전용 멤버로 등록
+# ChatGPT Pro를 agent-council 웹 멤버로 등록
 
-GPT-5.6 Sol Pro는 API가 없어 기존 council 멤버(claude/codex/gemini, 전부 CLI/API)로는 못 넣는다.
-insane-review의 `--council` 모드가 그 간극을 메운다 — **프롬프트를 위치인자로 받고, 응답만 stdout으로** 내보내(진행 로그는 stderr) council worker가 `output.txt`로 그대로 캡처한다.
+insane-review의 `--council` 모드는 로그인된 구독 ChatGPT 웹을 사용하며 **프롬프트를 위치인자로 받고 응답만 stdout으로** 내보낸다. 모델을 지정하지 않으면 현재 선택 모델을 고정하고 Pro 강도를 검증한다.
 
 ## 작동 방식 (council worker 계약)
 
@@ -9,67 +8,70 @@ council worker는 멤버 `command` 문자열을 토큰화한 뒤 **프롬프트�
 
 ## 엔진 절대경로 확인
 council worker는 셸 없이 execFile 하므로 `command`엔 **엔진의 절대경로**를 넣는다(공백 없게).
-새 suite binding을 프로젝트→user 순서로 먼저 확인하고, 둘 다 없을 때만 **읽기 전용·기간 한정 compatibility fallback**인 기존 `oh-my-gjc` binding을 프로젝트→user 순서로 확인한다. 모두 없을 때만 정확한 현재 checkout asset을 쓴다. 기존 binding이나 user state는 절대 쓰거나 지우지 않는다:
+새 suite binding을 프로젝트→user 순서로 먼저 확인하고, 둘 다 없을 때만 **읽기 전용·기간 한정 compatibility fallback**인 기존 `oh-my-gajae-code` binding을 프로젝트→user 순서로 확인한다. 모두 없을 때만 정확한 현재 checkout asset을 쓴다. 기존 binding이나 user state는 절대 쓰거나 지우지 않는다:
 ```bash
-resolve_omg_asset() (
-  fail() { echo "oh-my-gjc runtime binding is missing or invalid; rerun https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh." >&2; exit 1; }
-  reject_symlinked_components() {
-    local path="$1" current="/" component
-    local -a components
-    case "$path" in /*) ;; *) fail ;; esac
-    IFS=/ read -r -a components <<<"${path#/}"
-    for component in "${components[@]}"; do
-      [ -n "$component" ] || continue
-      current="${current%/}/$component"
-      [ ! -L "$current" ] || fail
-    done
-  }
-  local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir checkout
-  local -a bindings=(
-    "$PWD/.gjc/runtimes/oh-my-gjc/root"
-    "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"
-  )
-  # Bounded read-only compatibility fallback; never mutate legacy paths.
-  local -a legacy_compatibility_bindings=(
-    "$PWD/.gjc/runtimes/oh-my-gajae-code/root"
-    "$HOME/.gjc/agent/runtimes/oh-my-gajae-code/root"
-  )
-  bindings+=("${legacy_compatibility_bindings[@]}")
-  for binding in "${bindings[@]}"; do
-    if [ -e "$binding" ] || [ -L "$binding" ]; then
-      reject_symlinked_components "$binding"
-      [ -f "$binding" ] && [ ! -L "$binding" ] || fail
-      bytes="$(LC_ALL=C od -An -v -tu1 "$binding")" || fail
-      for byte in $bytes; do
-        case "$byte" in 0|[1-9]|1[1-9]|2[0-9]|3[01]|127) fail ;; esac
-      done
-      exec 3< "$binding" || fail
-      IFS= read -r root <&3 || { exec 3<&-; fail; }
-      if IFS= read -r -n 1 _ <&3; then exec 3<&-; fail; fi
-      exec 3<&-
-      case "$root" in ""|*[[:cntrl:]]*) fail ;; /*) ;; *) fail ;; esac
-      canonical_root="$(cd -P -- "$root" 2>/dev/null && pwd -P)" || fail
-      [ "$root" = "$canonical_root" ] || fail
-      asset="$canonical_root/$expected_asset"
-      asset_dir="${asset%/*}"
-      canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
-      [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
-      printf '%s\n' "$asset"
-      exit 0
-    fi
-  done
-  checkout="$PWD/plugins/oh-my-gjc"
-  reject_symlinked_components "$checkout"
-  [ -d "$checkout" ] && [ ! -L "$checkout" ] || fail
-  canonical_root="$(cd -P -- "$checkout" 2>/dev/null && pwd -P)" || fail
-  asset="$canonical_root/$expected_asset"
-  asset_dir="${asset%/*}"
-  canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
-  [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
-  printf '%s\n' "$asset"
-)
-IR="$(resolve_omg_asset "bin/pack_and_ask.py")" || exit 1
-printf '%s\n' "$IR"
+IR="$(python3 - <<'PY'
+from pathlib import Path
+import os
+import stat
+import sys
+
+asset = Path("bin/pack_and_ask.py")
+bindings = [
+    Path.cwd() / ".gjc/runtimes/oh-my-gjc/root",
+    Path.home() / ".gjc/agent/runtimes/oh-my-gjc/root",
+    Path.cwd() / ".gjc/runtimes/oh-my-gajae-code/root",
+    Path.home() / ".gjc/agent/runtimes/oh-my-gajae-code/root",
+]
+
+
+def reject_links(path):
+    for component in (path, *path.parents):
+        if component.is_symlink():
+            raise ValueError("symlinked path")
+
+
+def resolve_asset(root, relative):
+    reject_links(root)
+    if not root.is_absolute() or str(root.resolve(strict=True)) != str(root):
+        raise ValueError("non-canonical suite root")
+    asset = root / relative
+    reject_links(asset)
+    if not asset.is_file():
+        raise ValueError("missing suite asset")
+    return asset
+
+
+try:
+    for binding in bindings:
+        reject_links(binding)
+        try:
+            fd = os.open(binding, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+        except FileNotFoundError:
+            continue
+        with os.fdopen(fd, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(info.st_mode)
+                    or (hasattr(os, "getuid") and info.st_uid != os.getuid())
+                    or (os.name != "nt" and stat.S_IMODE(info.st_mode) & 0o077)):
+                raise ValueError("binding must be a private owned regular file")
+            value = stream.read(4097).decode("utf-8")
+        if (len(value.encode("utf-8")) > 4096 or not value.endswith("\n")
+                or value.count("\n") != 1
+                or any(ord(ch) < 32 or ord(ch) == 127 for ch in value[:-1])):
+            raise ValueError("malformed suite binding")
+        root = Path(value[:-1])
+        if str(root) != value[:-1]:
+            raise ValueError("non-canonical suite binding")
+        print(resolve_asset(root, asset))
+        raise SystemExit(0)
+    print(resolve_asset(Path.cwd() / "plugins/oh-my-gjc", asset))
+except (OSError, ValueError, UnicodeError) as error:
+    print(f"Invalid OMG runtime binding: {error}; rerun the hardened installer", file=sys.stderr)
+    raise SystemExit(1)
+PY
+)" || exit 1
+echo "IR=$IR"
 ```
 Malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing bindings fail closed; repair with `https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh`, never a plugin cache.
 
@@ -88,9 +90,9 @@ council:
       command: "codex exec"
       emoji: "🤖"
       color: "BLUE"
-    # ── GPT-5.6 Sol Pro (웹 전용, insane-review 경유) ──
+    # ── ChatGPT Pro (insane-review 웹 경유) ──
     - name: gpt-pro
-      command: "python3 /ABS/PATH/oh-my-gjc/bin/pack_and_ask.py --council --model pro --require-model \"GPT-5.6\" --force-answer-after 120"
+      command: "python3 /ABS/PATH/oh-my-gjc/bin/pack_and_ask.py --council --model pro --require-model current --force-answer-after 120"
       emoji: "🌐"
       color: "MAGENTA"
   settings:
@@ -99,7 +101,7 @@ council:
 ```
 
 - `/ABS/PATH/oh-my-gjc/bin/pack_and_ask.py`는 위 resolver가 출력한 **절대경로** 그대로. (경로에 공백 없게.)
-- `--require-model "GPT-5.6"`: council 경로에서도 활성 모델명을 검증(불일치/미확정이면 fail-closed로 전송 중단). 빼면 effort만 검증되고 기반 모델은 무엇이든 통과한다.
+- `--require-model current`: council 경로에서도 활성 모델명을 검증(불일치/미확정이면 fail-closed로 전송 중단). 빼면 effort만 검증되고 기반 모델은 무엇이든 통과한다.
 - `--force-answer-after 120`: 120초 후 "지금 답변 받기"로 리즈닝을 끊어 회수 시간을 bound. council `timeout`은 그보다 넉넉히(예: 600).
 - council은 멤버를 **병렬 detached**로 띄운다. gpt-pro는 자기 브라우저 탭을 새로 열므로 다른 멤버와 충돌하지 않지만, **동시에 두 개의 insane-review 잡이 같은 브라우저를 몰면 안 된다**(한 council 잡에 gpt-pro 멤버는 하나).
 
@@ -113,7 +115,7 @@ council:
 IR="/ABS/PATH/oh-my-gjc/bin/pack_and_ask.py"
 [ -f "$IR" ] && [ ! -L "$IR" ] || { echo "engine missing" >&2; exit 1; }
 # 단독으로 council 계약 확인: stdout엔 응답만, stderr엔 로그
-python3 "$IR" --council --model pro --require-model "GPT-5.6" \
+python3 "$IR" --council --model pro --require-model current \
   --force-answer-after 60 "한 문장으로: 1+1은?" 2>/dev/null
 # → GPT 응답 텍스트만 출력되어야 한다
 ```

@@ -30,7 +30,7 @@ gjc 세션의 `/plugin …`은 slash command가 아니라 채팅 텍스트다.
 `no-english`는 일반 한국어 설명만 다듬으며 `ultragoal`, `ralplan`, `deep-interview`, `team` 같은
 GJC 정식 이름과 코드·명령·경로·API 이름은 번역하거나 한글로 음역하지 않는다.
 
-`insane-search`는 일반 `read` 또는 웹 접근이 402·403·WAF·challenge·불완전한 SPA로 막혔을 때와 알려진 공개 플랫폼 route에서만 자동 활성화한다. 일반 검색과 이미 읽을 수 있는 페이지에는 사용하지 않는다. 공식 공개 route를 우선하고, 그 밖의 공개 URL은 SSRF-pinned TLS grid로 읽는다. API 키·로그인은 필요 없으며 CAPTCHA·paywall·인증 우회는 하지 않는다. 의존성은 확인만 하고 자동 설치하지 않으며, 가져온 본문은 신뢰하지 않는 외부 데이터다.
+`insane-search`는 일반 `read` 또는 웹 접근이 402·403·WAF·challenge·불완전한 SPA로 막혔을 때와 명시적인 공개 자막·미디어 추출 요청에서만 자동 활성화한다. 일반 검색과 이미 읽을 수 있는 페이지에는 사용하지 않는다. 공식 공개 route를 우선하고, 그 밖의 공개 URL은 SSRF-pinned TLS grid로 읽는다. API 키·로그인은 필요 없으며 CAPTCHA·paywall·인증 우회는 하지 않는다. 검색 실행은 의존성을 확인만 하고 자동 설치하지 않으며, 가져온 본문은 신뢰하지 않는 외부 데이터다.
 
 핵심 의존성은 Python 3, `curl_cffi>=0.15`, `bs4`, `PyYAML`, `markdownify`이고, YouTube 등 미디어 경로에는 선택적으로 `yt-dlp`가 필요하다.
 
@@ -43,7 +43,7 @@ GJC 정식 이름과 코드·명령·경로·API 이름은 번역하거나 한�
 | `/omg` | 카탈로그 — 설치된 omg 스킬·커맨드 한눈에 | — |
 | `/omg:setup` | 설치 표면과 전제조건 확인 (읽기 전용·멱등) | — |
 | `/omg:no-english [on\|off\|status]` | 현재 세션의 한국어 우선 표현 명시 토글 | — |
-| `/omg:insane-review` | GPT-5.6 Sol Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
+| `/omg:insane-review` | 검증된 ChatGPT Pro 웹 코드 리뷰 (API 비용 0) | ChatGPT 구독 + 크로미움 로그인 |
 | `/omg:gpt-image` | ChatGPT Images 웹 생성 | POSIX + ChatGPT 구독 + Playwright + 전용 Chrome/Chromium CDP 로그인 |
 
 > 전제가 붙은 커맨드는 필요한 도구가 없으면 실행 시 안내하고 멈춘다.

@@ -309,6 +309,11 @@ print(path.exists())
     expect(runAdvancedMenuFixture("Model", "Reasoning effort")).toContain("(True, 'GPT-5.6 Sol (Pro)')");
   });
 
+  test("verifies an Astra family selection without requiring a Sol label", () => {
+    expect(runAdvancedMenuFixture("Model", "Reasoning", "6 Astra", "GPT-6 Astra")).toContain("(True, '6 Astra (Pro)')");
+    expect(runAdvancedMenuFixture("모델", "추론", "Astra", "Astra")).toContain("(True, 'Astra (Pro)')");
+  });
+
   test("fails closed when advanced rows are absent", () => {
     const script = `
 import importlib.util

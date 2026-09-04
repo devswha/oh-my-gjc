@@ -1,0 +1,59 @@
+resolve_omg_asset() (
+  fail() { echo "oh-my-gjc runtime binding is missing or invalid; rerun https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh." >&2; exit 1; }
+  reject_symlinked_components() {
+    local path="$1" current="/" component
+    local -a components
+    case "$path" in /*) ;; *) fail ;; esac
+    IFS=/ read -r -a components <<<"${path#/}"
+    for component in "${components[@]}"; do
+      [ -n "$component" ] || continue
+      current="${current%/}/$component"
+      [ ! -L "$current" ] || fail
+    done
+  }
+  local expected_asset="$1" binding root bytes byte asset asset_dir canonical_root canonical_asset_dir checkout
+  local -a bindings=(
+    "$PWD/.gjc/runtimes/oh-my-gjc/root"
+    "$HOME/.gjc/agent/runtimes/oh-my-gjc/root"
+  )
+  # Bounded read-only compatibility fallback; never mutate legacy paths.
+  local -a legacy_compatibility_bindings=(
+    "$PWD/.gjc/runtimes/oh-my-gajae-code/root"
+    "$HOME/.gjc/agent/runtimes/oh-my-gajae-code/root"
+  )
+  bindings+=("${legacy_compatibility_bindings[@]}")
+  for binding in "${bindings[@]}"; do
+    if [ -e "$binding" ] || [ -L "$binding" ]; then
+      reject_symlinked_components "$binding"
+      [ -f "$binding" ] && [ ! -L "$binding" ] || fail
+      bytes="$(LC_ALL=C od -An -v -tu1 "$binding")" || fail
+      for byte in $bytes; do
+        case "$byte" in 0|[1-9]|1[1-9]|2[0-9]|3[01]|127) fail ;; esac
+      done
+      exec 3< "$binding" || fail
+      IFS= read -r root <&3 || { exec 3<&-; fail; }
+      if IFS= read -r -n 1 _ <&3; then exec 3<&-; fail; fi
+      exec 3<&-
+      case "$root" in ""|*[[:cntrl:]]*) fail ;; /*) ;; *) fail ;; esac
+      canonical_root="$(cd -P -- "$root" 2>/dev/null && pwd -P)" || fail
+      [ "$root" = "$canonical_root" ] || fail
+      asset="$canonical_root/$expected_asset"
+      asset_dir="${asset%/*}"
+      canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
+      [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
+      printf '%s\n' "$asset"
+      exit 0
+    fi
+  done
+  checkout="$PWD/plugins/oh-my-gjc"
+  reject_symlinked_components "$checkout"
+  [ -d "$checkout" ] && [ ! -L "$checkout" ] || fail
+  canonical_root="$(cd -P -- "$checkout" 2>/dev/null && pwd -P)" || fail
+  asset="$canonical_root/$expected_asset"
+  asset_dir="${asset%/*}"
+  canonical_asset_dir="$(cd -P -- "$asset_dir" 2>/dev/null && pwd -P)" || fail
+  [ "$asset_dir" = "$canonical_asset_dir" ] && [ -f "$asset" ] && [ ! -L "$asset" ] || fail
+  printf '%s\n' "$asset"
+)
+IR="$(resolve_omg_asset "bin/pack_and_ask.py")" || exit 1
+echo "IR=$IR"

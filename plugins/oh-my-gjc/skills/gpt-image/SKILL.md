@@ -21,44 +21,57 @@ import os
 import stat
 import sys
 
-cwd = Path.cwd()
-home = Path.home()
 asset = Path("bin/gpt_image_web.py")
 bindings = [
-    cwd / ".gjc/runtimes/oh-my-gjc/root",
-    home / ".gjc/agent/runtimes/oh-my-gjc/root",
+    Path.cwd() / ".gjc/runtimes/oh-my-gjc/root",
+    Path.home() / ".gjc/agent/runtimes/oh-my-gjc/root",
 ]
 
-for binding in bindings:
-    try:
-        info = binding.lstat()
-        if binding.is_symlink() or not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) & 0o077:
-            continue
-        lines = binding.read_text(encoding="utf-8").splitlines()
-        if len(lines) != 1 or not os.path.isabs(lines[0]) or any(ord(ch) < 32 for ch in lines[0]):
-            continue
-        root = Path(lines[0])
-        canonical = root.resolve(strict=True)
-        if str(root) != str(canonical):
-            continue
-        candidate = canonical / asset
-        if candidate.is_symlink() or not candidate.is_file():
-            continue
-        print(candidate)
-        raise SystemExit(0)
-    except (OSError, UnicodeError):
-        continue
 
-checkout = cwd / "plugins/oh-my-gjc" / asset
+def reject_links(path):
+    for component in (path, *path.parents):
+        if component.is_symlink():
+            raise ValueError("symlinked path")
+
+
+def resolve_asset(root, relative):
+    reject_links(root)
+    if not root.is_absolute() or str(root.resolve(strict=True)) != str(root):
+        raise ValueError("non-canonical suite root")
+    asset = root / relative
+    reject_links(asset)
+    if not asset.is_file():
+        raise ValueError("missing suite asset")
+    return asset
+
+
 try:
-    if not checkout.is_symlink() and checkout.is_file():
-        print(checkout.resolve(strict=True))
+    for binding in bindings:
+        reject_links(binding)
+        try:
+            fd = os.open(binding, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+        except FileNotFoundError:
+            continue
+        with os.fdopen(fd, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(info.st_mode)
+                    or (hasattr(os, "getuid") and info.st_uid != os.getuid())
+                    or (os.name != "nt" and stat.S_IMODE(info.st_mode) & 0o077)):
+                raise ValueError("binding must be a private owned regular file")
+            value = stream.read(4097).decode("utf-8")
+        if (len(value.encode("utf-8")) > 4096 or not value.endswith("\n")
+                or value.count("\n") != 1
+                or any(ord(ch) < 32 or ord(ch) == 127 for ch in value[:-1])):
+            raise ValueError("malformed suite binding")
+        root = Path(value[:-1])
+        if str(root) != value[:-1]:
+            raise ValueError("non-canonical suite binding")
+        print(resolve_asset(root, asset))
         raise SystemExit(0)
-except OSError:
-    pass
-
-print("gpt-image engine not found; rerun the hardened OMG installer", file=sys.stderr)
-raise SystemExit(1)
+    print(resolve_asset(Path.cwd() / "plugins/oh-my-gjc", asset))
+except (OSError, ValueError, UnicodeError) as error:
+    print(f"Invalid OMG runtime binding: {error}; rerun the hardened installer", file=sys.stderr)
+    raise SystemExit(1)
 PY
 )" || exit 1
 ```

@@ -1,0 +1,52 @@
+IS_ENGINE="$(python3 - <<'PY'
+from pathlib import Path
+import os
+import stat
+import sys
+
+cwd = Path.cwd()
+home = Path.home()
+asset = Path("bin/insane_search.py")
+bindings = [
+    cwd / ".gjc/runtimes/oh-my-gjc/root",
+    home / ".gjc/agent/runtimes/oh-my-gjc/root",
+]
+
+for binding in bindings:
+    try:
+        details = binding.lstat()
+        uid = os.getuid() if hasattr(os, "getuid") else None
+        if (
+            binding.is_symlink()
+            or not stat.S_ISREG(details.st_mode)
+            or (uid is not None and details.st_uid != uid)
+            or (os.name != "nt" and stat.S_IMODE(details.st_mode) & 0o077)
+        ):
+            continue
+        lines = binding.read_text(encoding="utf-8").splitlines()
+        if len(lines) != 1 or not os.path.isabs(lines[0]) or any(ord(ch) < 32 for ch in lines[0]):
+            continue
+        root = Path(lines[0])
+        canonical = root.resolve(strict=True)
+        if str(root) != str(canonical):
+            continue
+        candidate = canonical / asset
+        if candidate.is_symlink() or not candidate.is_file():
+            continue
+        print(candidate)
+        raise SystemExit(0)
+    except (OSError, UnicodeError):
+        continue
+
+checkout = cwd / "plugins/oh-my-gjc" / asset
+try:
+    if not checkout.is_symlink() and checkout.is_file():
+        print(checkout.resolve(strict=True))
+        raise SystemExit(0)
+except OSError:
+    pass
+
+print("insane-search launcher not found; rerun the hardened OMG installer", file=sys.stderr)
+raise SystemExit(1)
+PY
+)" || exit 1

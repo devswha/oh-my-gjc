@@ -442,7 +442,8 @@ def detect_browsers() -> list[tuple[str, str]]:
 
 def _load_config() -> dict:
     try:
-        return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        value = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
     except Exception:
         return {}
 
@@ -463,6 +464,8 @@ def save_browser_choice(name_or_path: str) -> None:
 def resolve_browser(name_or_path: str | None) -> tuple[str, str] | None:
     """--browser 값(이름 'chrome' 또는 절대경로)을 (이름, 경로)로 해석.
     인자 없으면 config 저장값 → 첫 감지 브라우저 순. 못 찾으면 None."""
+    if name_or_path and not isinstance(name_or_path, str):
+        return None
     if name_or_path:
         if os.path.isabs(name_or_path) and Path(name_or_path).exists():
             return (Path(name_or_path).stem, name_or_path)
@@ -845,6 +848,12 @@ def launch_browser_exe(path: str) -> bool:
     """전용 프로필 + 디버그 포트로 크로미움 직접 실행한 뒤 소유 프로필을 검증한다."""
     if not _prepare_browser_profile():
         return False
+    if is_port_open(CDP_PORT):
+        print(f"  ❌ CDP {CDP_PORT}이 이미 사용 중 — --ensure-env로 기존 전용 브라우저를 확인하세요")
+        return False
+    if host_os() == "linux" and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+        print("  ❌ GUI 디스플레이 없음(DISPLAY/WAYLAND_DISPLAY) — 데스크톱 세션에서 전용 브라우저를 실행하세요; 재로그인 문제가 아닙니다")
+        return False
     cmd = [path, f"--remote-debugging-port={CDP_PORT}",
            "--remote-debugging-address=127.0.0.1",
            f"--user-data-dir={BROWSER_PROFILE_DIR}",
@@ -904,7 +913,7 @@ def probe_login() -> str:
     """브라우저(CDP) up + playwright 있을 때 ChatGPT 로그인 상태를 best-effort로 확인.
     반환: 'ok' | 'no' | 'unknown'(프로브 불가/오류)."""
     import importlib.util
-    if not (is_port_open(CDP_PORT) and cdp_browser_ok()):
+    if not (is_port_open(CDP_PORT) and cdp_browser_ok() and _cdp_matches_dedicated_profile()):
         return "unknown"
     if not importlib.util.find_spec("playwright"):
         return "unknown"
@@ -914,13 +923,13 @@ def probe_login() -> str:
             b = pw.chromium.connect_over_cdp(CDP_URL)
             ctx = pick_context(b)
             if ctx is None:
-                return "no"
+                return "unknown"
             page = ctx.new_page()
             _guard_dialogs(ctx, page)
             try:
                 page.goto(CHATGPT_URL, wait_until="load", timeout=30000)
                 time.sleep(2)
-                return "ok" if looks_logged_in(page) else "no"
+                return login_state(page)
             finally:
                 try:
                     page.close()
@@ -928,6 +937,49 @@ def probe_login() -> str:
                     pass
     except Exception:
         return "unknown"
+
+
+def inspect_session(require_model: str = "current", want: str = "pro") -> dict:
+    """Inspect the existing dedicated session without uploading, sending, or selecting a model."""
+    result = {"ok": False, "browser": "down", "login": "unknown", "model": None, "effort": None}
+    if not is_port_open(CDP_PORT):
+        return result
+    result["browser"] = "wrong"
+    if not (cdp_browser_ok() and _cdp_matches_dedicated_profile()):
+        return result
+    result["browser"] = "ok"
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.connect_over_cdp(CDP_URL)
+            context = pick_context(browser)
+            if context is None:
+                return result
+            page = context.new_page()
+            _guard_dialogs(context, page)
+            try:
+                page.goto(CHATGPT_URL, wait_until="load", timeout=30000)
+                result["login"] = login_state(page)
+                if result["login"] != "ok":
+                    return result
+                pill = _exact_effort_pill(page, want)
+                if not _open_switcher(page):
+                    return result
+                result["model"] = selected_model_in_open_menu(page)
+                row = _find_menu_row(page, ("추론", "reasoning"))
+                lines = _menu_text(row).splitlines() if row else []
+                result["effort"] = (lines[-1].strip() if len(lines) >= 2
+                                    else read_menu_state(page)["effort_checked"] or pill)
+                model_ok = bool(result["model"]) and (require_model == "current"
+                           or _model_name_matches(result["model"], require_model))
+                result["ok"] = bool(model_ok and result["effort"]
+                                    and result["effort"].casefold() in _effort_candidates(want))
+                return result
+            finally:
+                page.close()
+    except Exception as exc:
+        result["ok"] = False
+        result["error"] = type(exc).__name__
+        return result
 
 
 def check_env(do_install: bool = False) -> int:
@@ -983,7 +1035,9 @@ def check_env(do_install: bool = False) -> int:
         if login_state == "ok":
             ok.append("ChatGPT 로그인됨 (입력창/모델 어포던스 확인)")
         elif login_state == "no":
-            issues.append(("ChatGPT 로그인 안 됨", "해당 브라우저에서 chatgpt.com 로그인 + GPT-5.6 Sol Pro 선택"))
+            issues.append(("ChatGPT 로그인 안 됨", "기존 전용 브라우저에서 chatgpt.com 로그인 후 다시 점검"))
+        else:
+            issues.append(("ChatGPT 로그인 상태 확인 불가", "페이지 로딩/접속 상태를 확인하고 다시 점검; 재로그인이나 프로필 초기화는 하지 않음"))
 
     for o in ok:
         print(f"  ✓ {o}")
@@ -1113,6 +1167,13 @@ def capture_conv_url(page, timeout_secs: int = 40) -> str | None:
 # 대화 URL은 두 형태다: 일반 채팅 https://chatgpt.com/c/<id>,
 # 프로젝트 안이면 https://chatgpt.com/g/g-p-<...>/c/<id>.
 CONV_URL_RE = re.compile(r"https://chatgpt\.com(?:/g/[A-Za-z0-9._-]+)?/c/[0-9a-f-]{8,}")
+
+
+def same_conversation(expected: str, actual: str) -> bool:
+    """Project and ordinary URLs can name one chat; another valid chat is not a match."""
+    urls = [urllib.parse.urlsplit(value) for value in (expected, actual)]
+    clean = [urllib.parse.urlunsplit((url.scheme, url.netloc, url.path.rstrip('/'), '', '')) for url in urls]
+    return all(CONV_URL_RE.fullmatch(value) for value in clean) and clean[0].rsplit('/', 1)[-1] == clean[1].rsplit('/', 1)[-1]
 
 
 def resolve_followup_target(value: str) -> str:
@@ -1352,23 +1413,23 @@ MODEL_SWITCHER_SELECTORS = [
 # 2026-08-31 실측(sol-lane e8c1a3f 백포팅): 모델명 표기가 'GPT-5.6 Sol'에서 '5.6 Sol'로
 # 바뀌었다 — 접두사 없는 버전 숫자(\d+\.\d+)도 모델명으로 인정한다. effort 항목
 # (즉시/중간/높음/매우 높음/최대/기본)에는 숫자가 없으므로 구분은 유지된다.
-MODEL_NAME_RE = r"GPT|gpt|o\d|Claude|Gemini|\d+\.\d+"
+MODEL_NAME_RE = r"(?i)GPT|o\d|Claude|Gemini|\d+\.\d+|\b(?:Astra|Sol|Terra|Luna)\b"
 
 
 def _model_name_matches(menu_name: str, require: str) -> bool:
     """2026-08-31 UI는 'GPT-5.6 Sol'을 '5.6 Sol'로 표시한다.
 
-    요청명과 메뉴명 양쪽에서 'GPT-'/'gpt ' 접두사를 떼고 나머지의 포함 관계로
-    비교한다: require 'GPT-5.6 Sol'은 메뉴 '5.6 Sol'과 일치한다.
+    GPT 접두사와 공백만 정규화한다. 버전/패밀리/변형은 정확히 같아야 한다.
     """
     def strip_prefix(value: str) -> str:
-        lowered = value.strip().casefold()
+        lowered = " ".join(value.split()).casefold()
         for prefix in ("gpt-", "gpt ", "gpt"):
             if lowered.startswith(prefix):
                 return lowered[len(prefix):].strip("- ")
         return lowered
 
-    return strip_prefix(require) in strip_prefix(menu_name) or strip_prefix(menu_name) in strip_prefix(require)
+    expected, observed = strip_prefix(require), strip_prefix(menu_name)
+    return bool(expected and observed and expected == observed)
 
 
 EFFORT_ALIASES = {
@@ -1626,14 +1687,15 @@ def _select_advanced_model_and_effort(page, want: str, require_model: str) -> tu
         result_name = f"{current_model} ({current_effort})"
         print(f"  ✓ 이미 목표 조합: model={current_model}, effort={current_effort} → 조작 생략")
         return True, result_name
-    if not _click_menu_row(page, ("모델", "model")):
-        return False, None
-    time.sleep(0.8)
-    selected_model = _click_menu_radio(page, require_model)
-    if selected_model is None:
-        return False, None
-    if not _ensure_switcher_menu(page) or not _expand_advanced_options(page):
-        return False, None
+    if not _model_name_matches(current_model, require_model):
+        if not _click_menu_row(page, ("모델", "model")):
+            return False, None
+        time.sleep(0.8)
+        selected_model = _click_menu_radio(page, require_model)
+        if selected_model is None:
+            return False, None
+        if not _ensure_switcher_menu(page) or not _expand_advanced_options(page):
+            return False, None
     # 추론 강도: 라벨 체계가 자주 바뀐다(2026-08: 'Pro' → '최대/울트라' 관측).
     # 별칭 후보 순서로 라디오 시도 → 검증은 (a) 라디오 aria-checked 또는
     # (b) 성공 선택이 서브메뉴를 닫아버린 UI를 위한 상위 행 값. 그래도 없으면 슬라이더.
@@ -1692,6 +1754,7 @@ def _select_advanced_model_and_effort(page, want: str, require_model: str) -> tu
 def read_menu_state(page) -> dict:
     """열린 메뉴에서 모델명(menuitem 중 checked/selected) + 체크된 추론단계(menuitemradio aria-checked)를 읽는다."""
     state = {"model": None, "model_source": None, "models": [], "effort_checked": None, "items": []}
+    selected_models = set()
     try:
         # 한 번 순회하며 (1) 모델같은 항목 전부 수집, (2) aria-checked/selected된 활성 모델 검출
         for it in page.query_selector_all('[role="menuitem"], [role="menuitemradio"], [role="option"]'):
@@ -1704,8 +1767,13 @@ def read_menu_state(page) -> dict:
                 if is_checked and not state["model"]:
                     state["model"] = name
                     state["model_source"] = "checked"
+                if is_checked:
+                    selected_models.add(name)
+        if len(selected_models) > 1:
+            state["model"] = None
+            state["model_source"] = "ambiguous"
         # 활성표시(aria-checked)를 못 찾았을 때만 첫 모델명 폴백 — 출처를 'fallback'으로 표기(검증 시 모호하면 거부)
-        if not state["model"] and state["models"]:
+        if not state["model"] and state["models"] and not selected_models:
             state["model"] = state["models"][0]
             state["model_source"] = "fallback"
     except Exception:
@@ -1735,8 +1803,16 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
     # pill('5.6 Sol|최대')의 둘째 줄에만 남는다 — 열기 '전에' 스냅숏해 already 판정에 쓴다.
     pill_effort_before = _exact_effort_pill(page, want_l)
     if not _open_switcher(page):
-        print("  ⚠️  모델 스위처를 못 찾음 → 기본 모델로 진행")
+        print("  ❌ 모델 스위처를 못 찾음 → 검증 실패(전송 안 함)")
         return False, None
+
+    if require_model == "current":
+        require_model = selected_model_in_open_menu(page)
+        if not require_model:
+            page.keyboard.press("Escape")
+            print("  ❌ 현재 선택 모델을 확인할 수 없음 → 전송 안 함")
+            return False, None
+        print(f"  현재 모델 고정: {require_model}")
 
     if require_model:
         advanced_result = _select_advanced_model_and_effort(page, want, require_model)
@@ -1863,7 +1939,8 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
 
     effort_verified = (_slider_effort_verified(page, want_l)
                        if slider_used else
-                       (after["effort_checked"] is not None and want_l in after["effort_checked"].lower())
+                       (after["effort_checked"] is not None
+                        and after["effort_checked"].strip().casefold() in _effort_candidates(want_l))
                        or (already_pill and (pill_effort_before is not None
                                              or _exact_effort_pill(page, want_l) is not None)))
     verified = model_verified and effort_verified
@@ -1879,6 +1956,19 @@ def select_model(page, want: str, require_model: str | None = None) -> tuple[boo
 
     print(f"  {'✓' if verified else '⚠️'} 최종 모델 검증: model={after['model']} (기대:{require_model}), effort={after['effort_checked']} (기대:{want}) -> 결과={'OK' if verified else '실패'}")
     return verified, verified_model_name
+
+
+def selected_model_in_open_menu(page) -> str | None:
+    """Read selected UI evidence; never infer the active model from the first option."""
+    if _expand_advanced_options(page):
+        row = _find_menu_row(page, ("모델", "model"))
+        lines = [line.strip() for line in _menu_text(row).splitlines() if line.strip()] if row else []
+        if len(lines) >= 2 and re.search(MODEL_NAME_RE, lines[-1]):
+            return lines[-1]
+    state = read_menu_state(page)
+    if state["model_source"] == "checked":
+        return state["model"]
+    return None
 
 
 def verified_effort_label(*, slider_label: str | None, slider_used: bool,
@@ -2279,26 +2369,31 @@ def pick_context(browser):
     return browser.contexts[0]
 
 
-def looks_logged_in(page) -> bool:
-    # 음성 신호: 입력창 존재 + 로그인 벽 부재
-    if find_input(page) is None:
-        return False
+def login_state(page) -> str:
+    """Only a visible login wall means logged out; missing UI evidence is unknown."""
     for sel in LOGIN_WALL_SELECTORS:
         try:
-            if page.query_selector(sel):
-                return False
+            wall = page.query_selector(sel)
+            if wall is not None and wall.is_visible():
+                return "no"
         except Exception:
-            continue
+            return "unknown"
+    if find_input(page) is None:
+        return "unknown"
     # 양성 신호: 인증된 세션에서만 렌더되는 composer 어포던스(모델 pill 또는 파일첨부 input)를 적극 확인.
     # 렌더 지연 대비 ~3s 폴링. 끝까지 없으면 fail-closed(인증 증명 실패로 간주).
     for _ in range(6):
         try:
             if page.query_selector('button.__composer-pill') or page.query_selector(FILE_INPUT_SELECTOR):
-                return True
+                return "ok"
         except Exception:
             pass
         time.sleep(0.5)
-    return False
+    return "unknown"
+
+
+def looks_logged_in(page) -> bool:
+    return login_state(page) == "ok"
 
 
 # ===========================================================================
@@ -2438,7 +2533,7 @@ def ensure_project(page, name: str, cache_key: str, cache_path: Path) -> str | N
 # main
 # ===========================================================================
 def main():
-    ap = argparse.ArgumentParser(description="repomix → 구독 ChatGPT(GPT-5.6 Sol Pro) 분석")
+    ap = argparse.ArgumentParser(description="repomix → 검증된 구독 ChatGPT Pro 분석")
     ap.add_argument("--target", default=None, help="분석 대상 폴더(생략 시 프롬프트만 = 의견 모드)")
     ap.add_argument("--include", default=None, help='repomix --include 글롭')
     ap.add_argument("--ignore", default=None, help="repomix --ignore 글롭")
@@ -2461,7 +2556,7 @@ def main():
     ap.add_argument("--prompt-file", default=None)
     ap.add_argument("--model", default=None, help='추론단계 선택(예: "pro")')
     ap.add_argument("--require-model", default=None,
-                    help='모델명 검증(예: "GPT-5.6") — 불일치 시 전송 중단')
+                    help='정확한 모델명 검증(예: "GPT-6 Astra"); current는 UI에서 현재 선택 모델을 읽어 고정. 불일치 시 전송 중단')
     ap.add_argument("--force-answer-after", type=int, default=None,
                     help="N초 후 리즈닝 중이면 '지금 답변 받기' 재시도")
     ap.add_argument("--max-wait", type=int, default=None,
@@ -2483,6 +2578,8 @@ def main():
     ap.add_argument("--out-dir", default=None,
                     help="출력 저장 폴더(기본: 현재 프로젝트의 .insane-review/; env INSANE_REVIEW_OUT)")
     ap.add_argument("--check-env", action="store_true")
+    ap.add_argument("--inspect-session", action="store_true",
+                    help="전용 브라우저 로그인·현재 모델·Pro 강도를 JSON으로 진단(선택/패킹/전송 없음)")
     ap.add_argument("--ensure-env", action="store_true",
                     help="저장된 브라우저가 있고 CDP가 닫혀(down) 있으면 조용히 1회 자동 기동 후 점검 "
                          "(저장값-only·첫감지 폴백 없음; browser=wrong이면 자동기동 안 함)")
@@ -2494,6 +2591,12 @@ def main():
                     help="응답 생성 중인 텍스트를 stdout에 실시간 증분 출력(파이프/로그 중계용)")
     ap.add_argument("prompt_args", nargs="*", help="프롬프트(위치인자 — council 호환)")
     args = ap.parse_args()
+
+    if args.inspect_session:
+        with CdpLease(CDP_PORT):
+            result = inspect_session(args.require_model or "current", args.model or "pro")
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        sys.exit(0 if result["ok"] else 1)
 
     if args.check_env:
         with CdpLease(CDP_PORT):
@@ -2660,14 +2763,17 @@ def main():
                         if find_input(page):
                             break
                         time.sleep(1)
-                    if not looks_logged_in(page):
-                        raise RuntimeError("ChatGPT 로그인 안 됨/입력창 없음 — 해당 브라우저에서 chatgpt.com 로그인 확인")
+                    session_login = login_state(page)
+                    if session_login != "ok":
+                        hint = ("기존 전용 브라우저에서 로그인" if session_login == "no"
+                                else "페이지 로딩/접속 상태 확인; 재로그인이나 프로필 초기화는 하지 않음")
+                        raise RuntimeError(f"ChatGPT login={session_login} — {hint}")
 
                     if followup_url:
                         # 목표 대화에 실제로 들어왔는지 확인한다. SPA가 조용히
                         # 리디렉트했는데 계속 진행하면 엉뚱한 대화에 질문이 흘러간다.
                         landed = current_url(page)
-                        if not CONV_URL_RE.fullmatch(landed.split("?")[0].rstrip("/")):
+                        if not same_conversation(followup_url, landed):
                             raise RuntimeError(f"후속 대상 대화에 진입 실패(현재: {landed[:80]}) → 중단(fail-closed)")
                         conv_url = landed
                         print(f"  🔗 대화 재진입: {conv_url}")

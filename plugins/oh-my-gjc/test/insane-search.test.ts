@@ -132,6 +132,19 @@ assert safety.curl_resolve_entries("https://public.test/") == (["public.test:443
     expect(read(join(engineRoot, "transport.py"))).toContain("CurlOpt.RESOLVE");
   });
 
+  test("blocks shared address space and credential-bearing redirect destinations", () => {
+    const result = runPython(`
+import sys
+sys.path.insert(0, ${pythonImportPath()})
+from engine import safety
+for address in ['100.64.0.1', '127.0.0.1', '169.254.169.254', '224.0.0.1', '::1']:
+    assert safety._ip_blocked(address), address
+assert not safety._ip_blocked('8.8.8.8')
+assert safety.resolve_public('https://user:pass@8.8.8.8/')[0] == []
+`);
+    expect(result.status, result.stderr).toBe(0);
+  });
+
   test("prints agent-facing content through the untrusted-text boundary", () => {
     const main = read(join(engineRoot, "__main__.py"));
     expect(main).toContain("print(result.to_untrusted_text(), end=\"\")");

@@ -13,7 +13,7 @@ oh-my-gjc 스위트의 단일 진입점(oh-my-zsh의 `omz` 관례 계승). 이 �
 - `/omg` — 이 카탈로그.
 - `/omg:setup` — 셋업 전제조건 확인. 멱등.
 - `/omg:no-english [on|off|status]` — 이번 세션의 한국어 우선 표현을 명시적으로 토글.
-- `/omg:insane-review` — GPT-5.6 Sol Pro 웹 코드 리뷰. · 전제: ChatGPT 구독 + 크로미움 로그인
+- `/omg:insane-review` — 검증된 ChatGPT Pro 웹 코드 리뷰. · 전제: ChatGPT 구독 + 크로미움 로그인
 - `/omg:gpt-image <prompt>` — 로그인된 ChatGPT Images 웹 UI로 PNG 생성 및 로컬 provenance 저장. · 전제: ChatGPT 로그인 + 크로미움
 
 > `insane-review`는 필요한 외부 환경이 없으면 안내하고 안전하게 멈춘다.

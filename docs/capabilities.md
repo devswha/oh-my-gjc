@@ -18,13 +18,13 @@
 
 ### `extragoal`
 
-완료된 변경을 독립적인 교차 세션 GJC 리뷰와 `insane-review`의 AND 게이트로 재검토합니다. 판정 누락, 형식 오류, 시간 초과는 승인으로 처리하지 않으며, 외부로 나가는 검토에서는 시크릿 스캔을 반드시 수행합니다.
+완료된 변경을 독립적인 교차 세션 GJC 리뷰로 재검토합니다. `insane-review`를 추가하는 N-of-N 모드에서는 선택한 모든 리뷰어가 통과해야 하는 AND 게이트를 적용합니다. 판정 누락, 형식 오류, 시간 초과는 승인으로 처리하지 않으며, 외부로 나가는 검토에서는 시크릿 스캔을 반드시 수행합니다.
 
 원문: [`SKILL.md`](../plugins/oh-my-gjc/skills/extragoal/SKILL.md)
 
 ### `insane-review`
 
-`/omg:insane-review`는 관련 코드를 repomix로 묶어 로그인된 ChatGPT 웹 세션에 CDP로 전달하고 GPT-5.6 Sol Pro 리뷰를 회수합니다. ChatGPT 구독, chatgpt.com에 로그인한 전용 프로필의 Chromium 계열 브라우저와 CDP `:9222`가 필요하며 로그인은 자동화하지 않습니다.
+`/omg:insane-review`는 관련 코드를 repomix로 묶어 로그인된 ChatGPT 웹 세션에 CDP로 전달하고 실제 선택된 Pro 모델의 리뷰를 회수합니다. 모델을 명시하면 그 이름을 검증하며 Sol로 대체하지 않습니다. ChatGPT 구독, chatgpt.com에 로그인한 전용 프로필의 Chromium 계열 브라우저와 CDP `:9222`가 필요하며 로그인은 자동화하지 않습니다.
 
 검증하지 못한 모델, 첨부되지 않은 패킹 파일, 잘린 프롬프트, 시간 초과, 빈 응답에서는 실패로 종료합니다. 결과 파일은 프로젝트 `.insane-review/`에 저장되며 외부 웹 서비스로 코드를 보낼 수 있으므로 개인 구독 용도로만 사용합니다.
 
@@ -32,7 +32,7 @@
 
 ### `insane-search`
 
-일반 `read` 또는 웹 접근이 402·403·WAF·challenge·불완전한 SPA로 막혔거나 X/Twitter, Reddit, YouTube 등 알려진 공개 플랫폼 route를 읽을 때만 자동 활성화합니다. 일반 검색이나 이미 읽을 수 있는 공개 페이지에는 사용하지 않습니다.
+일반 `read` 또는 웹 접근이 402·403·WAF·challenge·불완전한 SPA로 막혔거나 명시적인 공개 자막·미디어 추출 요청이 있을 때만 자동 활성화합니다. 일반 검색이나 이미 읽을 수 있는 공개 페이지에는 사용하지 않습니다.
 
 공식 공개 route를 먼저 사용하고, 일반 공개 URL은 SSRF-pinned TLS grid로 읽습니다. API 키나 로그인 없이 공개 `http`/`https` URL만 처리하며 CAPTCHA, paywall, 인증 우회를 하지 않습니다. 핵심 의존성은 Python 3, `curl_cffi>=0.15`, `bs4`, `PyYAML`, `markdownify`이고, YouTube 등 미디어 경로에는 선택적으로 `yt-dlp`가 필요합니다. 의존성은 확인만 하고 자동 설치하지 않습니다.
 

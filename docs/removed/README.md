@@ -73,3 +73,18 @@ Curated model-preset merger (`daily`/`agent`) into user `models.yml`.
 
 Removal rationale and boundary: see the `preset-pack` section in
 `docs/removed/tombstones.md` and `docs/verification/omg-release-v0.29.0-2026-07-21.md`.
+
+### Suite binding resolver snippets — replaced for v0.36.0 (unreleased)
+
+The capabilities remain active. These snippets were replaced to reject malformed
+or symlinked higher-priority bindings rather than silently selecting another root.
+Removal commit: recorded with the implementation commit in the skills audit verification report.
+
+| archived file | original path(s) |
+|---|---|
+| `suite-resolvers/insane-search-resolver.sh.txt` | `plugins/oh-my-gjc/skills/insane-search/SKILL.md` (resolver block) |
+| `suite-resolvers/council-resolver.sh.txt` | `plugins/oh-my-gjc/references/council-setup.md` (resolver block) |
+| `suite-resolvers/gpt-image-resolver.sh.txt` | `plugins/oh-my-gjc/skills/gpt-image/SKILL.md` (resolver block) |
+| `suite-resolvers/insane-review-resolver.sh.txt` | `plugins/oh-my-gjc/skills/insane-review/SKILL.md`, `plugins/oh-my-gjc/templates/insane-review.md` (identical resolver blocks) |
+
+Archive only; never install or execute these snippets.

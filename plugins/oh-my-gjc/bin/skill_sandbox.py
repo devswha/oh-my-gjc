@@ -79,17 +79,32 @@ class StubHandler(BaseHTTPRequestHandler):
             }],
             "usage": {"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
         }
-        events = (
+        message = response["output"][0]
+        part = message["content"][0]
+        # A Responses stream announces its message/content before text deltas.
+        # Current GJC ignores orphan deltas even if response.completed repeats them.
+        events = [
+            {"type": "response.created", "response": {**response, "status": "in_progress", "output": []}},
+            {"type": "response.output_item.added", "output_index": 0,
+             "item": {**message, "status": "in_progress", "content": []}},
+            {"type": "response.content_part.added", "item_id": message["id"],
+             "output_index": 0, "content_index": 0, "part": {**part, "text": ""}},
             {
                 "type": "response.output_text.delta",
                 "delta": "샌드박스 스킬 로딩을 확인했습니다.",
                 "item_id": "msg_skill_sandbox",
                 "output_index": 0,
                 "content_index": 0,
-                "sequence_number": 0,
             },
-            {"type": "response.completed", "response": response, "sequence_number": 1},
-        )
+            {"type": "response.output_text.done", "item_id": message["id"],
+             "output_index": 0, "content_index": 0, "text": part["text"]},
+            {"type": "response.content_part.done", "item_id": message["id"],
+             "output_index": 0, "content_index": 0, "part": part},
+            {"type": "response.output_item.done", "output_index": 0, "item": message},
+            {"type": "response.completed", "response": response},
+        ]
+        for index, event in enumerate(events):
+            event["sequence_number"] = index
         body = "".join(
             f"data: {json.dumps(event, ensure_ascii=False)}\n\n" for event in events
         ).encode()

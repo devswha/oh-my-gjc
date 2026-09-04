@@ -14,7 +14,7 @@ canonical 진단 대상은 user scope `~/.gjc/agent`다. 아래 5개 skill과 5�
 ```bash
 root="$HOME/.gjc/agent"
 new_suite_binding="$root/runtimes/oh-my-gjc/root"
-legacy_suite_binding="$root/runtimes/oh-my-gjc/root"
+legacy_suite_binding="$root/runtimes/oh-my-gajae-code/root"
 if test -e "$legacy_suite_binding" || test -L "$legacy_suite_binding"; then
   printf '%s\n' "warning: preserved compatibility fallback binding is present at $legacy_suite_binding; the oh-my-gjc binding is canonical" >&2
 fi
@@ -27,7 +27,7 @@ for command in omg.md omg:setup.md omg:no-english.md omg:insane-review.md omg:gp
 done
 ```
 
-프로젝트 `.gjc/runtimes/oh-my-gjc/root`, `.gjc/commands/omg*.md`, 또는 suite-owned `.gjc/skills/<name>`가 있으면 `프로젝트 scope 잔재가 user 설치보다 우선할 수 있음`이라고 경고만 한다. **Preserved compatibility fallback:** 이전 `~/.gjc/agent/runtimes/oh-my-gjc/root` binding이 있으면 새 binding을 정본으로 유지한 채 read-only fallback 존재만 경고한다. 이 커맨드는 프로젝트·user scope 어느 쪽도 수정하지 않는다.
+프로젝트 `.gjc/runtimes/oh-my-gjc/root`, `.gjc/commands/omg*.md`, 또는 suite-owned `.gjc/skills/<name>`가 있으면 `프로젝트 scope 잔재가 user 설치보다 우선할 수 있음`이라고 경고만 한다. **Preserved compatibility fallback:** 이전 `~/.gjc/agent/runtimes/oh-my-gajae-code/root` binding이 있으면 새 binding을 정본으로 유지한 채 read-only fallback 존재만 경고한다. 이 커맨드는 프로젝트·user scope 어느 쪽도 수정하지 않는다.
 
 누락·손상은 체크리스트에 `→ hardened installer를 사용자가 별도 셸에서 실행해야 함`으로 보고한다. 이 커맨드 안에서 installer를 실행하거나 provider 인증을 고치지 않는다.
 

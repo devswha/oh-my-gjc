@@ -87,3 +87,12 @@ Auto-update is OFF by default; the installer never schedules it. To opt in, run 
 - Cleanup removes only those former OMG-owned wrapper surfaces. The external upstream Ouroboros package 0.51.7, `~/.ouroboros`, its upstream marketplace/plugin, GJC bridge extension and MCP state, Seeds, runs, authentication, and configuration remain external and must not be removed.
 
 When run inside a git repository, upgrade/uninstall also backs up that repository's `AGENTS.md` and removes only one well-formed retired `oh-my-gjc:branchflow` marker block. It never deletes `docs/WORKFLOW.md`. Run the installer once from each repository where `/omg:branchflow-always on` was previously enabled, then review the preserved workflow document manually.
+
+## Optional search environment (explicit one-time setup)
+
+From the checkout, run `python3 plugins/oh-my-gjc/bin/setup_insane_search.py --install`
+once to install core public-fetch dependencies in a private virtual environment.
+The installed skill resolves the same helper beside its suite-bound launcher. Subsequent
+`insane_search.py` calls reuse it; ordinary fetches, `install.sh`, and `/omg:setup`
+never install dependencies. No browser login, ChatGPT model, or API key is involved.
+The environment lives at `${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/insane-search/venv`.
