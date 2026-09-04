@@ -19,7 +19,7 @@
 | `gjc plugin list` in that isolated HOME | rc=0 |
 | Installed surfaces | exactly 5 skills and 5 commands; root binding mode 0600 |
 | Installed Python helpers and native SKILL.md payloads | byte-identical to candidate sources |
-| `gitleaks git . --log-opts=f97288e..1aade43 --redact --no-banner` | rc=0; 2 commits scanned, no leaks |
+| `gitleaks git . --log-opts=f97288e..c96a451 --redact --no-banner` | rc=0; 3 commits scanned, no leaks |
 
 The fresh-install reproduction used separate HOME/GJC/XDG roots with `GJC_NOTIFICATIONS=0 GJC_SDK_DISABLE=1`. It did not use operator credentials. All previously exercised 12 offline search-engine test scripts passed; details and public-fetch evidence are in the [suite audit](skills-audit-2026-09-04.md).
 
@@ -36,8 +36,22 @@ The fresh-install reproduction used separate HOME/GJC/XDG roots with `GJC_NOTIFI
 
 Before release, the operator's user-scope suite binding and native commands still pointed to **v0.35.0**. Its native review command had neither `--require-model current` nor `--inspect-session`. The current project has no overriding project-scope binding/command/skill.
 
-The verified changes will be published through main/dev and v0.36.0, then the canonical hardened installer will refresh the existing user installation. This does not opt into automatic updates or run the optional dependency setup.
+The verified changes were published as v0.36.0. The canonical hardened installer refreshed the existing user installation from 0.35.0 to 0.36.0 (rc=0). No customized native files were found before the update; installed Python helpers and all five native skills match the verified source. The installer did not schedule automatic updates or invoke dependency setup. A separate explicit one-time setup invocation then prepared the private search environment for this repair.
 
 **Live Astra Pro verification is still pending-environment.** There is no GUI DISPLAY/WAYLAND_DISPLAY. A standard dedicated-profile headless launch successfully bound CDP, but ChatGPT returned HTTP 403 with a waiting/challenge page, no composer, and login unknown. No challenge/login bypass or review submission occurred. The diagnostic process was cleaned up; the existing profile was preserved. Release notes disclose this limit. No claim is made that an Astra response has been harvested.
 
-Publication and installed-payload results will be recorded after the release and upgrade actually succeed.
+## Publication and operator verification
+
+- Release tag commit: `c96a451e9a32525188195e180d67ba6069411061`.
+- GitHub Release v0.36.0 published at **2026-09-04T21:27:20Z**, not a draft or prerelease.
+- Main and dev were pushed atomically to the same release commit. The followup evidence commit also fast-forwards both branches; the release tag is not moved.
+- GitHub Actions `test`, run **33921159083**, completed **success** for the release commit.
+- Canonical installer downloaded from `raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh`, byte-compared with the verified script, executed with **rc=0**.
+- User suite binding: **v0.36.0**, mode **0600**. The installed review command contains both `--require-model current` and `--inspect-session`.
+- Separate explicit `setup_insane_search.py --install`: **rc=0**. It prepared `~/.local/share/oh-my-gjc/insane-search/venv` without changing system Python. Ordinary fetches still never install packages.
+- Installed `insane_search.py --check-env`: **rc=0**, managed interpreter reused, `missing=[]`, `authentication=not_required`, `browser=not_used`, `model=not_used`.
+- Installed public fetch of `https://example.com/` with `--selector h1 --json --trace --timeout 5 --no-retry`: **rc=0**, HTTP 200, **strong_ok**, one pinned curl attempt, 167 extracted characters, `content_trust=untrusted_public_web`, `must_invoke_browser=false`.
+- Installed `pack_and_ask.py --inspect-session`: **rc=1**, browser down / login unknown. Actual Astra Pro selection and response harvest remain unverified, as described above.
+
+Existing GJC sessions must be reopened to load the refreshed native command/skill bodies. This evidence update changes documentation only; it does not alter the reviewed runtime.
+
