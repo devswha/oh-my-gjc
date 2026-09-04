@@ -40,4 +40,17 @@ The scoped live canary packed two complete self-contained files containing the a
 
 The search automation improvements and actual installed public fetch (`strong_ok`, no browser/login/model) were verified in [v0.36.0 evidence](omg-release-v0.36.0-2026-09-04.md). Search code is unchanged by this patch.
 
-Behavior candidate: `8e50e37ed4d545d9113e5dfe60436a6edf1f87ed`. `gitleaks git . --log-opts=16cb311..8e50e37 --redact --no-banner` completed with rc=0 and no leaks. The release-preparation followup changes documentation only; the final range is scanned again before publication. Publication and the operator's v0.36.1 upgrade will be recorded after completion. Existing GJC sessions should be reopened to load the refreshed native instructions.
+Behavior candidate: `8e50e37ed4d545d9113e5dfe60436a6edf1f87ed`. `gitleaks git . --log-opts=16cb311..8e50e37 --redact --no-banner` completed with rc=0 and no leaks. The release-preparation followup changes documentation only; the final range is scanned again before publication. Publication and the operator upgrade are recorded below. Existing GJC sessions should be reopened to load the refreshed native instructions.
+
+## Published and installed
+
+- v0.36.1 published at **2026-09-04T22:26:19Z**, tag commit `3899c37138f4e15ee6d3abe055335849cf0b4924`; main and dev advanced atomically. v0.36.0 was marked superseded by v0.36.1 without deleting or moving either tag.
+- GitHub Actions test run **33925437882** completed **success** for the release commit.
+- Final release-range scan (`16cb311..3899c37`) returned rc=0, no leaks; the final preparation commit contained documentation only.
+- The canonical hardened installer updated the operator to **v0.36.1**, rc=0. Native files had no local customization before replacement. The installed engine matches the exact live-tested SHA-256 above; binding mode remains 0600.
+- Installed `--inspect-session --require-model "GPT-6 Astra"`: **rc=0**, browser/login ok, model **GPT-6 Astra**, effort **최대**.
+- Installed `--ensure-env`: **rc=0** using the existing browser/login, with no credential entry.
+- Installed search public canary: **rc=0**, **strong_ok**, one pinned curl attempt, no browser/login/model dependency; the managed environment was reused.
+- The normal dedicated browser remains available for reuse. No user browser, profile or login was reset. Full response artifacts remain private in the main checkout's ignored `.insane-review/` directory.
+
+The final documentation followup does not change the tested runtime. All requested inspection, implementation, independent review, live Astra verification, release and operator installation steps are complete.

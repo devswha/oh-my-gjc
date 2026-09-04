@@ -5,8 +5,8 @@
 - Baseline: `f97288e` on fetched `origin/main`; isolated branch `fix/skills-audit-astra-20260905`.
 - Audited manifest version: **0.36.0**. Publication and the operator installation refresh are tracked in [release evidence](omg-release-v0.36.0-2026-09-04.md).
 - All five skills, all five command templates, native installer asset/root contracts, review/search/image runtimes, relevant tests and public usage documentation were inspected. Vendored reference manuals and archived retired capabilities were not audited line by line.
-- Code verification is recorded below. Final independent candidate review: **APPROVE**; two non-blocking LOW findings addressed. **Live Astra/ChatGPT CDP verification is pending-environment**, not passed.
-- User's browser/Pro report maps to `insane-review`: `insane-search` uses public HTTP fetches and has no ChatGPT login or model selection. The exact reported Astra UI has not been observed in this environment.
+- Code verification is recorded below. Final independent candidate review: **APPROVE**; two non-blocking LOW findings addressed. **Live Astra/ChatGPT CDP verification passed with the final v0.36.1 candidate**; see the follow-through below.
+- User's browser/Pro report maps to `insane-review`: `insane-search` uses public HTTP fetches and has no ChatGPT login or model selection. Subsequent GUI validation observed GPT-6 Astra / 최대 and completed an attached review.
 
 ## Findings and changes
 
@@ -31,9 +31,9 @@ The independent original-source review confirmed the setup-path and model-label 
 |---|---|---|
 | no-english | Explicit-command trigger, session-only scope, preservation of code/logs/evidence; actual native loading | No external runtime |
 | extragoal | Leaf reviewer/secret-scan/verdict contracts and actual native loading; independent GJC audit exercised | Optional ChatGPT web lane not exercised |
-| insane-review | Exact model/current selection fixtures; login classification; scoped turn/clipboard/lease tests; followup identity; native loading | CDP browser unavailable; no code sent through ChatGPT web |
+| insane-review | Exact model/current selection fixtures; login classification; scoped turn/clipboard/lease tests; followup identity; native loading | Initially unavailable; final v0.36.1 attached Astra canary and response harvest passed |
 | insane-search | Managed setup/reuse; preflight; public URL/SSRF/prompt-boundary tests; actual public-page fetch | Auth/CAPTCHA/paywall bypass excluded; optional media/PDF packages not installed for the live canary |
-| gpt-image | Strict root resolution, PNG/output/provenance/deadline/shared lease tests; explicit trigger and native loading | No live image generation; dedicated browser unavailable |
+| gpt-image | Strict root resolution, PNG/output/provenance/deadline/shared lease tests; explicit trigger and native loading | Live shared-profile prerequisites passed; image generation was not requested |
 
 ## Verification evidence
 
@@ -50,18 +50,18 @@ The independent original-source review confirmed the setup-path and model-label 
 - Observed managed package versions: curl_cffi 0.16.3, beautifulsoup4 4.15.0, PyYAML 6.0.3, markdownify 1.2.3, pip 26.2.1. Future setup resolves the declared package constraints; this is not a lockfile.
 - Initial and final-review snapshot secret scans: rc=0 after redacting two confirmed synthetic tokens in existing collect redaction tests. Whole-history/archive scans are not represented as passing. `gitleaks git . --log-opts=f97288e..9a30dec --redact --no-banner`: rc=0, no leaks.
 
-## Pending environment and delivery
+## Initial environment observations and delivery (Astra limitation later resolved)
 
 - Updated `pack_and_ask.py --ensure-env`: **rc=1**; `DISPLAY` and `WAYLAND_DISPLAY` absent; CDP 9222 down. Existing dedicated profile is present and was not reset; no login was automated.
 - Updated `--inspect-session`: **rc=1**, `browser=down`, `login=unknown`, model/effort null. No upload, generation, model-selection click or review prompt was made by these checks.
 - A standard `--headless=new` diagnostic launch using the same dedicated profile did bind CDP successfully, but ChatGPT returned **HTTP 403**, a waiting/challenge title, no composer, and `login=unknown`. No challenge interaction, login, or alternate fetch was attempted. Only the process started for that diagnostic was terminated after verifying its captured PID, owner, normalized exact headless/profile/port arguments and Chromium executable; the profile was preserved. Headless operation is not claimed as a working substitute.
-- Required remaining proof: run inspection and a relevant review using the operator's existing dedicated logged-in browser with the actual Astra Pro UI, then inspect the saved response/provenance. Fixture acceptance alone is insufficient.
+- The originally required live proof is now complete: the existing dedicated GUI login, actual Astra/maximum selection, full-code attachment and saved response were verified. Fixture acceptance was not used as a substitute.
 - Control-tower report: direct local root probe returned HTTP 200 with title Tower; `/health` returned HTTP 404 (curl rc=0 alone was not service-health proof). A `kind=report` for pushed `1aade43` was submitted to the repository-documented `/queue/add` endpoint and accepted with HTTP 200. This records API acceptance, not human acknowledgement.
 - Implementation/removal commit: `9a30dec` (released in v0.36.0). Final review verdict: APPROVE. Documentation/test-fixture followups are recorded in the subsequent commit on the same work branch; the final pushed head is reported to the control tower after pushing.
 
 ## Published installation follow-through
 
-v0.36.0 was published and the operator installation was updated from 0.35.0. The actual installed search environment was explicitly prepared once, automatically reused on the next invocation, and returned `strong_ok` for the public h1 canary without a browser/login/model. See [release and operator evidence](omg-release-v0.36.0-2026-09-04.md). The Astra web response requirement remains pending-environment.
+v0.36.0 was published and the operator installation was updated from 0.35.0. The actual installed search environment was explicitly prepared once, automatically reused on the next invocation, and returned `strong_ok` for the public h1 canary without a browser/login/model. See [release and operator evidence](omg-release-v0.36.0-2026-09-04.md). The Astra web response requirement was subsequently verified with v0.36.1.
 
 ## Live validation follow-through
 

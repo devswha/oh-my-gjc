@@ -38,7 +38,7 @@ Before release, the operator's user-scope suite binding and native commands stil
 
 The verified changes were published as v0.36.0. The canonical hardened installer refreshed the existing user installation from 0.35.0 to 0.36.0 (rc=0). No customized native files were found before the update; installed Python helpers and all five native skills match the verified source. The installer did not schedule automatic updates or invoke dependency setup. A separate explicit one-time setup invocation then prepared the private search environment for this repair.
 
-**Live Astra Pro verification is still pending-environment.** There is no GUI DISPLAY/WAYLAND_DISPLAY. A standard dedicated-profile headless launch successfully bound CDP, but ChatGPT returned HTTP 403 with a waiting/challenge page, no composer, and login unknown. No challenge/login bypass or review submission occurred. The diagnostic process was cleaned up; the existing profile was preserved. Release notes disclose this limit. No claim is made that an Astra response has been harvested.
+**Live Astra Pro verification was pending at this release; it passed in the v0.36.1 follow-through linked below.** There is no GUI DISPLAY/WAYLAND_DISPLAY. A standard dedicated-profile headless launch successfully bound CDP, but ChatGPT returned HTTP 403 with a waiting/challenge page, no composer, and login unknown. No challenge/login bypass or review submission occurred. The diagnostic process was cleaned up; the existing profile was preserved. Release notes disclose this limit. No claim is made that an Astra response has been harvested.
 
 ## Publication and operator verification
 
