@@ -5,7 +5,7 @@
 - Baseline: `f97288e` on fetched `origin/main`; isolated branch `fix/skills-audit-astra-20260905`.
 - Candidate manifest version: **0.36.0**, not tagged or released by this task.
 - All five skills, all five command templates, native installer asset/root contracts, review/search/image runtimes, relevant tests and public usage documentation were inspected. Vendored reference manuals and archived retired capabilities were not audited line by line.
-- Code verification is recorded below. Final independent candidate review is pending. **Live Astra/ChatGPT CDP verification is pending-environment**, not passed.
+- Code verification is recorded below. Final independent candidate review: **APPROVE**; two non-blocking LOW findings addressed. **Live Astra/ChatGPT CDP verification is pending-environment**, not passed.
 - User's browser/Pro report maps to `insane-review`: `insane-search` uses public HTTP fetches and has no ChatGPT login or model selection. The exact reported Astra UI has not been observed in this environment.
 
 ## Findings and changes
@@ -23,7 +23,7 @@
 | Medium | Actual-GJC skill harness omitted Responses message/content announcement events and failed with “Turn completed without assistant text.” | Stub now emits the complete message/content stream lifecycle. All five skills load through real isolated GJC without paid calls. |
 | Low | Native-only skill copies pointed to references beside SKILL.md, and public extragoal docs implied its optional web lane was mandatory. | References now use the verified suite root; docs describe the existing native default and optional N-of-N AND gate. No extragoal execution policy changed. |
 
-The independent original-source review confirmed the setup-path and model-label problems: [raw initial review](skills-audit-2026-09-04-initial-review.md). It did not prove live UI compatibility. Final review results and dispositions will be added before the branch is reported complete.
+The independent original-source review confirmed the setup-path and model-label problems: [raw initial review](skills-audit-2026-09-04-initial-review.md). It did not prove live UI compatibility. The [final independent review](skills-audit-2026-09-04-final-review.md) returned APPROVE. LOW model-name wording was corrected. For the LOW temporary-directory portability finding, the test now resolves its temporary XDG base; product rejection of symlinked runtime paths is intentionally retained and documented. These followups alter docs/test fixtures only.
 
 ## Per-skill coverage
 
@@ -39,6 +39,7 @@ The independent original-source review confirmed the setup-path and model-label 
 
 - Baseline full Bun run: **177 passed, 1 failed** (real-GJC sandbox stream issue).
 - Candidate full run: `bun test plugins/oh-my-gjc/test` → **245 passed, 0 failed**, 17 files, 1061 assertions.
+- After the LOW documentation/test-fixture followups: readiness + no-english + frontmatter checks → **27 passed, 0 failed**, rc=0. Production runtime bytes remain those reviewed at `9a30dec`.
 - Manifest JSON parse + name/source/version parity, `bash -n install.sh` and all active bin shell scripts, Python compile of active bin helpers and changed safety module: passed.
 - Skill-creator validator: all **5** active skills passed.
 - `git diff --check`: passed.
@@ -47,7 +48,7 @@ The independent original-source review confirmed the setup-path and model-label 
 - Explicit search setup in a new isolated HOME: **rc=0**. Subsequent launch through system `python3 insane_search.py --check-env` auto-reused managed Python with **rc=0**, `missing=[]`, `authentication=not_required`, `browser=not_used`, `model=not_used`.
 - Live public canary: `insane_search.py https://example.com/ --json --trace --timeout 5 --no-retry` → **rc=0**, HTTP 200, **weak_ok**, one curl attempt, 167 extracted characters, `content_trust=untrusted_public_web`, `must_invoke_browser=false`. This proves public fetch/extraction, not every blocked platform.
 - Observed managed package versions: curl_cffi 0.16.3, beautifulsoup4 4.15.0, PyYAML 6.0.3, markdownify 1.2.3, pip 26.2.1. Future setup resolves the declared package constraints; this is not a lockfile.
-- Initial and final-review snapshot secret scans: rc=0 after redacting two confirmed synthetic tokens in existing collect redaction tests. Whole-history/archive scans are not represented as passing. The candidate Git-range scan will be recorded after committing.
+- Initial and final-review snapshot secret scans: rc=0 after redacting two confirmed synthetic tokens in existing collect redaction tests. Whole-history/archive scans are not represented as passing. `gitleaks git . --log-opts=f97288e..9a30dec --redact --no-banner`: rc=0, no leaks.
 
 ## Pending environment and delivery
 
@@ -56,4 +57,4 @@ The independent original-source review confirmed the setup-path and model-label 
 - A standard `--headless=new` diagnostic launch using the same dedicated profile did bind CDP successfully, but ChatGPT returned **HTTP 403**, a waiting/challenge title, no composer, and `login=unknown`. No challenge interaction, login, or alternate fetch was attempted. Only the process started for that diagnostic was terminated after verifying its captured PID, owner, normalized exact headless/profile/port arguments and Chromium executable; the profile was preserved. Headless operation is not claimed as a working substitute.
 - Required remaining proof: run inspection and a relevant review using the operator's existing dedicated logged-in browser with the actual Astra Pro UI, then inspect the saved response/provenance. Fixture acceptance alone is insufficient.
 - Control-tower report: direct local root probe returned HTTP 200 with title Tower; `/health` returned HTTP 404 (curl rc=0 alone was not service-health proof). A `kind=report` will use the repository-documented `/queue/add` endpoint after pushing; delivery is not claimed yet.
-- Implementation/removal commit, final review verdict and pushed branch commit: pending final review/commit.
+- Implementation/removal commit: `9a30dec` (candidate v0.36.0). Final review verdict: APPROVE. Documentation/test-fixture followups are recorded in the subsequent commit on the same work branch; the final pushed head is reported to the control tower after pushing.

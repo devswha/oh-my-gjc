@@ -78,7 +78,7 @@ Removal rationale and boundary: see the `preset-pack` section in
 
 The capabilities remain active. These snippets were replaced to reject malformed
 or symlinked higher-priority bindings rather than silently selecting another root.
-Removal commit: recorded with the implementation commit in the skills audit verification report.
+Removal commit: `9a30dec` (v0.36.0 candidate); see `docs/verification/skills-audit-2026-09-04.md`.
 
 | archived file | original path(s) |
 |---|---|

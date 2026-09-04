@@ -141,11 +141,11 @@ assert m.main() == 0
 import os, tempfile
 from pathlib import Path
 with tempfile.TemporaryDirectory() as temp:
- os.environ['XDG_DATA_HOME'] = temp
+ os.environ['XDG_DATA_HOME'] = str(Path(temp).resolve())
  path = m.managed_venv()
  assert m.managed_python() is None
  path.parent.mkdir(parents=True, mode=0o700)
- outside = Path(temp) / 'outside'; outside.mkdir()
+ outside = Path(temp).resolve() / 'outside'; outside.mkdir()
  path.symlink_to(outside, target_is_directory=True)
  try: m.managed_python()
  except ValueError: pass

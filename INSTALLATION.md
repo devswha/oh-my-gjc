@@ -96,3 +96,5 @@ The installed skill resolves the same helper beside its suite-bound launcher. Su
 `insane_search.py` calls reuse it; ordinary fetches, `install.sh`, and `/omg:setup`
 never install dependencies. No browser login, ChatGPT model, or API key is involved.
 The environment lives at `${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-gjc/insane-search/venv`.
+
+The managed search environment requires a canonical, non-symlink data path and privately owned suite directories. If XDG_DATA_HOME uses a symlink alias, set it to its real absolute path explicitly; setup does not silently follow or rewrite that alias.
