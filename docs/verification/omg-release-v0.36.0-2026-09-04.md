@@ -54,4 +54,3 @@ The verified changes were published as v0.36.0. The canonical hardened installer
 - Installed `pack_and_ask.py --inspect-session`: **rc=1**, browser down / login unknown. Actual Astra Pro selection and response harvest remain unverified, as described above.
 
 Existing GJC sessions must be reopened to load the refreshed native command/skill bodies. This evidence update changes documentation only; it does not alter the reviewed runtime.
-
