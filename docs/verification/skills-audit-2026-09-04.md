@@ -3,7 +3,7 @@
 ## Scope and status
 
 - Baseline: `f97288e` on fetched `origin/main`; isolated branch `fix/skills-audit-astra-20260905`.
-- Candidate manifest version: **0.36.0**, not tagged or released by this task.
+- Audited manifest version: **0.36.0**. Publication and the operator installation refresh are tracked in [release evidence](omg-release-v0.36.0-2026-09-04.md).
 - All five skills, all five command templates, native installer asset/root contracts, review/search/image runtimes, relevant tests and public usage documentation were inspected. Vendored reference manuals and archived retired capabilities were not audited line by line.
 - Code verification is recorded below. Final independent candidate review: **APPROVE**; two non-blocking LOW findings addressed. **Live Astra/ChatGPT CDP verification is pending-environment**, not passed.
 - User's browser/Pro report maps to `insane-review`: `insane-search` uses public HTTP fetches and has no ChatGPT login or model selection. The exact reported Astra UI has not been observed in this environment.
@@ -56,5 +56,5 @@ The independent original-source review confirmed the setup-path and model-label 
 - Updated `--inspect-session`: **rc=1**, `browser=down`, `login=unknown`, model/effort null. No upload, generation, model-selection click or review prompt was made by these checks.
 - A standard `--headless=new` diagnostic launch using the same dedicated profile did bind CDP successfully, but ChatGPT returned **HTTP 403**, a waiting/challenge title, no composer, and `login=unknown`. No challenge interaction, login, or alternate fetch was attempted. Only the process started for that diagnostic was terminated after verifying its captured PID, owner, normalized exact headless/profile/port arguments and Chromium executable; the profile was preserved. Headless operation is not claimed as a working substitute.
 - Required remaining proof: run inspection and a relevant review using the operator's existing dedicated logged-in browser with the actual Astra Pro UI, then inspect the saved response/provenance. Fixture acceptance alone is insufficient.
-- Control-tower report: direct local root probe returned HTTP 200 with title Tower; `/health` returned HTTP 404 (curl rc=0 alone was not service-health proof). A `kind=report` will use the repository-documented `/queue/add` endpoint after pushing; delivery is not claimed yet.
+- Control-tower report: direct local root probe returned HTTP 200 with title Tower; `/health` returned HTTP 404 (curl rc=0 alone was not service-health proof). A `kind=report` for pushed `1aade43` was submitted to the repository-documented `/queue/add` endpoint and accepted with HTTP 200. This records API acceptance, not human acknowledgement.
 - Implementation/removal commit: `9a30dec` (candidate v0.36.0). Final review verdict: APPROVE. Documentation/test-fixture followups are recorded in the subsequent commit on the same work branch; the final pushed head is reported to the control tower after pushing.

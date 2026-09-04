@@ -74,7 +74,7 @@ Curated model-preset merger (`daily`/`agent`) into user `models.yml`.
 Removal rationale and boundary: see the `preset-pack` section in
 `docs/removed/tombstones.md` and `docs/verification/omg-release-v0.29.0-2026-07-21.md`.
 
-### Suite binding resolver snippets — replaced for v0.36.0 (unreleased)
+### Suite binding resolver snippets — replaced for v0.36.0
 
 The capabilities remain active. These snippets were replaced to reject malformed
 or symlinked higher-priority bindings rather than silently selecting another root.
