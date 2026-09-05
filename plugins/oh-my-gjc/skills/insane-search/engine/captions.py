@@ -49,7 +49,7 @@ def parse_webvtt(data: str) -> list[dict]:
     if len(data.encode("utf-8")) > _CAPTION_MAX_BYTES:
         raise CaptionError("error", "caption_byte_limit")
     text = data.removeprefix("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
-    blocks = re.split(r"\n[ \t]*\n", text.strip())
+    blocks = re.split(r"\n(?:[ \t]*\n)+", text.strip())
     header = blocks.pop(0).splitlines() if blocks else []
     if not header or not re.fullmatch(r"WEBVTT(?:[ \t].*)?", header[0]):
         raise CaptionError("unsupported", "not_webvtt")
@@ -117,6 +117,31 @@ def _public_request(url: str, *, timeout: int, method: str = "GET", data=None, h
     return response
 
 
+def _check_player_access(player) -> None:
+    """Keep access failures before yt-dlp's fallback and no-formats handling.
+
+    Inspect the player status, not the video's title/description. Missing media
+    formats alone say nothing about access to an otherwise public caption track.
+    """
+    if not isinstance(player, dict):
+        return
+    status = player.get("playabilityStatus") or {}
+    details = player.get("videoDetails") or {}
+    if not isinstance(status, dict) or not isinstance(details, dict):
+        raise CaptionError("error", "invalid_player_metadata")
+    code = status.get("status")
+    auth_status = code in {"LOGIN_REQUIRED", "AGE_CHECK_REQUIRED", "AGE_VERIFICATION_REQUIRED"}
+    # Error renderers can carry the reason in simpleText/runs rather than in
+    # the top-level reason. Never include their remote text in diagnostics.
+    auth_reason = code != "OK" and re.search(
+        r"\b(?:sign[ -]?in|log[ -]?in|authentication|private video|video is private|"
+        r"members[ -]only|confirm your age|age[ -]restricted|age[ -]verification)\b",
+        json.dumps(status, ensure_ascii=True).lower())
+    if (auth_status or auth_reason or status.get("desktopLegacyAgeGateReason")
+            or details.get("isPrivate") is True):
+        raise CaptionError("auth_required", "player_requires_authentication")
+
+
 def _extract_info(url: str, timeout: int) -> dict:
     try:
         from yt_dlp import YoutubeDL
@@ -133,6 +158,32 @@ def _extract_info(url: str, timeout: int) -> dict:
         def debug(self, message):
             pass
         info = warning = error = debug
+
+    class PublicYoutubeIE(YoutubeIE):
+        @classmethod
+        def ie_key(cls):
+            # Extractor arguments are keyed by this name; the subclass name
+            # must not silently select yt-dlp's default clients instead.
+            return YoutubeIE.ie_key()
+
+        def _invalid_player_response(self, player_response, video_id):
+            # In yt-dlp 2026.8.19 this hook sees both the watch-page response
+            # and player API responses before implicit age-gate fallbacks.
+            _check_player_access(player_response)
+            return super()._invalid_player_response(player_response, video_id)
+
+        def _download_ytcfg(self, client, *args, **kwargs):
+            # player_client=[web] does not disable upstream fallback clients.
+            # Reject their config/embed requests before any transport call.
+            if client != "web":
+                raise CaptionError("unsupported", "alternate_player_client_forbidden")
+            return super()._download_ytcfg(client, *args, **kwargs)
+
+        def _extract_player_response(self, client, *args, **kwargs):
+            # Also covers clients which do not download a config first.
+            if client != "web":
+                raise CaptionError("unsupported", "alternate_player_client_forbidden")
+            return super()._extract_player_response(client, *args, **kwargs)
 
     class PublicYoutubeDL(YoutubeDL):
         requests_made = 0
@@ -180,7 +231,7 @@ def _extract_info(url: str, timeout: int) -> dict:
                                            "skip": ["dash", "hls", "translated_subs"]}},
         }
         with PublicYoutubeDL(params, auto_init=False) as ydl:
-            extractor = YoutubeIE()
+            extractor = PublicYoutubeIE()
             if not extractor.suitable(url):
                 raise CaptionError("unsupported", "single_video_url_required")
             ydl.add_info_extractor(extractor)
