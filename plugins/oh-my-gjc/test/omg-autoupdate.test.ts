@@ -191,8 +191,22 @@ describe("omg-autoupdate.sh", () => {
     try {
       expect(run(["bogus"], st).status).not.toBe(0);
       expect(run(["run", "--nope"], st).status).not.toBe(0);
+      expect(run(["run", "--local="], st).status).not.toBe(0);
+      expect(run(["run", "--local", "--dry-run"], st).status).not.toBe(0);
     } finally {
       rmSync(st, { recursive: true, force: true });
     }
+  });
+
+  test("canonicalizes relative local paths before scheduling", () => {
+    const st = mkdtempSync(join(tmpdir(), "omgau-"));
+    try {
+      const result = spawnSync("bash", [script, "enable", "--local", ".", "--dry-run"], {
+        cwd: repoRoot, encoding: "utf8",
+        env: { ...process.env, PATH: `${stubBin}:${process.env.PATH}`, XDG_RUNTIME_DIR: "", XDG_STATE_HOME: st },
+      });
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain(`--local '${repoRoot}'`);
+    } finally { rmSync(st, { recursive: true, force: true }); }
   });
 });

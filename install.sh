@@ -7,6 +7,8 @@
 #   --candidate-ref <path|ref>   marketplace SOURCE override (a local checkout path or an
 #                                explicit dev ref) for release-candidate provenance testing.
 #                                Default is the published marketplace (devswha/oh-my-gjc).
+#   --local <checkout>          explicitly install this checkout's payload, including on
+#                                existing HOME; never refresh or fall back to a remote.
 #
 # One install brings ALL 5 skills + 5 commands (/omg + 4 /omg:*) — there are no separate/optional plugins. Legacy
 # args (--core, tower, insane-review, codex-*, lazycodex, gjc-bugwatch) are accepted only
@@ -38,9 +40,19 @@ trap cleanup EXIT
 command -v gjc >/dev/null 2>&1 || die "gjc not found on PATH. Install Gajae Code first, then re-run."
 
 # ── parse args ────────────────────────────────────────────────────────────────
-MARKET="$MARKET_DEFAULT"; CAND_MODE=0; LEGACY=()
+MARKET="$MARKET_DEFAULT"; CAND_MODE=0; LOCAL_CHECKOUT=""; LEGACY=()
 while [ $# -gt 0 ]; do
   case "$1" in
+    --local)
+      shift
+      [ $# -gt 0 ] || die "--local needs a checkout path"
+      LOCAL_CHECKOUT="$1"
+      [ -n "$LOCAL_CHECKOUT" ] || die "--local needs a checkout path"
+      ;;
+    --local=*)
+      LOCAL_CHECKOUT="${1#*=}"
+      [ -n "$LOCAL_CHECKOUT" ] || die "--local needs a checkout path"
+      ;;
     --candidate-ref)
       shift
       [ $# -gt 0 ] || die "--candidate-ref needs a path or ref"
@@ -66,6 +78,53 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+if [ -n "$LOCAL_CHECKOUT" ]; then
+  [ "$CAND_MODE" = 0 ] || die "--local and --candidate-ref are mutually exclusive"
+  case "$LOCAL_CHECKOUT" in -*|*[[:cntrl:]]*) die "invalid --local checkout path" ;; esac
+  [ -d "$LOCAL_CHECKOUT" ] || die "--local checkout does not exist: $LOCAL_CHECKOUT"
+  LOCAL_CHECKOUT="$(cd -P "$LOCAL_CHECKOUT" && pwd -P)"
+  command -v python3 >/dev/null 2>&1 || die "--local requires python3 to validate the local catalog"
+  # Validate before removing an existing registration. In local mode even a catalog
+  # that redirects the suite entry to a remote source is an error, not a fallback.
+  python3 -I - "$LOCAL_CHECKOUT" <<'PY' || die "invalid --local suite checkout; existing registration preserved"
+import json
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+
+def require(condition):
+    if not condition:
+        raise ValueError("invalid local suite checkout")
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        require(key not in result)
+        result[key] = value
+    return result
+
+def local_json(path):
+    require(path.is_file() and path.resolve() == path)
+    return json.loads(path.read_text(), object_pairs_hook=unique_object)
+
+try:
+    catalog = local_json(root / ".claude-plugin/marketplace.json")
+    require(catalog["name"] == "oh-my-gjc")
+    entries = [p for p in catalog["plugins"] if p["name"] == "oh-my-gjc"]
+    require(len(entries) == 1 and entries[0]["source"] == "./plugins/oh-my-gjc")
+    suite = root / "plugins/oh-my-gjc"
+    for relative in (".claude-plugin/plugin.json", "bin/install-skill.sh"):
+        asset = suite / relative
+        require(asset.is_file() and asset.resolve() == asset)
+    manifest = local_json(suite / ".claude-plugin/plugin.json")
+    require(manifest["name"] == "oh-my-gjc")
+    require(entries[0].get("version") == manifest["version"])
+except (OSError, ValueError, KeyError, TypeError):
+    sys.exit(1)
+PY
+  MARKET="$LOCAL_CHECKOUT"
+fi
 if [ "${#LEGACY[@]}" -gt 0 ]; then
   warn "single-plugin suite now — these args are legacy and install nothing extra: ${LEGACY[*]}"
   warn "  everything comes from the one plugin; use /omg:<name> after install."
@@ -147,9 +206,11 @@ else
       die "marketplace add failed (exit $market_status) — refusing to use an unverified existing source."
     fi
   fi
-  say "marketplace update: $ENTRY"
-  gjc plugin marketplace update "$ENTRY" \
-    || die "marketplace update failed — refusing to install from a possibly-stale catalog."
+  if [ -z "$LOCAL_CHECKOUT" ]; then
+    say "marketplace update: $ENTRY"
+    gjc plugin marketplace update "$ENTRY" \
+      || die "marketplace update failed — refusing to install from a possibly-stale catalog."
+  fi
 fi
 
 say "install $PLUGIN_ID"
@@ -157,13 +218,13 @@ say "install $PLUGIN_ID"
 # Raw install diagnostics remain private; only the exact compatibility diagnostic is inspected.
 INSTALL_STDERR="$(mktemp "${TMPDIR:-/tmp}/omg-install.XXXXXX")" \
   || die "could not safely capture the plugin install diagnostic."
-if [ "$CAND_MODE" = 1 ]; then
+if [ "$CAND_MODE" = 1 ] || [ -n "$LOCAL_CHECKOUT" ]; then
   # Candidate/provenance mode: force reinstall so the cache is the candidate, not a stale copy.
   # Fail closed — never fall through to install a possibly-stale cache as release evidence.
   if INSTALL_OUTPUT="$(gjc plugin install "$PLUGIN_ID" --force 2>"$INSTALL_STDERR")"; then
     relay_install_output "$INSTALL_OUTPUT"
   else
-    die "candidate install failed — refusing to proceed with a possibly-stale cache (provenance integrity)."
+    die "candidate/local install failed — refusing to proceed with a possibly-stale cache (provenance integrity)."
   fi
 else
   # Published reruns are upgrade paths. The marketplace was refreshed above; --force now

@@ -17,7 +17,7 @@
 #     and points the timer/cron at that copy, so a version-bumped plugin cache
 #     path can never break the scheduled unit.
 #   - Update source is the canonical HTTPS installer by default; `--local <dir>`
-#     runs that checkout's install.sh instead (offline / air-gapped).
+#     runs that checkout's install.sh --local <dir> with its payload (offline).
 #   - Schedule/path values are validated against an allowlist and escaped for
 #     the systemd/cron syntax they land in.
 #   - systemd --user timer is preferred; cron is the fallback. `disable`
@@ -80,8 +80,11 @@ parse_flags() {
       --dry-run) DRY_RUN=1 ;;
       --local)
         shift; [ $# -gt 0 ] || die "--local needs a checkout path"
-        LOCAL_CHECKOUT="$1" ;;
-      --local=*) LOCAL_CHECKOUT="${1#*=}" ;;
+        LOCAL_CHECKOUT="$1"
+        [ -n "$LOCAL_CHECKOUT" ] || die "--local needs a checkout path" ;;
+      --local=*)
+        LOCAL_CHECKOUT="${1#*=}"
+        [ -n "$LOCAL_CHECKOUT" ] || die "--local needs a checkout path" ;;
       --interval)
         shift; [ $# -gt 0 ] || die "--interval needs a systemd OnCalendar value (e.g. daily, weekly, '*-*-* 04:00:00')"
         INTERVAL="$1" ;;
@@ -169,7 +172,7 @@ do_run() {
     printf '\n===== %s  omg-autoupdate run =====\n' "$(date -Is)"
     printf 'source: %s\n' "$(update_source_label)"
     if [ -n "$LOCAL_CHECKOUT" ]; then
-      if bash "$LOCAL_CHECKOUT/install.sh"; then rc=0; else rc=$?; fi
+      if bash "$LOCAL_CHECKOUT/install.sh" --local "$LOCAL_CHECKOUT"; then rc=0; else rc=$?; fi
     else
       tmp="$(mktemp "${TMPDIR:-/tmp}/omg-installer.XXXXXX")"
       if fetch_to "$tmp" && [ -s "$tmp" ]; then
@@ -372,6 +375,11 @@ main() {
   [ $# -ge 1 ] || die "usage: omg-autoupdate.sh {run|enable|disable|status} [flags]"
   local action="$1"; shift
   parse_flags "$@"
+  if [ -n "$LOCAL_CHECKOUT" ]; then
+    case "$LOCAL_CHECKOUT" in -*|*[[:cntrl:]]*) die "invalid --local checkout path" ;; esac
+    [ -f "$LOCAL_CHECKOUT/install.sh" ] || die "--local checkout has no install.sh: $LOCAL_CHECKOUT/install.sh"
+    LOCAL_CHECKOUT="$(cd -P "$LOCAL_CHECKOUT" && pwd -P)"
+  fi
   case "$action" in
     run)     do_run ;;
     enable)  do_enable ;;
