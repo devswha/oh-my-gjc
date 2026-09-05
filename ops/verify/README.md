@@ -15,10 +15,12 @@ ops/verify/.local-ci/venv/bin/python ops/verify/run_ci.py \
 
 Use a **new** output directory for every run. `--install-deps` is explicit and
 requires a venv. Without it, the runner only checks already installed dependencies.
-The Linux x86_64/CPython 3.12 wheel lock pins pip, all seven directly exercised
+The Linux x86_64/CPython 3.12 wheel lock pins pip, all eight directly exercised
 packages, and their transitive dependencies. Imports and installed versions must
 match; missing/broken packages, unexpected skips, zero-test summaries, nonzero RCs,
-and timeouts fail the run. No browser, model SDK, yt-dlp, or pytest is installed.
+and timeouts fail the run. No browser, model SDK, or pytest is installed. yt-dlp is
+pinned for offline tests of the real extractor's public-access boundaries; it is
+not installed by production fetches.
 
 `summary.json` records actual versions, dependency checks, source/log hashes,
 commands, RCs, counts, failures, and exclusions. Each command has a log. The
@@ -44,6 +46,13 @@ synthetic retired files cannot make that regression test pass.
 | u7 | URL/redirect guards with literals and fake redirects |
 | u8 | Untrusted-content boundary fixtures |
 | u9 | Mocked yt-dlp resolution/subprocess; no yt-dlp installation |
+| search completeness / outputs / public captions | Bounded extraction metadata, batch framing, WebVTT and real-library access-policy fixtures |
+
+The actual root-installer reproduction is a separate lane: set `OMG_REAL_GJC` to
+the intended GJC binary and run `bun test plugins/oh-my-gjc/test/local-installer.test.ts`.
+Its Linux seccomp fixture blocks networking. Without that explicit binary, the test
+file emits a machine-readable coverage notice and runs the installer fixtures;
+the offline summary lists the real-GJC reproduction as excluded.
 
 `test_smoke.py` and `test_u4.py` are excluded because they contain real endpoint
 requests. The allowlist is deliberately not unittest discovery: these scripts
