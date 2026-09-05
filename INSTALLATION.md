@@ -78,6 +78,8 @@ Auto-update is OFF by default; the installer never schedules it. From the reposi
 
 `--local <checkout>` forwards that checkout to `install.sh --local`, so scheduled runs use its payload as well as its installer. Keep the checkout at a stable path and update its contents deliberately.
 
+If scheduling was enabled with an older updater, run the new `enable` command again with the same interval and local-source options to refresh its stable script copy. Re-running the root installer alone does not rewrite that separately opted-in copy or its schedule.
+
 ### v0.26.0 tombstone
 
 - Direct user removal: the current Fable audit and its Opus fallback both stalled without a report. Native cross-session review and `insane-review` remain.

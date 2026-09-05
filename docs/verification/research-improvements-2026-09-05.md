@@ -25,4 +25,4 @@ The PDF finding was reproduced with real parsers before integration. Synthetic r
 
 ## Status
 
-Implementation and final evidence are in progress. A passing local fixture does not establish live ChatGPT recovery, public caption availability, model-driven natural-language selection, or a published installation. Final outcomes and limitations will be recorded in the release verification document.
+All eight implementation items are complete. Independent findings were fixed, the final cross-family review approved, and local/GitHub CI, actual root installation, full payload provenance and live Pro recovery passed. Public YouTube transcript availability, optional NLP activation evaluation and platform limits remain explicitly scoped in the [release verification](omg-release-v0.37.0-2026-09-05.md). Publication and operator installation receipts are maintained there.
