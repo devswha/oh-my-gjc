@@ -39,15 +39,61 @@ class Node:
     def inner_text(self): return self.row['text']
 
 
+class Composer:
+    def click(self, **kwargs): pass
+
+
+class Keyboard:
+    """Composer fixture; production put_text/clear/readback remain in use."""
+    def __init__(self, page):
+        self.page = page
+        self.selected = False
+    def press(self, key):
+        if key in ('Control+a', 'Meta+a'):
+            self.selected = True
+        elif key == 'Backspace':
+            self.page.prompt = '' if self.selected else self.page.prompt[:-1]
+            self.selected = False
+        elif key == 'Enter':
+            if self.page.prompt:
+                self.page.env.sends += 1
+                self.page.prompt = ''
+        else:
+            raise AssertionError('unexpected composer key: ' + key)
+    def insert_text(self, message):
+        env = self.page.env
+        env.insert_calls += 1
+        if env.insert_errors:
+            env.insert_errors -= 1
+            if env.insert_before_error:
+                self.page.prompt += message
+            raise RuntimeError('insert_text transport failure')
+        self.page.prompt += message
+    def type(self, message):
+        self.page.env.type_calls += 1
+        # Playwright's US keyboard layout maps both newline characters to Enter.
+        for char in message:
+            if char in '\r\n':
+                self.press('Enter')
+            else:
+                self.page.prompt += char
+
+
 class Page:
     def __init__(self, env):
         self.env = env
         self.url = URL
         self.rows = []
         self.prompt = ''
+        self.composer = Composer()
+        self.keyboard = Keyboard(self)
     def goto(self, url, **kwargs): self.url = url
     def close(self): pass
-    def evaluate(self, js): return self.url
+    def evaluate(self, js):
+        if js == '() => location.href': return self.url
+        if 'el.innerText || el.textContent' in js: return self.prompt
+        if 'window.scrollTo' in js or 'el.focus()' in js: return None
+        raise AssertionError('unexpected page evaluation')
     def eval_on_selector_all(self, *args):
         if self.env.dom_error and self.env.sends:
             raise RuntimeError('CDP DOM transport lost')
@@ -58,6 +104,7 @@ class Page:
         role = 'assistant' if 'assistant' in sel else 'user' if 'user' in sel else None
         return [Node(r) for r in self.rows if r['role'] == role] if role else []
     def query_selector(self, sel):
+        if sel in m.INPUT_SELECTORS: return self.composer
         return self if sel in m.SEND_BTN_SELECTORS else None
     def is_visible(self): return True
     def is_enabled(self): return not (self.env.pre_failure and self.env.pages == 1)
@@ -67,8 +114,9 @@ class Page:
         assert receipt.attempted and receipt.data['send_state'] == 'unknown', 'must fsync before click'
         self.url = URL
         if not self.env.invisible_request:
+            answer = self.env.answer(self.prompt) if self.env.answer else 'A complete audited response.'
             self.rows = [dict(id='user-1', role='user', text=self.prompt),
-                         dict(id='assistant-1', role='assistant', text='A complete audited response.')]
+                         dict(id='assistant-1', role='assistant', text=answer)]
         if self.env.click_error:
             raise RuntimeError('input accepted then CDP transport lost')
 
@@ -78,6 +126,9 @@ class Harness:
         self.out = out
         self.sends = self.pages = 0
         self.dom_error = self.click_error = self.invisible_request = self.pre_failure = False
+        self.insert_calls = self.type_calls = self.insert_errors = 0
+        self.insert_before_error = False
+        self.answer = None
         self.page = None
     def new_page(self):
         self.pages += 1
@@ -92,13 +143,11 @@ class Harness:
         with contextlib.ExitStack() as stack:
             replacements = dict(sync_playwright=lambda: self, CdpLease=lambda _: Lease(),
                 pick_context=lambda _: self, _guard_dialogs=lambda *args: None,
-                find_input=lambda _: object(), login_state=lambda _: 'ok',
+                login_state=lambda _: 'ok',
                 wait_for_login_state=lambda _: 'ok', read_model_pills=lambda _: [],
                 resolve_browser=lambda _: None, ensure_browser=lambda _: True,
                 _cdp_matches_dedicated_profile=lambda: True,
                 select_model=lambda *args, **kwargs: (True, 'Verified Model (Pro)'),
-                put_text=lambda page, value: setattr(page, 'prompt', value),
-                composer_has_prompt=lambda page, value: page.prompt == value,
                 detect_quota_block=lambda _: None, turn_terminal=lambda *args: True,
                 copy_turn=lambda *args, **kwargs: None,
                 MIN_WAIT_SECS=0, STABLE_CHECK_SECS=1)
@@ -156,6 +205,100 @@ class RecoveryTests(unittest.TestCase):
                 m.harvest_run(args)
         self.assertEqual(env.sends, 0)
 
+    def run_request_fixture(self, env, mode, *extra):
+        """Run the real request/pack/input paths with only external repomix faked."""
+        if mode == 'prompt':
+            return env.run(*extra)
+        src = env.out.parent / 'src'
+        src.mkdir()
+        (src / 'main.py').write_text('print("audited source")\n')
+        def repomix(cmd, **kwargs):
+            output = Path(cmd[cmd.index('-o') + 1])
+            output.write_text('## File: main.py\n```python\n1: print("audited source")\n```\n')
+            return SimpleNamespace(returncode=0, stdout='Total Files: 1\nTotal Tokens: 10\n', stderr='')
+        with patch.object(m.shutil, 'which', return_value='/fake/npx'), \
+                patch.object(m.subprocess, 'run', repomix), \
+                patch.object(m, 'attach_file', return_value=mode == 'attached'):
+            result = env.run('--target', str(src), *extra)
+        self.assertEqual('<repomix_pack ' in env.page.prompt, mode == 'inline')
+        return result
+
+    def test_input_transport_failure_never_types_or_sends(self):
+        for accepted in (False, True):
+            with self.subTest(insert_accepted=accepted), tempfile.TemporaryDirectory(dir=self.root) as tmp:
+                env = Harness(Path(tmp))
+                env.insert_errors = 3
+                env.insert_before_error = accepted
+                self.assertNotEqual(env.run('--retries', '2'), 0)
+                self.assertEqual((env.pages, env.insert_calls), (3, 3))
+                self.assertEqual((env.type_calls, env.sends), (0, 0))
+                journal = RunJournal.read(next(env.out.glob('runs/*.json')))
+                self.assertFalse(journal.attempted)
+                self.assertEqual(journal.data['send_state'], 'prepared')
+                self.assertFalse(list(env.out.glob('response_*.md')))
+
+    def test_input_transport_failure_can_retry_then_send_once(self):
+        for accepted in (False, True):
+            with self.subTest(insert_accepted=accepted), tempfile.TemporaryDirectory(dir=self.root) as tmp:
+                env = Harness(Path(tmp))
+                env.insert_errors = 1
+                env.insert_before_error = accepted
+                self.assertEqual(env.run('--retries', '4'), 0)
+                self.assertEqual((env.pages, env.insert_calls, env.type_calls, env.sends), (2, 2, 0, 1))
+                journal = RunJournal.read(next(env.out.glob('runs/*.json')))
+                self.assertEqual(journal.data['send_state'], 'complete')
+                self.assertEqual(journal.data['request_sha256'], text_hash(env.page.prompt))
+                self.assertEqual(env.page.prompt.count('[insane-review request:'), 1)
+
+    def test_actual_request_echo_never_published_by_normal_run(self):
+        for mode in ('prompt', 'attached', 'inline'):
+            for suffix in ('', ' copied', ' x' * 20):
+                with self.subTest(mode=mode, suffix=suffix), tempfile.TemporaryDirectory(dir=self.root) as tmp:
+                    env = Harness(Path(tmp) / 'output')
+                    env.answer = lambda request: ' \n'.join(request.split()) + suffix
+                    result = self.run_request_fixture(env, mode, '--prompt', 'evidence ' * 30, '--retries', '4')
+                    self.assertNotEqual(result, 0)
+                    self.assertIn('전송한 요청', str(result))
+                    self.assertEqual((env.sends, env.pages), (1, 1))
+                    journal = RunJournal.read(next(env.out.glob('runs/*.json')))
+                    self.assertEqual(journal.data['send_state'], 'observed')
+                    self.assertIsNone(journal.data['response_sha256'])
+                    self.assertFalse(list(env.out.glob('response_*.md')))
+
+    def test_actual_request_echo_never_published_after_restart(self):
+        for mode in ('prompt', 'attached', 'inline'):
+            for suffix in ('', ' copied', ' x' * 20):
+                with self.subTest(mode=mode, suffix=suffix), tempfile.TemporaryDirectory(dir=self.root) as tmp:
+                    env = Harness(Path(tmp) / 'output')
+                    env.answer = lambda request: ' \n'.join(request.split()) + suffix
+                    result = self.run_request_fixture(env, mode, '--prompt', 'evidence ' * 30, '--max-wait', '0')
+                    self.assertNotEqual(result, 0)
+                    self.assertEqual(env.sends, 1)
+                    journal = RunJournal.read(next(env.out.glob('runs/*.json')))
+                    self.assertEqual(journal.data['schema'], 1)
+                    self.assertEqual(journal.data['request_sha256'], text_hash(env.page.prompt))
+                    recovered = Harness(env.out)
+                    env.page.env = recovered
+                    with self.assertRaisesRegex(RuntimeError, '전송한 요청'):
+                        self.harvest(journal, env.page, recovered)
+                    self.assertEqual(recovered.sends, 0)
+                    self.assertEqual(RunJournal.read(journal.path).data['send_state'], 'observed')
+                    self.assertFalse(list(env.out.glob('response_*.md')))
+
+    def test_substantive_answer_quoting_request_survives_normal_and_harvest(self):
+        for mode in ('prompt', 'attached', 'inline'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory(dir=self.root) as tmp:
+                env = Harness(Path(tmp) / 'output')
+                env.answer = lambda request: request + '\n' + 'Substantive source analysis. ' * 20
+                self.assertEqual(self.run_request_fixture(env, mode, '--prompt', 'evidence ' * 30), 0)
+                journal = RunJournal.read(next(env.out.glob('runs/*.json')))
+                original_hash = journal.data['response_sha256']
+                recovered = Harness(env.out)
+                env.page.env = recovered
+                self.harvest(journal, env.page, recovered)
+                self.assertEqual(recovered.sends, 0)
+                self.assertEqual(RunJournal.read(journal.path).data['response_sha256'], original_hash)
+
     def test_post_send_statuses_never_retry(self):
         for status in ('timeout', 'unknown', 'not_sent', 'quota', 'empty'):
             with self.subTest(status=status), tempfile.TemporaryDirectory(dir=self.root) as tmp:
@@ -163,6 +306,7 @@ class RecoveryTests(unittest.TestCase):
                 with patch.object(m, 'wait_for_turn_response', return_value=(status, '')):
                     self.assertNotEqual(env.run('--retries', '5'), 0)
                 self.assertEqual((env.sends, env.pages), (1, 1))
+                self.assertEqual((env.insert_calls, env.type_calls), (1, 0))
                 self.assertFalse(list(Path(tmp).glob('response_*.md')))
 
     def test_wait_exception_never_retries(self):
@@ -170,12 +314,14 @@ class RecoveryTests(unittest.TestCase):
         with patch.object(m, 'wait_for_turn_response', side_effect=RuntimeError('DOM error')):
             self.assertNotEqual(env.run('--retries', '8'), 0)
         self.assertEqual((env.sends, env.pages), (1, 1))
+        self.assertEqual((env.insert_calls, env.type_calls), (1, 0))
 
     def test_click_error_does_not_try_second_selector_or_enter(self):
         env = Harness(self.out)
         env.click_error = True
         self.assertNotEqual(env.run('--retries', '8'), 0)
         self.assertEqual((env.sends, env.pages), (1, 1))
+        self.assertEqual((env.insert_calls, env.type_calls), (1, 0))
         journal = RunJournal.read(next(self.out.glob('runs/run_*.json')))
         journal.require_recovery()  # acceptance was observed despite input transport failure
 
