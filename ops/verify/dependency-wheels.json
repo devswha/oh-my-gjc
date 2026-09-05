@@ -217,6 +217,52 @@
         "colorama; platform_system == \"Windows\""
       ],
       "source": "https://pypi.org/pypi/tqdm/4.70.0/json"
+    },
+    {
+      "name": "yt-dlp",
+      "version": "2026.8.19",
+      "url": "https://files.pythonhosted.org/packages/69/b2/8cd1613f56eed7ceb64fbd4df3f1c01246bfb098e6f398228bafda22b80b/yt_dlp-2026.8.19-py3-none-any.whl",
+      "sha256": "1d57897e94c6665a0a6f9bc54b34e584284e32c034ffab3a7df25d8f7b24eedf",
+      "requires_dist": [
+        "curl-cffi!=0.6.*,!=0.7.*,!=0.8.*,!=0.9.*,<0.17,>=0.5.10; implementation_name == \"cpython\" and extra == \"curl-cffi\"",
+        "typing-extensions; python_full_version < \"3.11\" and extra == \"curl-cffi\"",
+        "brotli; (implementation_name == \"cpython\" and sys_platform != \"ios\") and extra == \"default\"",
+        "brotlicffi; implementation_name != \"cpython\" and extra == \"default\"",
+        "certifi; extra == \"default\"",
+        "mutagen; extra == \"default\"",
+        "pycryptodomex; extra == \"default\"",
+        "requests<3,>=2.32.2; extra == \"default\"",
+        "urllib3<3,>=2.0.2; extra == \"default\"",
+        "websockets>=13.0; extra == \"default\"",
+        "yt-dlp-ejs==0.8.0; extra == \"default\"",
+        "deno>=2.6.6; extra == \"deno\"",
+        "brotli==1.2.0; (implementation_name == \"cpython\" and sys_platform != \"ios\") and extra == \"pin\"",
+        "brotlicffi==1.2.0.1; implementation_name != \"cpython\" and extra == \"pin\"",
+        "certifi==2026.7.22; extra == \"pin\"",
+        "charset-normalizer==3.5.0; extra == \"pin\"",
+        "idna==3.18; extra == \"pin\"",
+        "mutagen==1.48.1; extra == \"pin\"",
+        "pycryptodomex==3.23.0; extra == \"pin\"",
+        "requests==2.34.2; extra == \"pin\"",
+        "urllib3==2.7.0; extra == \"pin\"",
+        "websockets==16.1.1; python_full_version < \"3.11\" and extra == \"pin\"",
+        "websockets==17.0.1; python_full_version >= \"3.11\" and extra == \"pin\"",
+        "yt-dlp-ejs==0.8.0; extra == \"pin\"",
+        "certifi==2026.7.22; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+        "cffi==2.1.1; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+        "curl-cffi==0.16.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+        "pycparser==3.0; implementation_name == \"cpython\" and extra == \"pin-curl-cffi\"",
+        "typing-extensions==4.16.0; python_full_version < \"3.11\" and extra == \"pin-curl-cffi\"",
+        "deno==2.9.5; extra == \"pin-deno\"",
+        "cffi==2.1.1; platform_python_implementation != \"PyPy\" and extra == \"pin-secretstorage\"",
+        "cryptography==50.0.0; extra == \"pin-secretstorage\"",
+        "jeepney==0.9.0; extra == \"pin-secretstorage\"",
+        "pycparser==3.0; (implementation_name != \"PyPy\" and platform_python_implementation != \"PyPy\") and extra == \"pin-secretstorage\"",
+        "secretstorage==3.5.0; extra == \"pin-secretstorage\"",
+        "typing-extensions==4.16.0; python_full_version < \"3.11\" and extra == \"pin-secretstorage\"",
+        "secretstorage; extra == \"secretstorage\""
+      ],
+      "source": "https://pypi.org/pypi/yt-dlp/2026.8.19/json"
     }
   ]
 }
