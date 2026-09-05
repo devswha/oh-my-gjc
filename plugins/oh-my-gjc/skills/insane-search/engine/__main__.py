@@ -2,8 +2,9 @@
 """CLI entrypoint for the insane-search engine.
 
 Usage:
-    python3 -m engine URL [--selector CSS] [--device auto|desktop|mobile]
-                          [--timeout N] [--max-attempts N] [--json] [--trace]
+    python3 -m engine URL [URL ...] [--selector CSS] [--device auto|desktop|mobile]
+                          [--timeout N] [--json | --body-json | --jsonl] [--trace]
+                          [--captions --caption-language CODE --caption-source manual|auto]
 
 Examples:
     python3 -m engine "https://example.com/" --selector "h1"
@@ -11,8 +12,8 @@ Examples:
     python3 -m engine "https://example.com/" --device mobile --trace
 
 Exit codes:
-    0   strong_ok or weak_ok
-    1   ok=False (all attempts failed)
+    0   all inputs succeeded (fetch success is not extraction completeness)
+    1   at least one input failed; other results are still emitted
     2   CLI arg error
 """
 from __future__ import annotations
@@ -21,13 +22,13 @@ import argparse
 import json
 import sys
 
-from .fetch_chain import fetch
+from .fetch_chain import FetchResult, fetch_many
 
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python3 -m engine",
                                 description="Generic WAF-profile fetch chain.")
-    p.add_argument("url", help="URL to fetch.")
+    p.add_argument("urls", nargs="+", help="Public URLs to fetch sequentially in input order.")
     p.add_argument("--selector", "-s", action="append", default=None,
                    dest="selectors", metavar="CSS",
                    help="Positive-proof CSS selector. Repeatable.")
@@ -53,36 +54,96 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Skip Playwright fallback (curl-only).")
     p.add_argument("--no-phase0", action="store_true",
                    help="Skip the Phase 0 official-API router (generic grid only).")
-    p.add_argument("--json", action="store_true",
-                   help="Emit FetchResult as JSON to stdout (content omitted).")
+    output = p.add_mutually_exclusive_group()
+    output.add_argument("--json", action="store_true",
+                        help="Legacy metadata JSON (one object, or array for multiple URLs); no body.")
+    output.add_argument("--body-json", action="store_true",
+                        help="Version 1 JSON envelope with wrapped body and provenance.")
+    output.add_argument("--jsonl", action="store_true",
+                        help="Version 1 body/provenance record per input, one JSON line each.")
+    p.add_argument("--captions", action="store_true", help="Explicit public caption extraction only.")
+    p.add_argument("--caption-language", metavar="CODE", help="Exact requested caption language.")
+    p.add_argument("--caption-source", choices=("manual", "auto"), default=None,
+                   help="Caption source; default manual. Never silently switches to auto.")
     p.add_argument("--trace", action="store_true",
                    help="Print per-attempt trace to stderr.")
     return p
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    try:
-        result = fetch(
-            args.url,
-            success_selectors=args.selectors,
-            device_class=args.device,
-            timeout=args.timeout,
-            max_attempts=args.max_attempts,
-            # The OMG port keeps local browser executors disabled. GJC's
-            # browser tool is the explicit, separately-audited escalation path.
-            enable_playwright=False,
-            enable_phase0=not args.no_phase0,
-            enable_extraction=not args.no_extract,
-            enable_retry=not args.no_retry,
-            enable_markdown=not args.no_markdown,
-            enable_maincontent=args.maincontent,
-        )
-    except Exception as e:
-        print(f"engine fatal: {type(e).__name__}: {e}", file=sys.stderr)
-        return 2
+def body_record(result: FetchResult, index: int, requested_url: str) -> dict:
+    """All fetched strings, including provenance, remain untrusted data."""
+    route = result.extraction_meta.get("route")
+    if not route and result.trace:
+        route = result.trace[-1].executor
+    return {
+        "schema_version": 1,
+        "input_index": index,
+        "requested_url": requested_url,
+        "final_url": result.final_url,
+        "ok": result.ok,
+        "route": route or result.profile_used or "none",
+        "verdict": result.verdict,
+        "meta": result.to_dict(),
+        "content_untrusted": result.to_untrusted_text(),
+    }
 
-    if args.trace:
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.captions:
+        import re
+        if not args.caption_language or not re.fullmatch(r"[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*", args.caption_language):
+            parser.error("--captions requires --caption-language CODE (an exact language tag)")
+        if args.no_phase0 or args.no_extract:
+            parser.error("--captions cannot be combined with --no-phase0 or --no-extract")
+    elif args.caption_language is not None or args.caption_source is not None:
+        parser.error("caption options require --captions")
+    if not 5 <= args.timeout <= 60:
+        parser.error("--timeout must be between 5 and 60 seconds")
+    results = fetch_many(
+        args.urls,
+        success_selectors=args.selectors,
+        device_class=args.device,
+        timeout=args.timeout,
+        max_attempts=args.max_attempts,
+        enable_playwright=False,
+        enable_phase0=not args.no_phase0,
+        enable_extraction=not args.no_extract,
+        enable_retry=not args.no_retry,
+        enable_markdown=not args.no_markdown,
+        enable_maincontent=args.maincontent,
+        caption_language=args.caption_language if args.captions else None,
+        caption_source=args.caption_source or "manual",
+    )
+    for index, result in enumerate(results):
+        _diagnostics(result, trace=args.trace)
+        if args.jsonl:
+            print(json.dumps(body_record(result, index, args.urls[index]), ensure_ascii=False))
+        elif not args.json and not args.body_json:
+            print(result.to_untrusted_text(), end="")
+            if result.prompt_injection_risk in ("medium", "high"):
+                signals = ",".join(result.prompt_injection_signals) or "none"
+                print(f"[engine] prompt_injection_risk={result.prompt_injection_risk} signals={signals}",
+                      file=sys.stderr)
+            print(f"[engine] input_index={index} ok={result.ok} verdict={result.verdict} "
+                  f"profile={result.profile_used} attempts={len(result.trace)} "
+                  f"extraction_complete={result.extraction_meta.get('extraction_complete')}",
+                  file=sys.stderr)
+    if args.json:
+        payload = [result.to_dict() for result in results]
+        print(json.dumps(payload[0] if len(payload) == 1 else payload, ensure_ascii=False, indent=2))
+    elif args.body_json:
+        print(json.dumps({"schema_version": 1,
+                          "ok": all(result.ok for result in results),
+                          "results": [body_record(result, index, args.urls[index])
+                                      for index, result in enumerate(results)]},
+                         ensure_ascii=False, indent=2))
+    return 0 if all(result.ok for result in results) else 1
+
+
+def _diagnostics(result: FetchResult, *, trace: bool) -> None:
+    if trace:
         print("=== trace ===", file=sys.stderr)
         for att in result.trace:
             d = att.to_dict()
@@ -126,23 +187,6 @@ def main(argv: list[str] | None = None) -> int:
         if result.must_invoke_browser:
             print("   ➜ must_invoke_browser = TRUE — use GJC's browser tool for the public page only.", file=sys.stderr)
         print("════════════════════════════════════════════════════════════════", file=sys.stderr)
-
-    if args.json:
-        payload = result.to_dict()
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
-    else:
-        print(result.to_untrusted_text(), end="")
-        if result.prompt_injection_risk in ("medium", "high"):
-            signals = ",".join(result.prompt_injection_signals) or "none"
-            print(
-                f"[engine] prompt_injection_risk={result.prompt_injection_risk} signals={signals}",
-                file=sys.stderr,
-            )
-        print(f"\n[engine] ok={result.ok} verdict={result.verdict} "
-              f"profile={result.profile_used} attempts={len(result.trace)}",
-              file=sys.stderr)
-
-    return 0 if result.ok else 1
 
 
 if __name__ == "__main__":

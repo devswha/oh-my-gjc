@@ -259,132 +259,200 @@ def _visible_text(html: str) -> str:
     return _re.sub(r"\s+", " ", t).strip()
 
 
-def _extract_json_ld_text(html: str) -> str:
-    """Pull articleBody / description from <script type=application/ld+json>.
+def _completeness(meta: dict) -> None:
+    """A parser finishing does not prove coverage of the source document."""
+    meta["truncated"] = bool(meta["truncation_reasons"])
+    meta["coverage_uncertain"] = True
+    lost = (meta["truncated"] or meta.get("pages_failed", 0)
+            or meta.get("pages_empty", 0) or meta.get("blocks_failed", 0)
+            or meta.get("error"))
+    meta["extraction_complete"] = False if lost else None
 
-    Bounded: at most _JSONLD_MAX_BLOCKS blocks are parsed, a blob larger than
-    _JSONLD_MAX_BLOB is skipped without json.loads, and the joined output is
-    capped at _RESCUE_MAX_TEXT."""
+
+def _extract_json_ld_text(html: str, *, meta: Optional[dict] = None) -> str:
+    """Bounded article text rescue; optional diagnostics preserve the string API."""
+    meta = meta if meta is not None else {}
+    meta.update(scan_chars=min(len(html), _SCAN_LIMIT), input_chars=len(html),
+                blocks_seen=0, blocks_processed=0, blocks_failed=0,
+                blocks_oversized=0, blocks_empty=0, blocks_total=None,
+                truncation_reasons=[], errors=[], coverage_note="embedded_text_only")
+    if len(html) > _SCAN_LIMIT:
+        meta["truncation_reasons"].append("scan_limit")
     out: list[str] = []
-    blocks = 0
     total = 0
+    exhausted = True
     for m in _re.finditer(
             r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
-            html, _re.I | _re.S):
-        blocks += 1
-        if blocks > _JSONLD_MAX_BLOCKS:
+            html[:_SCAN_LIMIT], _re.I | _re.S):
+        meta["blocks_seen"] += 1
+        if meta["blocks_seen"] > _JSONLD_MAX_BLOCKS:
+            meta["truncation_reasons"].append("block_limit")
+            exhausted = False
             break
         raw = m.group(1)
         if len(raw) > _JSONLD_MAX_BLOB:
+            meta["blocks_oversized"] += 1
+            if "blob_limit" not in meta["truncation_reasons"]:
+                meta["truncation_reasons"].append("blob_limit")
             continue
+        meta["blocks_processed"] += 1
         try:
             data = _json.loads(raw)
             if isinstance(data, list):
+                if len(data) > 1:
+                    # Preserve the existing first-object extraction contract.
+                    meta["coverage_note"] = "embedded_text_only; first_array_item_only"
                 data = data[0] if data else {}
+            body = ""
             if isinstance(data, dict):
-                t = (data.get("@type") or "")
+                t = data.get("@type") or ""
                 if t in ("Article", "NewsArticle", "BlogPosting") or "articleBody" in data:
                     body = data.get("articleBody") or data.get("description") or ""
-                    if isinstance(body, str) and body:
-                        take = body[:_RESCUE_MAX_TEXT - total]
-                        if take:
-                            out.append(take)
-                            total += len(take)
-                        if total >= _RESCUE_MAX_TEXT:
-                            break
-        except Exception:
-            pass
-    return "\n\n".join(out)
+            if isinstance(body, str) and body:
+                separator = "\n\n" if out else ""
+                piece = separator + body
+                take = piece[:max(0, _RESCUE_MAX_TEXT - total)]
+                if take:
+                    out.append(take)
+                    total += len(take)
+                if len(take) < len(piece):
+                    meta["truncation_reasons"].append("text_limit")
+                    exhausted = False
+                    break
+            else:
+                meta["blocks_empty"] += 1
+        except Exception as exc:
+            meta["blocks_failed"] += 1
+            meta["errors"].append({"block": meta["blocks_seen"], "error": type(exc).__name__})
+    if exhausted and len(html) <= _SCAN_LIMIT:
+        meta["blocks_total"] = meta["blocks_seen"]
+    _completeness(meta)
+    return "".join(out)
 
 
-def _extract_pdf_pdfplumber(body: bytes) -> tuple[str, str]:
-    """(title, text) via pdfplumber, or ("", "") on failure / no text layer.
-    Same bounds as the pypdf path: ≤80 pages, text capped at _RESCUE_MAX_TEXT."""
-    if _pdfplumber is None:
-        return "", ""
+def _pdf_metadata(backend: str) -> dict:
+    return {"backend": backend, "pages_total": None, "pages_processed": 0,
+            "pages_failed": 0, "pages_empty": 0, "pages_with_text": 0,
+            "page_errors": [], "truncation_reasons": [], "error": "",
+            "coverage_note": "text_layer_only; images_and_layout_not_verified"}
+
+
+def _pdf_pages_text(pages, meta: dict) -> str:
+    meta["pages_total"] = len(pages)
+    if len(pages) > 80:
+        meta["truncation_reasons"].append("page_limit")
+    parts: list[str] = []
+    total = 0
+    for number in range(min(len(pages), 80)):
+        meta["pages_processed"] += 1
+        try:
+            text = pages[number].extract_text() or ""
+            if not isinstance(text, str):
+                raise TypeError("non-text extraction")
+        except Exception as exc:
+            meta["pages_failed"] += 1
+            meta["page_errors"].append({"page": number + 1, "error": type(exc).__name__})
+            continue
+        if not text.strip():
+            meta["pages_empty"] += 1
+            continue
+        meta["pages_with_text"] += 1
+        piece = ("\n\n" if parts else "") + text
+        take = piece[:max(0, _RESCUE_MAX_TEXT - total)]
+        parts.append(take)
+        total += len(take)
+        if len(take) < len(piece) or (total >= _RESCUE_MAX_TEXT and number + 1 < len(pages)):
+            meta["truncation_reasons"].append("text_limit")
+            break
+    return "".join(parts).strip()
+
+
+def _extract_pdf_pdfplumber(body: bytes, *, meta: Optional[dict] = None) -> tuple[str, str]:
+    """(title, text), with optional page diagnostics; no OCR or runtime installs."""
+    meta = meta if meta is not None else {}
+    meta.update(_pdf_metadata("pdfplumber"))
+    title = ""
     try:
+        if _pdfplumber is None:
+            meta["error"] = "pdfplumber_missing"
+            return "", ""
         with _pdfplumber.open(_io.BytesIO(body)) as pdf:
-            title = ""
             try:
                 md = pdf.metadata or {}
                 if md.get("Title"):
                     title = str(md["Title"])[:300]
-            except Exception:
-                pass
-            parts: list[str] = []
-            total = 0
-            for page in pdf.pages[:80]:
-                try:
-                    t = page.extract_text() or ""
-                except Exception:
-                    t = ""
-                take = t[:_RESCUE_MAX_TEXT - total]
-                parts.append(take)
-                total += len(take)
-                if total >= _RESCUE_MAX_TEXT:
-                    break
-            return title, "\n\n".join(p for p in parts if p).strip()
-    except Exception:
-        return "", ""
+            except Exception as exc:
+                meta["metadata_error"] = type(exc).__name__
+            return title, _pdf_pages_text(pdf.pages, meta)
+    except Exception as exc:
+        meta["error"] = f"pdf_error:{type(exc).__name__}"
+        return title, ""
+    finally:
+        _completeness(meta)
 
 
-def _extract_pdf_pypdf(body: bytes) -> tuple[str, str, str]:
-    """(title, text, error_code) via pypdf. error_code "" on success."""
-    if _PdfReader is None:
-        return "", "", "pypdf_missing"
+def _extract_pdf_pypdf(body: bytes, *, meta: Optional[dict] = None) -> tuple[str, str, str]:
+    """(title, text, error_code), with optional page diagnostics."""
+    meta = meta if meta is not None else {}
+    meta.update(_pdf_metadata("pypdf"))
+    title = ""
     try:
+        if _PdfReader is None:
+            meta["error"] = "pypdf_missing"
+            return "", "", "pypdf_missing"
         reader = _PdfReader(_io.BytesIO(body))
-        title = ""
         try:
             if reader.metadata and reader.metadata.title:
                 title = str(reader.metadata.title)[:300]
-        except Exception:
-            pass
-        pages: list[str] = []
-        total = 0
-        for page in reader.pages[:80]:
-            try:
-                t = page.extract_text() or ""
-            except Exception:
-                t = ""
-            take = t[:_RESCUE_MAX_TEXT - total]
-            pages.append(take)
-            total += len(take)
-            if total >= _RESCUE_MAX_TEXT:
-                break
-        return title, "\n\n".join(p for p in pages if p).strip(), ""
-    except Exception as e:
-        return "", "", f"pdf_error:{type(e).__name__}"
+        except Exception as exc:
+            meta["metadata_error"] = type(exc).__name__
+        return title, _pdf_pages_text(reader.pages, meta), ""
+    except Exception as exc:
+        meta["error"] = f"pdf_error:{type(exc).__name__}"
+        return title, "", meta["error"]
+    finally:
+        _completeness(meta)
 
 
-def _extract_pdf(body: bytes, url: str) -> tuple[str, str, float, str]:
-    """Returns (title, text, quality, error_code). error_code is "" on success.
-    Caps at 80 pages to keep token budget sane; reports pdf_no_text_layer for
-    scanned PDFs (so the caller knows rendering will not help either).
+def _extract_pdf(body: bytes, url: str, *, meta: Optional[dict] = None) -> tuple[str, str, float, str]:
+    """Prefer pdfplumber text, then pypdf; retain both attempts' diagnostics.
 
-    M3: tries pdfplumber first (better multi-column / table handling), then
-    falls back to pypdf. Bounded: bodies above _PDF_MAX_BYTES never reach a
-    parser (decompression bombs bound their input, not their page count), and
-    the extracted text is capped at _RESCUE_MAX_TEXT."""
+    Bounds remain 25 MiB input, 80 pages, 1M output characters (including
+    separators). Fetch success is independent of text extraction completeness.
+    """
+    meta = meta if meta is not None else {}
+    meta.update(_pdf_metadata("none"))
+    meta["attempts"] = []
     if len(body) > _PDF_MAX_BYTES:
+        meta["error"] = "pdf_too_large"
+        meta["truncation_reasons"].append("byte_limit")
+        _completeness(meta)
         return "", "", 0.0, "pdf_too_large"
     if _pdfplumber is None and _PdfReader is None:
+        meta["error"] = "pdf_no_extractor"
+        _completeness(meta)
         return "", "", 0.0, "pdf_no_extractor"
 
-    # 1) pdfplumber (preferred). Only adopt when it yields text.
-    p_title, p_text = _extract_pdf_pdfplumber(body)
+    pm: dict = {}
+    p_title, p_text = _extract_pdf_pdfplumber(body, meta=pm)
+    meta["attempts"].append(pm)
     if p_text:
+        meta.update(pm)
         return p_title, p_text, _quality_score(p_text), ""
 
-    # 2) pypdf fallback.
-    y_title, y_text, y_err = _extract_pdf_pypdf(body)
+    ym: dict = {}
+    y_title, y_text, y_err = _extract_pdf_pypdf(body, meta=ym)
+    meta["attempts"].append(ym)
+    meta.update(ym if ym["pages_total"] is not None or ym["error"] != "pypdf_missing" else pm)
     if y_text:
         return y_title, y_text, _quality_score(y_text), ""
-    if y_err and y_err != "pypdf_missing":
-        return y_title, "", 0.0, y_err
-
-    # Neither produced text: prefer any title we found; report no text layer.
-    return (p_title or y_title), "", 0.0, "pdf_no_text_layer"
+    errors = [m["error"] for m in (ym, pm) if m["error"].startswith("pdf_error:")]
+    error = errors[0] if errors else "pdf_no_text_layer"
+    if meta["pages_failed"]:
+        error = "pdf_page_errors"
+    meta["error"] = error
+    _completeness(meta)
+    return (p_title or y_title), "", 0.0, error
 
 
 def _looks_like_pdf(resp, final_url: str) -> bool:
@@ -475,12 +543,13 @@ def _extract_response(resp, final_url: str, inner_text: str = "",
             except Exception:
                 pass
             if bytes(body[:5]) == b"%PDF-" or ctype_pdf:
-                title, text, quality, err = _extract_pdf(bytes(body), final_url)
+                pdf_meta: dict = {}
+                title, text, quality, err = _extract_pdf(bytes(body), final_url, meta=pdf_meta)
                 if text:
                     return title, text, quality, {"source": "pdf", "error": err or "",
-                                                  "inner_text_used": False}
+                                                  "inner_text_used": False, **pdf_meta}
                 return title, f"[PDF binary, {len(body)} bytes; extractor={err or 'ok'}]", \
-                       0.0, {"source": "pdf", "error": err, "inner_text_used": False}
+                       0.0, {"source": "pdf", "error": err, "inner_text_used": False, **pdf_meta}
 
     text = getattr(resp, "text", "") or ""
     if not text:
@@ -503,7 +572,8 @@ def _extract_response(resp, final_url: str, inner_text: str = "",
     visible = _visible_text(scan)
     content, source, quality = text, "raw", _quality_score(visible)
 
-    jsonld = _extract_json_ld_text(scan)
+    jsonld_meta: dict = {}
+    jsonld = _extract_json_ld_text(text, meta=jsonld_meta)
     if len(jsonld) > _JSONLD_MIN_CHARS and len(jsonld) > len(visible):
         content, source, quality = jsonld, "json_ld", _quality_score(jsonld)
 
@@ -525,7 +595,8 @@ def _extract_response(resp, final_url: str, inner_text: str = "",
         main = _main_content_text(content)
         if main:
             return title, main, _quality_score(main), {
-                "source": "maincontent", "error": "", "inner_text_used": inner_used}
+                "source": "maincontent", "error": "", "inner_text_used": inner_used,
+                "json_ld": jsonld_meta, "coverage_uncertain": True, "extraction_complete": None}
 
     # M1 markdownify (opt-in): only the raw-HTML path carries markup. json_ld /
     # inner_text are already plain text, so leave them alone. When enabled and
@@ -537,8 +608,17 @@ def _extract_response(resp, final_url: str, inner_text: str = "",
         if md:
             content, quality = md, _quality_score(md)
             source = "raw+md"
+    details = dict(jsonld_meta) if source == "json_ld" else {
+        "truncated": False, "truncation_reasons": [],
+        "coverage_uncertain": True, "extraction_complete": None}
+    if inner_used:
+        truncated = len((inner_text or "").strip()) > _INNER_TEXT_MAX
+        details.update(truncated=truncated,
+                       truncation_reasons=["inner_text_limit"] if truncated else [],
+                       extraction_complete=False if truncated else None)
     return title, content, quality, {"source": source, "error": "",
-                                     "inner_text_used": inner_used}
+                                    "inner_text_used": inner_used,
+                                    "json_ld": jsonld_meta, **details}
 
 
 def _maybe_extract(resp, final_url: str, *, enable_extraction: bool,
@@ -559,9 +639,8 @@ def _curl_probe(
 ) -> tuple[Any, Optional[str]]:
     """Returns (response, error_str). response may be None on exception.
 
-    Routes through the per-host SessionPool so cookies (WAF sensors) and the
-    warm connection persist across attempts and across pages of the same host.
-    The pool degrades to a one-shot GET when a Session can't be created.
+    Routes through the hardened transport: fresh, DNS-pinned requests without
+    cookie or connection reuse across attempts or URLs.
     """
     from .transport import POOL
     return POOL.request(url, impersonate=impersonate, referer=referer, timeout=timeout,
@@ -769,6 +848,8 @@ def fetch(
     enable_retry: bool = True,
     enable_markdown: bool = True,
     enable_maincontent: bool = False,
+    caption_language: Optional[str] = None,
+    caption_source: str = "manual",
 ) -> FetchResult:
     """Public entrypoint — the generic grid wrapped with per-host self-learning.
 
@@ -797,6 +878,9 @@ def fetch(
     <pre>/<code> → fences); ``extraction_source`` becomes "raw+md". Set False
     for raw HTML. No-op when markdownify is not installed.
     ``enable_maincontent`` (opt-in) instead strips boilerplate via resiliparse."""
+    if caption_language is not None:
+        from .captions import fetch_captions
+        return fetch_captions(url, language=caption_language, source=caption_source, timeout=timeout)
     priority: Optional[dict] = None
     learned_existed = False
     uh = dict(user_hint or {})
@@ -1177,6 +1261,7 @@ def _give_up(trace, profile_used, last_resp, last_attempt, best_suspect,
             grid_exhausted=grid_exhausted, stop_reason=stop_reason,
             untried_routes=untried, must_invoke_browser=must_browser,
             block_class=block_class,
+            extraction_meta={"route": s_att.executor},
         )
     return FetchResult(
         ok=False,
@@ -1189,6 +1274,7 @@ def _give_up(trace, profile_used, last_resp, last_attempt, best_suspect,
         grid_exhausted=grid_exhausted, stop_reason=stop_reason,
         untried_routes=untried, must_invoke_browser=must_browser,
         block_class=block_class,
+        extraction_meta={"route": last_attempt.executor if last_attempt else "none"},
     )
 
 
@@ -1197,21 +1283,36 @@ def url_of(attempt: Optional[Attempt]) -> str:
 
 
 def fetch_many(urls: list[str], **kwargs) -> list[FetchResult]:
-    """Fetch many URLs, reusing the per-host SessionPool across calls.
+    """Sequential public fetches in original input order, including duplicates.
 
-    The first URL of a host may pay for warmup / browser bootstrap; later URLs
-    of the SAME host reuse the winning session's cookies + connection, which is
-    where R7-style bulk collection gets its throughput. Ordering by host keeps
-    the warm session hot."""
-    by_host: dict[str, list[int]] = {}
-    for i, u in enumerate(urls):
-        from .transport import _host_of
-        by_host.setdefault(_host_of(u), []).append(i)
-    results: list[Optional[FetchResult]] = [None] * len(urls)
-    for _host, idxs in by_host.items():
-        for i in idxs:
-            results[i] = fetch(urls[i], **kwargs)
-    return [r for r in results if r is not None]
+    Each URL and redirect uses fresh DNS-pinned transport. No cookie/session
+    reuse, browser bootstrap, host sorting, persistence, or parallel requests.
+    Per-input exceptions become failures so a batch never drops later results.
+    """
+    from .safety import classify_url
+    results: list[FetchResult] = []
+    for url in urls:
+        try:
+            if kwargs.get("caption_language") is not None:
+                # The caption entrypoint performs the same guard and retains
+                # caption_status even for DNS/input failures; never use HTML.
+                results.append(fetch(url, **kwargs))
+                continue
+            allowed, reason = classify_url(url, allow_private=False)
+            if not allowed:
+                results.append(FetchResult(
+                    ok=False, final_url=url, verdict="blocked", stop_reason="ssrf_blocked",
+                    summary=f"public URL rejected: {reason}",
+                    extraction_meta={"error": "ssrf_blocked"}))
+                continue
+            results.append(fetch(url, **kwargs))
+        except Exception as exc:
+            # Exception messages may contain response text or signed URLs.
+            results.append(FetchResult(
+                ok=False, final_url=url, verdict="error", stop_reason="error",
+                summary=f"fetch error: {type(exc).__name__}",
+                extraction_meta={"error": type(exc).__name__}))
+    return results
 
 
 def _build_result(resp, attempt: Attempt, trace: list[Attempt], profile_used: Optional[str],
@@ -1222,6 +1323,7 @@ def _build_result(resp, attempt: Attempt, trace: list[Attempt], profile_used: Op
     _t, content, quality, meta = _maybe_extract(
         resp, final_url, enable_extraction=enable_extraction,
         enable_markdown=enable_markdown, enable_maincontent=enable_maincontent)
+    meta["route"] = attempt.executor
     return FetchResult(
         ok=True,
         content=content,

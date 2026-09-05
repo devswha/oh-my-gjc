@@ -88,3 +88,21 @@ Removal commit: `9a30dec` (v0.36.0 candidate); see `docs/verification/skills-aud
 | `suite-resolvers/insane-review-resolver.sh.txt` | `plugins/oh-my-gjc/skills/insane-review/SKILL.md`, `plugins/oh-my-gjc/templates/insane-review.md` (identical resolver blocks) |
 
 Archive only; never install or execute these snippets.
+
+
+### Insane-search media recipes — replaced for v0.37.0
+
+The former executable media recipes recommended runtime package installation,
+raw subtitle/media downloads, broad yt-dlp operations, and generic browser
+escalation outside the hardened OMG public-caption contract. Their original
+reference is preserved verbatim; the active reference now documents explicit
+YouTube single-public-video captions and typed failures. Existing Phase 0
+metadata/platform code remains unchanged.
+Removal commit: `eadcc1a` (v0.37.0 candidate).
+
+| archived file | original path |
+|---|---|
+| `insane-search-media/media.md` | `plugins/oh-my-gjc/skills/insane-search/references/media.md` |
+
+Archive only; never install, execute, resolve, or reference these recipes from
+runtime code or installers.
