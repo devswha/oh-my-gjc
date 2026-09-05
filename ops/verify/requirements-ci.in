@@ -1,0 +1,9 @@
+# Direct dependencies exercised by the reviewed offline engine suites.
+# No browser, model SDK, yt-dlp, or runtime installer dependencies.
+curl_cffi==0.16.3
+beautifulsoup4==4.15.0
+PyYAML==6.0.3
+markdownify==1.2.3
+pypdf==6.17.0
+pdfplumber==0.11.10
+resiliparse==1.0.9

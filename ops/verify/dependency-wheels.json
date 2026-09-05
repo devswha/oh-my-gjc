@@ -1,0 +1,222 @@
+{
+  "python": "3.12.12",
+  "platform": "linux-x86_64",
+  "wheels": [
+    {
+      "name": "pip",
+      "version": "26.2.1",
+      "url": "https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl",
+      "sha256": "71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/pip/26.2.1/json"
+    },
+    {
+      "name": "curl_cffi",
+      "version": "0.16.3",
+      "url": "https://files.pythonhosted.org/packages/72/01/2bbf141baa0fc3921d31a90de5465b7a94188845a8fe84dee86bf7bd90f1/curl_cffi-0.16.3-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "a875a661e2f9a949be29454880bbb9553307a487c4c08819738298cf5c1622e2",
+      "requires_dist": [
+        "cffi>=2.0.0",
+        "certifi>=2024.2.2"
+      ],
+      "source": "https://pypi.org/pypi/curl_cffi/0.16.3/json"
+    },
+    {
+      "name": "beautifulsoup4",
+      "version": "4.15.0",
+      "url": "https://files.pythonhosted.org/packages/88/c6/92fcd42f1ba33e1184263f25bfabf3d27c383410470f169e4b8163bf9c17/beautifulsoup4-4.15.0-py3-none-any.whl",
+      "sha256": "d6f88de62e1d4e38ecb1077eb9724cd0eff29d2a08ca16a401e9b9e93f117cf9",
+      "requires_dist": [
+        "soupsieve>=1.6.1",
+        "typing-extensions>=4.0.0"
+      ],
+      "source": "https://pypi.org/pypi/beautifulsoup4/4.15.0/json"
+    },
+    {
+      "name": "PyYAML",
+      "version": "6.0.3",
+      "url": "https://files.pythonhosted.org/packages/8b/9d/b3589d3877982d4f2329302ef98a8026e7f4443c765c46cfecc8858c6b4b/pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/PyYAML/6.0.3/json"
+    },
+    {
+      "name": "markdownify",
+      "version": "1.2.3",
+      "url": "https://files.pythonhosted.org/packages/04/10/fa543d484e8b1199243fe20eedd02cc5af050edebce98a7293a5773df592/markdownify-1.2.3-py3-none-any.whl",
+      "sha256": "a189a0bedfd14009030fde5f85bb6f77c56897cb839b5c25315dd7d4e3e290ba",
+      "requires_dist": [
+        "beautifulsoup4<5,>=4.9",
+        "six<2,>=1.15"
+      ],
+      "source": "https://pypi.org/pypi/markdownify/1.2.3/json"
+    },
+    {
+      "name": "pypdf",
+      "version": "6.17.0",
+      "url": "https://files.pythonhosted.org/packages/c1/08/1e9731038124a9127e1d27848952b86fb32b2f45f8f1b94adc7f0817a6ac/pypdf-6.17.0-py3-none-any.whl",
+      "sha256": "5bd827266a21553b74d910e350131a6227b72f2ab4209bf372814b8195fa11c5",
+      "requires_dist": [
+        "typing_extensions >= 4.0; python_version < '3.11'"
+      ],
+      "source": "https://pypi.org/pypi/pypdf/6.17.0/json"
+    },
+    {
+      "name": "pdfplumber",
+      "version": "0.11.10",
+      "url": "https://files.pythonhosted.org/packages/a2/9a/07d658e1e7fad860f1c541ab941348125dbdab773be3a0afaf32361866c7/pdfplumber-0.11.10-py3-none-any.whl",
+      "sha256": "7741ea81bf165b474b153e6789d10d18e06b6ddcf3ec84289c3ef2fed6802580",
+      "requires_dist": [
+        "pdfminer.six==20260107",
+        "Pillow>=12.2.0",
+        "pypdfium2>=5.9.0"
+      ],
+      "source": "https://pypi.org/pypi/pdfplumber/0.11.10/json"
+    },
+    {
+      "name": "Resiliparse",
+      "version": "1.0.9",
+      "url": "https://files.pythonhosted.org/packages/bd/89/c6945e951b13cc15369511e4df96e10555af960bdef94bda57af3fc16574/resiliparse-1.0.9-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "c717da692cacf2335948dff4f75eeb65bddc37ec25eb235daf36ef463207b6ea",
+      "requires_dist": [
+        "fastwarc==1.0.9"
+      ],
+      "source": "https://pypi.org/pypi/Resiliparse/1.0.9/json"
+    },
+    {
+      "name": "FastWARC",
+      "version": "1.0.9",
+      "url": "https://files.pythonhosted.org/packages/97/f8/22135874ca1113371bca168937449a78c7cd1ee70969256d8d93f7e467e2/fastwarc-1.0.9-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "sha256": "105e4e7755c917de5e3f33dc1d93822eaa2a451cedc5430c6e0718964ab651e2",
+      "requires_dist": [
+        "brotli",
+        "click",
+        "tqdm",
+        "typing_extensions>=4.15; python_version < \"3.13\""
+      ],
+      "source": "https://pypi.org/pypi/FastWARC/1.0.9/json"
+    },
+    {
+      "name": "pdfminer.six",
+      "version": "20260107",
+      "url": "https://files.pythonhosted.org/packages/20/8b/28c4eaec9d6b036a52cb44720408f26b1a143ca9bce76cc19e8f5de00ab4/pdfminer_six-20260107-py3-none-any.whl",
+      "sha256": "366585ba97e80dffa8f00cebe303d2f381884d8637af4ce422f1df3ef38111a9",
+      "requires_dist": [
+        "charset-normalizer>=2.0.0",
+        "cryptography>=36.0.0"
+      ],
+      "source": "https://pypi.org/pypi/pdfminer.six/20260107/json"
+    },
+    {
+      "name": "six",
+      "version": "1.17.0",
+      "url": "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl",
+      "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/six/1.17.0/json"
+    },
+    {
+      "name": "certifi",
+      "version": "2026.7.22",
+      "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+      "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/certifi/2026.7.22/json"
+    },
+    {
+      "name": "cffi",
+      "version": "2.1.1",
+      "url": "https://files.pythonhosted.org/packages/b1/db/dceb9dd5b231e1da801793f8acc9f3c52a7e1afe40bb1aae37e02b0faad5/cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf",
+      "requires_dist": [
+        "pycparser; implementation_name != \"PyPy\""
+      ],
+      "source": "https://pypi.org/pypi/cffi/2.1.1/json"
+    },
+    {
+      "name": "charset-normalizer",
+      "version": "3.5.1",
+      "url": "https://files.pythonhosted.org/packages/6f/89/bb5108dc6c3651dca963f2b0a3ba19bbcb370c94e1b6d3e0e844a58e6dca/charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "b9af956078716df40d985fb0dfeb2c2120c5ca92ba4ff4b388acfd01cdc14d08",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/charset-normalizer/3.5.1/json"
+    },
+    {
+      "name": "cryptography",
+      "version": "50.0.1",
+      "url": "https://files.pythonhosted.org/packages/85/66/6ccca4722987ddedaa7fc9c3f4708af7431f5535666c174350830888c6b7/cryptography-50.0.1-cp311-abi3-manylinux_2_34_x86_64.whl",
+      "sha256": "51afcfceb15597cf2635068e4ac9a56b2abde622edde17f37d85fd7b5306497a",
+      "requires_dist": [
+        "cffi>=2.0.0 ; platform_python_implementation != 'PyPy'",
+        "typing-extensions>=4.13.2 ; python_full_version < '3.11'"
+      ],
+      "source": "https://pypi.org/pypi/cryptography/50.0.1/json"
+    },
+    {
+      "name": "pillow",
+      "version": "12.3.0",
+      "url": "https://files.pythonhosted.org/packages/84/21/a35af28dcc61f37ed850a2d64c65c701321dfbf25085e469d5559360cbbf/pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/pillow/12.3.0/json"
+    },
+    {
+      "name": "pypdfium2",
+      "version": "5.13.0",
+      "url": "https://files.pythonhosted.org/packages/d3/7c/74a2fb48e5b0d2402d9ca64b39074c722d67e9a8a2c58449a843a8c2329a/pypdfium2-5.13.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "81df25c1ab4c13ff773102d3cbea1967511d079123b067fc077bd0c4d57d91d8",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/pypdfium2/5.13.0/json"
+    },
+    {
+      "name": "soupsieve",
+      "version": "2.9.2",
+      "url": "https://files.pythonhosted.org/packages/eb/dc/ad025c1ee131eba60c69f4dd5779b18fcf1e6b21a343e2162a84d5d133c7/soupsieve-2.9.2-py3-none-any.whl",
+      "sha256": "8089a26fd974ca7a1f30276d3d8492ab266ab15af581642dfe8aa162e0c1c823",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/soupsieve/2.9.2/json"
+    },
+    {
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/typing_extensions/4.16.0/json"
+    },
+    {
+      "name": "brotli",
+      "version": "1.2.0",
+      "url": "https://files.pythonhosted.org/packages/03/a7/03aa61fbc3c5cbf99b44d158665f9b0dd3d8059be16c460208d9e385c837/brotli-1.2.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "072e7624b1fc4d601036ab3f4f27942ef772887e876beff0301d261210bca97f",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/brotli/1.2.0/json"
+    },
+    {
+      "name": "click",
+      "version": "8.5.0",
+      "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+      "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/click/8.5.0/json"
+    },
+    {
+      "name": "pycparser",
+      "version": "3.0",
+      "url": "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl",
+      "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+      "requires_dist": [],
+      "source": "https://pypi.org/pypi/pycparser/3.0/json"
+    },
+    {
+      "name": "tqdm",
+      "version": "4.70.0",
+      "url": "https://files.pythonhosted.org/packages/f9/1c/01bfd571a64e7f270e6bab5e33777debe0edc56759233ce84f27dec92d14/tqdm-4.70.0-py3-none-any.whl",
+      "sha256": "7f585706bfddbdebf89daac705b2dfcc16890130727d3197ca62c732b4310953",
+      "requires_dist": [
+        "colorama; platform_system == \"Windows\""
+      ],
+      "source": "https://pypi.org/pypi/tqdm/4.70.0/json"
+    }
+  ]
+}

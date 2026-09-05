@@ -27,31 +27,31 @@ PLUGIN_NAME = "oh-my-gjc"
 PLUGIN_SOURCE = "./plugins/{}".format(PLUGIN_NAME)
 CACHE_PREFIX = "{}___{}___".format(PLUGIN_NAME, PLUGIN_NAME)
 # Historical v0.27 identity; retained only for explicit rejection coverage.
-OLD_PLUGIN_NAME = "oh-my-gjc"
+OLD_PLUGIN_NAME = "oh-my-gajae-code"
 OLD_PLUGIN_SOURCE = "./plugins/{}".format(OLD_PLUGIN_NAME)
 OLD_CACHE_PREFIX = "{}___{}___".format(OLD_PLUGIN_NAME, OLD_PLUGIN_NAME)
 VERSION = "1.2.3"
 MARKERS = [
-    "bin/install-skill.sh",
-    ".claude-plugin/plugin.json",
-    "templates/omg.md",
-    "templates/setup.md",
-    "templates/gate.md",
-    "templates/gate-always.md",
-    "templates/no-english.md",
-    "templates/insane-review.md",
-    "templates/deep-onboarding.md",
-    "templates/multi-harness.md",
-    "bin/multi-harness-research.mjs",
-    "skills/insane-review/SKILL.md",
-    "skills/adaptive-response/SKILL.md",
-    "skills/no-english/SKILL.md",
-    "skills/extragoal/SKILL.md",
-    "skills/deep-onboarding/SKILL.md",
-    "skills/multi-harness-research/SKILL.md",
+    'bin/install-skill.sh',
+    '.claude-plugin/plugin.json',
+    'bin/omg-autoupdate.sh',
+    'bin/pack_and_ask.py',
+    'bin/cdp_lock.py',
+    'bin/insane_search.py',
+    'bin/setup_insane_search.py',
+    'bin/gpt_image_web.py',
+    'templates/omg.md',
+    'templates/setup.md',
+    'templates/no-english.md',
+    'templates/insane-review.md',
+    'templates/gpt-image.md',
+    'skills/no-english/SKILL.md',
+    'skills/extragoal/SKILL.md',
+    'skills/insane-review/SKILL.md',
+    'skills/insane-search/SKILL.md',
+    'skills/gpt-image/SKILL.md',
 ]
 NON_MARKER_PAYLOADS = [
-    "bin/pack_and_ask.py",
     "bin/collect.ts",
     "templates/non-marker-template.md",
     "skills/non-marker-skill/SKILL.md",
@@ -884,11 +884,11 @@ class RecordProvenanceTest(unittest.TestCase):
         self._cache_marker(self.cache, marker).unlink()
         os.symlink(self._cache_marker(self.cache, "templates/setup.md"), self._cache_marker(self.cache, marker))
         self._assert_failure_untouched("cache marker 'templates/omg.md' is missing, a symlink, or cannot be safely opened")
-    def test_multi_harness_critical_marker_fixture_matches_the_gate(self):
+    def test_current_critical_marker_fixture_matches_the_gate(self):
         self.assertEqual(PROVENANCE.MARKERS, MARKERS)
 
-    def test_multi_harness_runner_missing_from_candidate_or_cache_is_rejected(self):
-        runner = "bin/multi-harness-research.mjs"
+    def test_search_runner_missing_from_candidate_or_cache_is_rejected(self):
+        runner = "bin/insane_search.py"
         candidate_runner = self._candidate_marker(runner)
         self._git(
             "update-index",
@@ -897,17 +897,17 @@ class RecordProvenanceTest(unittest.TestCase):
         )
         candidate_runner.unlink()
         self._assert_failure_untouched(
-            "candidate marker 'bin/multi-harness-research.mjs' is missing, a symlink, or cannot be safely opened"
+            "candidate marker 'bin/insane_search.py' is missing, a symlink, or cannot be safely opened"
         )
 
         self.temporary_directory.cleanup()
         self.setUp()
         self._cache_marker(self.cache, runner).unlink()
         self._assert_failure_untouched(
-            "cache marker 'bin/multi-harness-research.mjs' is missing, a symlink, or cannot be safely opened"
+            "cache marker 'bin/insane_search.py' is missing, a symlink, or cannot be safely opened"
         )
 
-    def test_multi_harness_binding_schema_tampering_is_rejected_for_candidate_and_cache(self):
+    def test_suite_binding_schema_tampering_is_rejected_for_candidate_and_cache(self):
         binding_schema = "bin/install-skill.sh"
         candidate_schema = self._candidate_marker(binding_schema)
         self._git(
@@ -930,9 +930,9 @@ class RecordProvenanceTest(unittest.TestCase):
             "cache marker 'bin/install-skill.sh' bytes differ from the tracked candidate HEAD blob"
         )
 
-    def test_final_revalidation_rejects_aggregate_drift_of_multi_harness_critical_markers(self):
+    def test_final_revalidation_rejects_aggregate_drift_of_current_critical_markers(self):
         cases = (
-            ("candidate runner", self._candidate_marker, "bin/multi-harness-research.mjs"),
+            ("candidate runner", self._candidate_marker, "bin/insane_search.py"),
             ("cache binding schema", lambda path: self._cache_marker(self.cache, path), "bin/install-skill.sh"),
         )
         for label, resolve_path, relative_path in cases:

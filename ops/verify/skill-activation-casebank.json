@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "evaluation": "manual-or-optional-model",
+  "claim": "Expected skill-loading decisions only. Static schema tests and sandbox stub loading are not NLP activation evidence.",
+  "cases": [
+    {
+      "id": "no-english-explicit-on",
+      "skill": "no-english",
+      "prompt": "/omg:no-english on",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": true,
+      "reason": "Explicit command is the sole activation surface.",
+      "source": "plugins/oh-my-gjc/templates/no-english.md"
+    },
+    {
+      "id": "no-english-explicit-status",
+      "skill": "no-english",
+      "prompt": "/omg:no-english status",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Fresh-session status only reports the existing session flag; it does not load the skill.",
+      "source": "plugins/oh-my-gjc/templates/no-english.md"
+    },
+    {
+      "id": "no-english-korean-chat",
+      "skill": "no-english",
+      "prompt": "오늘 작업 결과를 알려줘.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Ordinary Korean conversation must not activate it.",
+      "source": "plugins/oh-my-gjc/templates/no-english.md"
+    },
+    {
+      "id": "no-english-language-preference",
+      "skill": "no-english",
+      "prompt": "한국어로 답해줘. 영어는 줄여줘.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "A language preference alone is not the explicit command.",
+      "source": "plugins/oh-my-gjc/templates/no-english.md"
+    },
+    {
+      "id": "no-english-quoted-command",
+      "skill": "no-english",
+      "prompt": "문서의 `/omg:no-english on`이 무슨 뜻인지 설명해줘.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Quoted documentation is not a command invocation.",
+      "source": "plugins/oh-my-gjc/templates/no-english.md"
+    },
+    {
+      "id": "gpt-image-explicit",
+      "skill": "gpt-image",
+      "prompt": "/omg:gpt-image a small blue house",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": true,
+      "reason": "Explicit generation command.",
+      "source": "plugins/oh-my-gjc/skills/gpt-image/SKILL.md"
+    },
+    {
+      "id": "gpt-image-explicit-ko",
+      "skill": "gpt-image",
+      "prompt": "/omg:gpt-image 달 위의 작은 집을 그려줘",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": true,
+      "reason": "Explicit command with Korean prompt.",
+      "source": "plugins/oh-my-gjc/skills/gpt-image/SKILL.md"
+    },
+    {
+      "id": "gpt-image-ordinary-image",
+      "skill": "gpt-image",
+      "prompt": "작은 파란 집 이미지를 만들어줘.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Ordinary image requests do not activate this explicit-only skill.",
+      "source": "plugins/oh-my-gjc/skills/gpt-image/SKILL.md"
+    },
+    {
+      "id": "gpt-image-design",
+      "skill": "gpt-image",
+      "prompt": "Create a dashboard mockup.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "A design request is not the explicit command.",
+      "source": "plugins/oh-my-gjc/skills/gpt-image/SKILL.md"
+    },
+    {
+      "id": "gpt-image-quote",
+      "skill": "gpt-image",
+      "prompt": "Explain the example `/omg:gpt-image a house`.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Mentioning command syntax does not invoke it.",
+      "source": "plugins/oh-my-gjc/skills/gpt-image/SKILL.md"
+    },
+    {
+      "id": "insane-review-pro",
+      "skill": "insane-review",
+      "prompt": "Have Pro review this completed change.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": true,
+      "reason": "Explicit Pro review request.",
+      "source": "plugins/oh-my-gjc/skills/insane-review/SKILL.md"
+    },
+    {
+      "id": "insane-review-ko",
+      "skill": "insane-review",
+      "prompt": "repomix로 묶어서 GPT에 넣어줘. 이 변경을 리뷰받자.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": true,
+      "reason": "Explicit request to pack code for ChatGPT review.",
+      "source": "plugins/oh-my-gjc/skills/insane-review/SKILL.md"
+    },
+    {
+      "id": "insane-review-ordinary",
+      "skill": "insane-review",
+      "prompt": "Review this code for bugs.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Generic code review must not activate the external web lane.",
+      "source": "plugins/oh-my-gjc/skills/insane-review/SKILL.md"
+    },
+    {
+      "id": "insane-review-repair",
+      "skill": "insane-review",
+      "prompt": "Fix the failing unit test.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "A repair request is not Pro review authorization.",
+      "source": "plugins/oh-my-gjc/skills/insane-review/SKILL.md"
+    },
+    {
+      "id": "insane-review-public-search",
+      "skill": "insane-review",
+      "prompt": "Search for public documentation about this parser.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Public search requires no ChatGPT browser session.",
+      "source": "plugins/oh-my-gjc/skills/insane-review/SKILL.md"
+    },
+    {
+      "id": "insane-search-blocked",
+      "skill": "insane-search",
+      "prompt": "공개 페이지 내용을 가져와줘. 앞선 read가 403으로 실패했어.",
+      "context": "Public URL https://example.test/article; ordinary read returned HTTP 403.",
+      "expected_load": true,
+      "reason": "A prior blocked public URL read satisfies the activation boundary.",
+      "source": "plugins/oh-my-gjc/skills/insane-search/SKILL.md"
+    },
+    {
+      "id": "insane-search-thin-spa",
+      "skill": "insane-search",
+      "prompt": "The public article only returned an empty SPA shell. Extract its text.",
+      "context": "Public URL https://example.test/article; ordinary read returned a thin HTML shell.",
+      "expected_load": true,
+      "reason": "Incomplete ordinary access permits the fallback.",
+      "source": "plugins/oh-my-gjc/skills/insane-search/SKILL.md"
+    },
+    {
+      "id": "insane-search-captions",
+      "skill": "insane-search",
+      "prompt": "이 공개 유튜브 영상의 공개 자막을 추출해줘.",
+      "context": "Public video URL https://www.youtube.com/watch?v=fixture; public captions requested.",
+      "expected_load": true,
+      "reason": "Explicit public caption/media extraction is the direct exception.",
+      "source": "plugins/oh-my-gjc/skills/insane-search/SKILL.md"
+    },
+    {
+      "id": "insane-search-ordinary",
+      "skill": "insane-search",
+      "prompt": "Find documentation about Python JSON parsing.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Normal web search must run first.",
+      "source": "plugins/oh-my-gjc/skills/insane-search/SKILL.md"
+    },
+    {
+      "id": "insane-search-read-success",
+      "skill": "insane-search",
+      "prompt": "Summarize this public article.",
+      "context": "Ordinary read already returned the complete article body.",
+      "expected_load": false,
+      "reason": "Successful ordinary read needs no fallback.",
+      "source": "plugins/oh-my-gjc/skills/insane-search/SKILL.md"
+    },
+    {
+      "id": "insane-search-private",
+      "skill": "insane-search",
+      "prompt": "내 로그인 쿠키로 비공개 글을 읽어줘.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Private authenticated content is excluded.",
+      "source": "plugins/oh-my-gjc/skills/insane-search/SKILL.md"
+    },
+    {
+      "id": "insane-search-paywall",
+      "skill": "insane-search",
+      "prompt": "Bypass this subscription paywall.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Paywall bypass is excluded.",
+      "source": "plugins/oh-my-gjc/skills/insane-search/SKILL.md"
+    },
+    {
+      "id": "insane-search-captcha",
+      "skill": "insane-search",
+      "prompt": "Solve the CAPTCHA and get the blocked page.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "CAPTCHA bypass is excluded.",
+      "source": "plugins/oh-my-gjc/skills/insane-search/SKILL.md"
+    },
+    {
+      "id": "extragoal-final",
+      "skill": "extragoal",
+      "prompt": "Run an independent external final review gate on the completed diff before merge.",
+      "context": "Completed, clean, committed feature branch; all implementation work is done and the caller requests the independent final gate.",
+      "expected_load": true,
+      "reason": "Explicit final independent review gate request.",
+      "source": "plugins/oh-my-gjc/skills/extragoal/SKILL.md"
+    },
+    {
+      "id": "extragoal-ko",
+      "skill": "extragoal",
+      "prompt": "완성 diff 독립 검증 후 머지 전 교차 리뷰를 해줘.",
+      "context": "Completed, clean, committed feature branch; all implementation work is done and the caller requests the independent final gate.",
+      "expected_load": true,
+      "reason": "Explicit completed-diff cross-review trigger.",
+      "source": "plugins/oh-my-gjc/skills/extragoal/SKILL.md"
+    },
+    {
+      "id": "extragoal-explain",
+      "skill": "extragoal",
+      "prompt": "Explain what this function does.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Routine explanation is not a final review gate.",
+      "source": "plugins/oh-my-gjc/skills/extragoal/SKILL.md"
+    },
+    {
+      "id": "extragoal-implementation",
+      "skill": "extragoal",
+      "prompt": "Implement a new validation function.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "An implementation request alone is not a completed-work review gate.",
+      "source": "plugins/oh-my-gjc/skills/extragoal/SKILL.md"
+    },
+    {
+      "id": "extragoal-ordinary-review",
+      "skill": "extragoal",
+      "prompt": "Check this loop for an off-by-one bug.",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "A local code question does not ask for an independent final gate.",
+      "source": "plugins/oh-my-gjc/skills/extragoal/SKILL.md"
+    },
+    {
+      "id": "no-english-explicit-empty",
+      "skill": "no-english",
+      "prompt": "/omg:no-english",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": true,
+      "reason": "Empty arguments explicitly load and enable the skill.",
+      "source": "plugins/oh-my-gjc/templates/no-english.md"
+    },
+    {
+      "id": "no-english-explicit-off",
+      "skill": "no-english",
+      "prompt": "/omg:no-english off",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Off disables the session flag without loading the skill.",
+      "source": "plugins/oh-my-gjc/templates/no-english.md"
+    },
+    {
+      "id": "no-english-invalid",
+      "skill": "no-english",
+      "prompt": "/omg:no-english unknown",
+      "context": "Fresh session; no prior skill activation.",
+      "expected_load": false,
+      "reason": "Invalid arguments show usage without loading the skill.",
+      "source": "plugins/oh-my-gjc/templates/no-english.md"
+    }
+  ]
+}
