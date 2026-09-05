@@ -166,6 +166,7 @@ REFUSAL_MARKERS = (
 )
 PROMPT_ECHO_CHARS = 200
 MIN_ECHO_CHARS = 120
+MAX_ECHO_EXTRA = 40
 
 # 출력은 '실행한 현재 프로젝트'의 .insane-review/ 에 저장(플러그인 내부 X — kkirikkiri의 .kkirikkiri 패턴).
 # env INSANE_REVIEW_OUT 또는 --out-dir로 오버라이드.
@@ -1286,7 +1287,7 @@ def normalize(text: str | None) -> str:
     return re.sub(r"\s+", " ", text).strip() if text else ""
 
 
-def rejection_reason(response: str, prompt: str) -> str | None:
+def rejection_reason(response: str, prompt: str, *, request_sha256: str | None = None) -> str | None:
     """Return why a recovered page is not a usable answer, if applicable."""
     normalised = normalize(response)
     if not normalised:
@@ -1294,12 +1295,19 @@ def rejection_reason(response: str, prompt: str) -> str | None:
     for marker in REFUSAL_MARKERS:
         if normalised.startswith(marker) and len(normalised) <= 1000:
             return f"모델 거부 응답 감지: {marker}"
+    # The persisted hash covers the actual request, including its run marker and
+    # any inline pack. Allow only the same short echo suffix as the original
+    # prompt guard; substantive answers that quote the request remain valid.
+    if request_sha256 is not None:
+        for extra in range(min(MAX_ECHO_EXTRA, len(normalised)) + 1):
+            if text_hash(normalised[:len(normalised) - extra]) == request_sha256:
+                return "전송한 요청 본문이 응답에 그대로 반복됨(답변 아님)"
     prompt_normalised = normalize(prompt)
     prompt_head = prompt_normalised[:PROMPT_ECHO_CHARS]
     echo_extra = len(normalised) - len(prompt_normalised)
     if (len(prompt_head) >= MIN_ECHO_CHARS
             and normalised.startswith(prompt_normalised)
-            and 0 <= echo_extra <= 40):
+            and 0 <= echo_extra <= MAX_ECHO_EXTRA):
         return "프롬프트 앞부분이 응답에 그대로 반복됨(답변 아님)"
     return None
 
@@ -2163,11 +2171,9 @@ def put_text(page, message: str):
     if not clear_composer(page):
         raise RuntimeError("composer 초기화 실패(잔여 텍스트 제거 불가) → 중단(fail-closed)")
     # 크로스플랫폼: OS 클립보드/⌘V(맥 전용) 대신 Playwright 네이티브 insert_text(insertText 이벤트).
-    # → mac/win/linux 동일 동작 + 동시 실행 시 클립보드 경합 제거. 실패 시 키 입력 폴백.
-    try:
-        page.keyboard.insert_text(message)
-    except Exception:
-        page.keyboard.type(message)
+    # keyboard.type은 개행을 Enter로 보내 journal 경계 전에 제출할 수 있다.
+    # 삽입 실패는 전송 전 준비 재시도로 돌리고, 키 입력으로 폴백하지 않는다.
+    page.keyboard.insert_text(message)
     time.sleep(0.6)
 
 
@@ -2791,7 +2797,7 @@ def harvest_run(args):
                                                              harvest_only=True)
                     if status != "ok" or not response.strip():
                         raise RuntimeError(f"harvest {status}; no partial response saved; no messages sent")
-                    if rejection := rejection_reason(response, data["prompt"]):
+                    if rejection := rejection_reason(response, data["prompt"], request_sha256=data["request_sha256"]):
                         raise RuntimeError(f"harvest rejected: {rejection}")
                     journal.verify_identity()
                     if observe_bound_turn(page, journal) is None:
@@ -3247,7 +3253,7 @@ def main():
         conv_url = journal.data["conversation"]
 
 
-        rejection = rejection_reason(response, prompt)
+        rejection = rejection_reason(response, prompt, request_sha256=journal.data["request_sha256"])
         if rejection:
             sys.exit(f"❌ 회수한 페이지를 답변으로 인정하지 않음(fail-closed): {rejection}")
 
