@@ -71,6 +71,7 @@ GPT_IMAGE_ASSETS=(
 )
 INSANE_REVIEW_ASSETS=(
   bin/pack_and_ask.py
+  bin/review_journal.py
   bin/cdp_lock.py
   skills/insane-review/references/upstream.md
   skills/insane-review/references/upstream-LICENSE
@@ -859,6 +860,7 @@ case "$mode" in
       preflight_all
       for s in "${EXPECTED_SKILLS[@]}";     do install_skill     "$s" "$mode"; done
       for c in "${EXPECTED_COMMANDS[@]}";   do install_command   "$c" "$mode"; done
+      report_missing
       publish_native_stage
       cleanup_legacy_commands "$mode"
       cleanup_removed "$mode"

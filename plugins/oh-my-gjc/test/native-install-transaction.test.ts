@@ -51,6 +51,7 @@ set -eu
 src="\${@: -2:1}"
 dest="\${@: -1}"
 case "\${FAULT:-}:$(basename "$0"):$src:$dest" in
+  vanish:cp:*/skills/no-english/SKILL.md:*/new/s-no-english) rm -f "$VANISH_SOURCE" ;;
   stage:cp:*templates/setup.md:*) printf partial > "$dest"; exit 71 ;;
   backup:cp:*/commands/omg:setup.md:*/old/c-setup) printf partial > "$dest"; exit 71 ;;
   publish:cp:*/.native-install/new/c-setup:*) printf partial > "$dest"; exit 71 ;;
@@ -94,6 +95,17 @@ exec /bin/$(basename "$0") "$@"
 }
 
 describe("native install restoration", () => {
+  test("a source disappearing after preflight aborts before publication and cleanup", () => {
+    const f = fixture();
+    const changing = join(f.root, "changing-suite");
+    cpSync(suite, changing, { recursive: true });
+    const result = f.run("vanish", changing, { VANISH_SOURCE: join(changing, "templates/setup.md") });
+    expect(result.status).not.toBe(0);
+    expect(result.stdout + result.stderr).toContain("templates/setup.md");
+    f.assertOld();
+    expect(existsSync(f.journal)).toBe(false);
+    expect(existsSync(join(f.root, "published"))).toBe(false);
+  });
   for (const scope of ["user", "project"]) {
     for (const fault of ["stage", "backup", "publish", "rename", "binding", "terminate"]) {
       test(`${scope}: ${fault} failure preserves/restores the complete previous set`, () => {

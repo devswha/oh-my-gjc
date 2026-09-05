@@ -116,6 +116,16 @@ function cycle(realGjc?: string) {
 }
 
 describe("explicit local payload installer", () => {
+  test("root and updater accept relative local paths with exported CDPATH", () => {
+    const f = fixture();
+    f.mark("RELATIVE LOCAL PAYLOAD");
+    cpSync(f.source, join(f.root, "project/checkout"), { recursive: true });
+    for (const updater of [false, true]) {
+      const result = f.run(updater, { CDPATH: "." }, ["--local", "checkout"]);
+      expect(result.status, result.stdout + result.stderr).toBe(0);
+      f.verify("RELATIVE LOCAL PAYLOAD");
+    }
+  });
   test("actual root/native/updater scripts install fresh, repeat changed bytes, and upgrade offline", () => cycle());
   test("existing registration can switch to a different local checkout", () => {
     const f = fixture();

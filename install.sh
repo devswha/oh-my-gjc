@@ -82,7 +82,7 @@ if [ -n "$LOCAL_CHECKOUT" ]; then
   [ "$CAND_MODE" = 0 ] || die "--local and --candidate-ref are mutually exclusive"
   case "$LOCAL_CHECKOUT" in -*|*[[:cntrl:]]*) die "invalid --local checkout path" ;; esac
   [ -d "$LOCAL_CHECKOUT" ] || die "--local checkout does not exist: $LOCAL_CHECKOUT"
-  LOCAL_CHECKOUT="$(cd -P "$LOCAL_CHECKOUT" && pwd -P)"
+  LOCAL_CHECKOUT="$(CDPATH= cd -P "$LOCAL_CHECKOUT" && pwd -P)"
   command -v python3 >/dev/null 2>&1 || die "--local requires python3 to validate the local catalog"
   # Validate before removing an existing registration. In local mode even a catalog
   # that redirects the suite entry to a remote source is an error, not a fallback.

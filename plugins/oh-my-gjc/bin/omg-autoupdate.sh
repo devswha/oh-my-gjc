@@ -378,7 +378,7 @@ main() {
   if [ -n "$LOCAL_CHECKOUT" ]; then
     case "$LOCAL_CHECKOUT" in -*|*[[:cntrl:]]*) die "invalid --local checkout path" ;; esac
     [ -f "$LOCAL_CHECKOUT/install.sh" ] || die "--local checkout has no install.sh: $LOCAL_CHECKOUT/install.sh"
-    LOCAL_CHECKOUT="$(cd -P "$LOCAL_CHECKOUT" && pwd -P)"
+    LOCAL_CHECKOUT="$(CDPATH= cd -P "$LOCAL_CHECKOUT" && pwd -P)"
   fi
   case "$action" in
     run)     do_run ;;
