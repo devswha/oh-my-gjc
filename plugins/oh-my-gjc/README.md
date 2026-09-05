@@ -79,14 +79,14 @@ GJC 정식 이름과 코드·명령·경로·API 이름은 번역하거나 한�
 
 ## 자동 업데이트 (opt-in)
 
-기본 설치는 자동 업데이트를 켜지 않는다. 원하면 명시적으로 opt-in한다:
+기본 설치는 자동 업데이트를 켜지 않는다. 저장소 루트에서 명시적으로 opt-in한다:
 
 ```sh
-bin/omg-autoupdate.sh enable            # systemd --user 타이머(없으면 cron 폴백), 기본 daily
-bin/omg-autoupdate.sh enable --interval weekly
-bin/omg-autoupdate.sh enable --local /path/to/checkout   # 네트워크 대신 로컬 checkout 재실행
-bin/omg-autoupdate.sh status            # 스케줄 여부 + 최근 로그
-bin/omg-autoupdate.sh disable           # 해제
+bash plugins/oh-my-gjc/bin/omg-autoupdate.sh enable            # systemd --user 타이머(없으면 cron 폴백), 기본 daily
+bash plugins/oh-my-gjc/bin/omg-autoupdate.sh enable --interval weekly
+bash plugins/oh-my-gjc/bin/omg-autoupdate.sh enable --local /path/to/checkout
+bash plugins/oh-my-gjc/bin/omg-autoupdate.sh status            # 스케줄 여부 + 최근 로그
+bash plugins/oh-my-gjc/bin/omg-autoupdate.sh disable           # 해제
 ```
 
 - 갱신은 신뢰된 canonical `install.sh` 재실행(또는 `--local` checkout)이다. **root 실행 금지**, 단일 실행 잠금, 모든 실행을 `${XDG_STATE_HOME:-~/.local/state}/oh-my-gjc/autoupdate.log`에 기록한다.
