@@ -2630,9 +2630,14 @@ def strict_turn_snapshot(page) -> list[dict]:
     rows = page.eval_on_selector_all("[data-message-id]", """els => els.map(el => {
         const roleNode = el.matches('[data-message-author-role]') ? el :
             el.querySelector('[data-message-author-role]');
+        const role = roleNode && roleNode.getAttribute('data-message-author-role');
+        // Attachment chips share the user turn container. Hash only the one
+        // rendered prompt body; ambiguous/missing bodies retain the full text
+        // and must still pass the exact request hash below.
+        const bodies = role === 'user' ? roleNode.querySelectorAll('.whitespace-pre-wrap') : [];
         return {id: el.getAttribute('data-message-id'),
-                role: roleNode && roleNode.getAttribute('data-message-author-role'),
-                text: roleNode ? roleNode.innerText : ''};
+                role: role,
+                text: bodies.length === 1 ? bodies[0].innerText : roleNode ? roleNode.innerText : ''};
     }).filter(row => row.role === 'user' || row.role === 'assistant')""")
     if not isinstance(rows, list):
         raise RuntimeError("message snapshot unavailable")

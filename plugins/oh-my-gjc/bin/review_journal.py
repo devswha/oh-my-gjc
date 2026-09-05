@@ -368,7 +368,10 @@ class RunJournal:
 
     def require_recovery(self):
         validate(self.data)
-        if (not self.attempted or not self.data["conversation"] or not self.data["user_turn"]
+        if (not self.attempted or not self.data["conversation"]
                 or not self.data["verified_model"]):
             raise ValueError("insufficient verified conversation/request/model evidence for harvest; never resend automatically")
+        # A bound conversation plus the persisted full request hash, unique run
+        # marker and baseline can identify a request after a post-send DOM error.
+        # observe_bound_turn must verify them before binding any missing turn ID.
         self.verify_identity()

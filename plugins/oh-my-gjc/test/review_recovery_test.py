@@ -186,7 +186,28 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual((env.sends, env.pages), (1, 1))
         journal = RunJournal.read(next(self.out.glob('runs/run_*.json')))
         self.assertEqual(journal.data['send_state'], 'unknown')
-        with self.assertRaises(ValueError): journal.require_recovery()
+        journal.require_recovery()  # bound URL/request hash survive the DOM failure
+
+    def test_user_prompt_snapshot_excludes_attachment_chip_text(self):
+        captured = []
+        page = SimpleNamespace(eval_on_selector_all=lambda selector, js: captured.append(js) or [])
+        m.strict_turn_snapshot(page)
+        # Execute the production browser callback against the observed DOM shape.
+        script = r'''
+const snapshot = eval(process.argv[1]);
+const prompt = 'Review this\n\n[insane-review request: fixture]';
+function turn(bodies) {
+  return {matches: () => true, getAttribute: key => key === 'data-message-id' ? 'u1' : 'user',
+    innerText: 'pack.md\n파일\n' + prompt,
+    querySelectorAll: selector => selector === '.whitespace-pre-wrap' ? bodies : []};
+}
+const assert = require('node:assert/strict');
+assert.equal(snapshot([turn([{innerText: prompt}])])[0].text, prompt);
+assert.notEqual(snapshot([turn([])])[0].text, prompt);
+assert.notEqual(snapshot([turn([{innerText: prompt}, {innerText: 'extra'}])])[0].text, prompt);
+'''
+        result = subprocess.run(['node', '-e', script, captured[0]], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_absence_of_request_is_unknown_not_unsent(self):
         env = Harness(self.out)
@@ -254,6 +275,23 @@ raise SystemExit(7)
         journal.update(assistant_turn=None)
         self.harvest(RunJournal.read(journal.path), page, env)
         self.assertEqual(RunJournal.read(journal.path).data['assistant_turn'], 'assistant-1')
+
+    def test_restart_binds_unobserved_request_only_with_exact_durable_evidence(self):
+        journal, page, env = self.make_journal()
+        journal.update(send_state='unknown', user_turn=None, assistant_turn=None)
+        self.harvest(RunJournal.read(journal.path), page, env)
+        restored = RunJournal.read(journal.path)
+        self.assertEqual(restored.data['user_turn'], 'user-1')
+        self.assertEqual(restored.data['send_state'], 'complete')
+
+    def test_unknown_request_recovery_rejects_mismatched_text_and_missing_conversation(self):
+        journal, page, env = self.make_journal()
+        journal.update(send_state='unknown', user_turn=None, assistant_turn=None)
+        page.rows[0]['text'] = 'unrelated request'
+        with self.assertRaisesRegex(RuntimeError, 'request text'): self.harvest(journal, page, env)
+        self.assertFalse(list(self.out.glob('response_*.md')))
+        journal.update(conversation=None)
+        with self.assertRaisesRegex(ValueError, 'insufficient'): journal.require_recovery()
 
     def test_harvest_waits_for_hydration_without_guessing_or_sending(self):
         journal, page, env = self.make_journal()
