@@ -160,7 +160,8 @@ if present(scopes['project'] / 'runtimes/oh-my-gjc/root'):
     add('project', scopes['project'] / 'runtimes/oh-my-gjc/root', 'warning',
         'project binding takes precedence, including invalid binding; no silent fallback')
 
-marker_re = re.compile(r'^<!-- (BEGIN|END) ((?:oh-my-gjc|my-workflows):(?:easy-always|gate-always|branchflow)) -->$')
+# Avoid an HTML-comment start token: GJC strips those even inside code fences.
+marker_re = re.compile(r'^<[!]-- (BEGIN|END) ((?:oh-my-gjc|my-workflows):(?:easy-always|gate-always|branchflow)) -->$')
 marker_files = [scopes['user'] / n for n in ('SYSTEM.md', 'AGENTS.md')] + [
     scopes['project'] / n for n in ('SYSTEM.md', 'AGENTS.md')] + [cwd / 'AGENTS.md']
 for path in marker_files:
@@ -172,7 +173,7 @@ for path in marker_files:
         for line in text.splitlines():
             match = marker_re.fullmatch(line)
             if not match:
-                if re.match(r'^\s*<!--\s*(?:BEGIN|END)\b.*(?:oh-my-gjc|my-workflows):(?:easy-always|gate-always|branchflow)', line):
+                if re.match(r'^\s*<[!]--\s*(?:BEGIN|END)\b.*(?:oh-my-gjc|my-workflows):(?:easy-always|gate-always|branchflow)', line):
                     found = malformed = True
                 continue
             found = True
