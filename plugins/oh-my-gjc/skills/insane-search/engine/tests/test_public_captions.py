@@ -1,11 +1,14 @@
 """Explicit caption modes, WebVTT parsing, and transport/auth boundaries."""
+from contextlib import ExitStack
 import json
 from pathlib import Path
 import socket
+import subprocess
 import sys
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from engine import captions as cap, fetch_chain as fc, safety
@@ -34,6 +37,16 @@ class CaptionTests(unittest.TestCase):
         self.assertEqual(cues[1]["text"], "Overlapping words.\nSecond line.")
         self.assertEqual(cues[3]["text"], "Word timing")
         self.assertEqual(cap._milliseconds("01:01:01.001"), 3_661_001)
+
+    def test_webvtt_allows_arbitrary_blank_lines_between_blocks(self):
+        expected = cap.parse_webvtt(VTT)
+        for blanks in (1, 2, 3, 4, 7, 32):
+            for whitespace in ("", " ", "\t", " \t"):
+                for newline in ("\n", "\r\n", "\r"):
+                    with self.subTest(blanks=blanks, whitespace=whitespace, newline=newline):
+                        separator = "\n" + (whitespace + "\n") * blanks
+                        spaced = VTT.replace("\n\n", separator).replace("\n", newline)
+                        self.assertEqual(cap.parse_webvtt(spaced), expected)
 
     def test_invalid_or_segmented_vtt_is_typed(self):
         for data, state in [("<html>login</html>", "unsupported"),
@@ -182,11 +195,17 @@ class CaptionTests(unittest.TestCase):
                 self.urlopen(request)
                 return info(subtitles={})
         response_type = lambda *args, **kwargs: None
+        class FakeIE:
+            @classmethod
+            def ie_key(cls):
+                return "Youtube"
+            def suitable(self, url):
+                return True
         modules = {"yt_dlp": SimpleNamespace(YoutubeDL=FakeDL),
                    "yt_dlp.globals": SimpleNamespace(plugin_dirs=dirs, all_plugins_loaded=loaded),
                    "yt_dlp.networking.common": SimpleNamespace(Response=response_type),
                    "yt_dlp.networking.exceptions": SimpleNamespace(HTTPError=RuntimeError),
-                   "yt_dlp.extractor.youtube": SimpleNamespace(YoutubeIE=lambda: SimpleNamespace(suitable=lambda _: True))}
+                   "yt_dlp.extractor.youtube": SimpleNamespace(YoutubeIE=FakeIE)}
         response = SimpleNamespace(content=b"{}", url=TRACK, status_code=200, headers={})
         with patch.dict(sys.modules, modules), patch.object(cap, "_public_request", return_value=response) as request:
             self.assertEqual(cap._extract_info(VIDEO, 5)["id"], "fixture0001")
@@ -204,6 +223,173 @@ class CaptionTests(unittest.TestCase):
         self.assertIsNone(params["cookiesfrombrowser"])
         self.assertFalse(params["usenetrc"])
         request.assert_called_once()
+
+
+class YoutubeDLIntegrationTests(unittest.TestCase):
+    """Real YoutubeDL/YoutubeIE with in-memory HTTP fixtures, verified on 2026.8.19.
+
+    No mocking of player parsing, access checks, fallback loops, or subtitle
+    extraction. Dependency-free runs skip this class; never install anything.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from yt_dlp.extractor.youtube import YoutubeIE
+            from yt_dlp.version import __version__
+            from curl_cffi import Curl
+        except ImportError:
+            raise unittest.SkipTest("actual yt-dlp + curl_cffi not installed")
+        cls.youtube_ie = YoutubeIE
+        cls.curl = Curl
+        cls.ytdlp_version = __version__
+
+    def setUp(self):
+        self.stack = ExitStack()
+        self.addCleanup(self.stack.close)
+        self.calls = []
+        self.blocked_io = []
+        for target, name in ((socket, "getaddrinfo"), (socket.socket, "connect"),
+                             (socket.socket, "connect_ex"), (socket.socket, "sendto"),
+                             (subprocess, "Popen"), (self.curl, "perform")):
+            blocked = self.stack.enter_context(patch.object(
+                target, name, side_effect=AssertionError(f"offline fixture forbids {name}")))
+            self.blocked_io.append(blocked)
+        self.stack.enter_context(patch.object(safety, "classify_url", return_value=(True, "fixture")))
+
+    def tearDown(self):
+        # Fail even if an extractor catches a blocked operation's exception.
+        for blocked in self.blocked_io:
+            blocked.assert_not_called()
+
+    @staticmethod
+    def public_player(source="manual"):
+        track = {"baseUrl": "https://www.youtube.com/api/timedtext?v=fixture0001&lang=en",
+                 "languageCode": "en", "vssId": ".en", "name": {"simpleText": "English"}}
+        if source == "auto":
+            track.update(kind="asr", vssId="a.en")
+        return {
+            "videoDetails": {"videoId": "fixture0001", "title": "Sign in tutorial: private video settings",
+                             "shortDescription": "A public guide to authentication.", "lengthSeconds": "4"},
+            "playabilityStatus": {"status": "OK"},
+            # These must stay skipped through the subclass's Youtube key.
+            "streamingData": {"hlsManifestUrl": "https://media.public.test/live.m3u8",
+                              "dashManifestUrl": "https://media.public.test/video.mpd"},
+            "captions": {"playerCaptionsTracklistRenderer": {"captionTracks": [track]}},
+        }
+
+    def fetch_player(self, player, *, initial_player=True, source="manual"):
+        self.calls.clear()
+        config = {"INNERTUBE_CONTEXT": {"client": {"clientName": "WEB", "clientVersion": "2.20260819.01.00"}},
+                  "PLAYER_JS_URL": "/s/player/abcd1234/player_ias.vflset/en_US/base.js", "STS": 12345}
+        initial = {"contents": {"twoColumnWatchNextResults": {"results": {"results": {"contents": []}}}}}
+
+        def webpage(cfg, include_player=True):
+            text = "<html><script>ytcfg.set(" + json.dumps(cfg) + ");var ytInitialData = " + json.dumps(initial) + ";"
+            if include_player:
+                text += "var ytInitialPlayerResponse = " + json.dumps(player) + ";"
+            return (text + "</script></html>").encode()
+
+        def respond(url, *, timeout, method="GET", data=None, headers=None):
+            body = json.loads(data) if data else None
+            self.calls.append((url, method, body))
+            path = urlsplit(url).path
+            ctype = "text/html; charset=utf-8"
+            if path == "/watch":
+                raw = webpage(config, initial_player)
+            elif path.startswith("/embed/"):
+                # Deliberately answer an unintended fallback so tests cannot
+                # pass merely because the fixture lacks that response.
+                embedded = {**config, "INNERTUBE_CONTEXT": {
+                    "client": {"clientName": "WEB_EMBEDDED_PLAYER", "clientVersion": "1.20260819.01.00"}}}
+                raw = webpage(embedded)
+            elif path == "/youtubei/v1/player":
+                raw, ctype = json.dumps(player).encode(), "application/json"
+            elif path == "/youtubei/v1/next":
+                raw, ctype = json.dumps(initial).encode(), "application/json"
+            elif path == "/api/timedtext":
+                self.assertEqual(parse_qs(urlsplit(url).query)["fmt"], ["vtt"])
+                raw, ctype = VTT.encode(), "text/vtt"
+            elif path.endswith("/base.js"):
+                raw = b"var signatureTimestamp=12345;"
+            else:
+                raise AssertionError(f"unexpected fixture request: {url}")
+            return SimpleNamespace(url=url, content=raw, headers={"content-type": ctype}, status_code=200)
+
+        with patch.object(cap, "_public_request", side_effect=respond):
+            return cap.fetch_captions(VIDEO, language="en", source=source, timeout=5)
+
+    def test_auth_and_age_responses_stop_before_implicit_fallback(self):
+        statuses = [
+            {"status": "LOGIN_REQUIRED", "reason": "This is a private video. Please sign in to verify that you may see it."},
+            {"status": "LOGIN_REQUIRED", "reason": "Sign in to confirm your age"},
+            {"status": "AGE_CHECK_REQUIRED", "reason": "연령 확인 필요"},
+            {"status": "AGE_VERIFICATION_REQUIRED"},
+            {"status": "UNPLAYABLE", "desktopLegacyAgeGateReason": 1},
+            {"status": "UNPLAYABLE", "errorScreen": {"playerErrorMessageRenderer": {
+                "reason": {"simpleText": "Members-only content"}}}},
+        ]
+        for status in statuses:
+            for initial_player in (True, False):
+                with self.subTest(status=status, initial_player=initial_player, yt_dlp=self.ytdlp_version):
+                    # Real private/login responses may omit videoDetails.
+                    player = {"playabilityStatus": status, "streamingData": {}}
+                    result = self.fetch_player(player, initial_player=initial_player)
+                    self.assertEqual(result.verdict, "auth_required", result.extraction_meta)
+                    self.assertEqual(result.extraction_meta["error"], "player_requires_authentication")
+                    self.assertEqual(result.content, "")
+                    paths = [urlsplit(url).path for url, _, _ in self.calls]
+                    self.assertEqual(paths, ["/watch"] if initial_player else ["/watch", "/youtubei/v1/player"])
+                    for _, _, body in self.calls:
+                        if body:
+                            self.assertEqual(body["context"]["client"]["clientName"], "WEB")
+
+    def test_public_caption_tracks_work_without_media_formats(self):
+        for source in ("manual", "auto"):
+            for initial_player in (True, False):
+                for status in ({"status": "OK"}, {},
+                               {"status": "UNPLAYABLE", "reason": "No video formats found"},
+                               {"status": "UNPLAYABLE", "reason": "Error signing media URLs"}):
+                    with self.subTest(source=source, initial_player=initial_player, status=status):
+                        player = self.public_player(source)
+                        player["playabilityStatus"] = status
+                        result = self.fetch_player(player, initial_player=initial_player, source=source)
+                        self.assertTrue(result.ok, result.extraction_meta)
+                        payload = json.loads(result.content)
+                        self.assertEqual(payload["source"], source)
+                        self.assertEqual(payload["video"]["extractor"], "Youtube")
+                        self.assertEqual(payload["cues"], cap.parse_webvtt(VTT))
+                        self.assertEqual(result.extraction_meta["cue_count"], 4)
+                        self.assertIn(result.untrusted_content_boundary["begin"], result.to_untrusted_text())
+                        self.assertEqual([urlsplit(url).path for url, _, _ in self.calls],
+                                         ["/watch", "/api/timedtext"] if initial_player
+                                         else ["/watch", "/youtubei/v1/player", "/api/timedtext"])
+
+    def test_public_metadata_without_tracks_is_still_no_captions(self):
+        player = self.public_player()
+        del player["captions"]
+        del player["streamingData"]
+        result = self.fetch_player(player)
+        self.assertEqual(result.verdict, "no_captions", result.extraction_meta)
+        self.assertEqual([urlsplit(url).path for url, _, _ in self.calls], ["/watch"])
+
+    def test_unrequested_clients_cannot_reach_config_or_player_transport(self):
+        configuration_arg = self.youtube_ie._configuration_arg
+        for client in ("web_embedded", "android_vr"):
+            for skip_config in (False, True):
+                def config_arg(extractor, key, *args, **kwargs):
+                    if key == "player_skip" and skip_config:
+                        return ["configs"]
+                    return configuration_arg(extractor, key, *args, **kwargs)
+                with self.subTest(client=client, skip_config=skip_config), \
+                        patch.object(self.youtube_ie, "_get_requested_clients", return_value=["web", client]), \
+                        patch.object(self.youtube_ie, "_configuration_arg", config_arg):
+                    # Exercise the real upstream dispatch if it adds a client
+                    # for a new reason, independently of current age detection.
+                    result = self.fetch_player(self.public_player())
+                    self.assertEqual(result.verdict, "unsupported", result.extraction_meta)
+                    self.assertEqual(result.extraction_meta["error"], "alternate_player_client_forbidden")
+                    self.assertEqual([urlsplit(url).path for url, _, _ in self.calls], ["/watch"])
 
 
 if __name__ == "__main__":
