@@ -81,6 +81,19 @@ echo "IR=$IR"
 ```
 A malformed, symlinked, non-canonical, multiline, control-character-containing, or asset-missing binding stops here; rerun the hardened installer at `https://raw.githubusercontent.com/devswha/oh-my-gjc/main/install.sh` rather than selecting a cache.
 
+## 중단된 번들 실행 회수 — 온보딩보다 먼저 분기
+이미 전송을 시도한 실행의 타임아웃/오류를 복구하는 요청이면 로그의 `Run journal:`을 사용한다:
+```bash
+python3 "$IR" --harvest-only .insane-review/runs/run_<tag>.json --max-wait 1200
+```
+`--resume`은 동일한 회수 전용 별칭이다. 이 경우 아래 온보딩·새 리뷰·모델 선택 단계를
+실행하지 않는다. 엔진은 기존 전용 CDP/공유 리스를 검증하고 기록된 대화/요청/응답 턴만 읽는다.
+전송·재패킹·모델 재선택은 없다. 결속 증거 부족, 소스/패킹 변경, 턴 모호성은 중단 사유다.
+전송 버튼을 시도한 뒤에는 `--retries`를 늘리거나 새 실행으로 자동 재전송하지 않는다.
+`--followup`은 **새 질문을 전송**하는 기능이므로 회수 대신 쓰지 않는다.
+lane 실행은 기존 `lane harvest` 안내를 따른다. 상세: 검증한 suite root의
+`skills/insane-review/references/recovery.md`.
+
 ## Step 0.5 — 환경 온보딩 (브라우저·로그인; 선택지 기반, 막힌 단계만)
 
 먼저 gjc가 직접 실행한다(사용자에게 시키지 말 것):

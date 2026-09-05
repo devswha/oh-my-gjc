@@ -474,7 +474,7 @@ print(module.CONV_URL_RE.fullmatch("https://chatgpt.com/") is None)
     // only break a conversation that is already on the verified model.
     const source = read(engine);
     expect(source).toContain("if not args.no_project and not followup_url:");
-    expect(source).toContain("if args.model and followup_url:");
+    expect(source).toContain("if followup_url:");
     expect(source).toContain("entry_url = followup_url or CHATGPT_URL");
     // landing on the wrong conversation must abort, not leak the question there
     expect(source).toContain("후속 대상 대화에 진입 실패");

@@ -185,7 +185,7 @@ if __name__ == "__main__":
     );
     expect(engineSource).toContain("if not cdp_lease.still_binding():");
     const guard = engineSource.indexOf("if not cdp_lease.still_binding():");
-    const send = engineSource.indexOf("click_send(page)", guard);
+    const send = engineSource.indexOf("click_send(page, before_send=before_send)", guard);
     expect(guard).toBeGreaterThan(-1);
     expect(send).toBeGreaterThan(guard); // the check precedes the send
   });
