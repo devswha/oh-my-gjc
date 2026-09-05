@@ -1,0 +1,43 @@
+{
+  "python": "3.12.12",
+  "bun": "1.4.0",
+  "pip": "26.2.1",
+  "runner": "ubuntu-24.04",
+  "verified_date": "2026-09-05",
+  "actions": {
+    "actions/checkout": {
+      "tag": "v6.0.2",
+      "sha": "de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+      "source": "https://api.github.com/repos/actions/checkout/git/ref/tags/v6.0.2"
+    },
+    "actions/setup-python": {
+      "tag": "v6.0.0",
+      "sha": "e797f83bcb11b83ae66e0230d6156d7c80228e7c",
+      "source": "https://api.github.com/repos/actions/setup-python/git/ref/tags/v6.0.0"
+    },
+    "oven-sh/setup-bun": {
+      "tag": "v2.2.0",
+      "sha": "0c5077e51419868618aeaa5fe8019c62421857d6",
+      "source": "https://api.github.com/repos/oven-sh/setup-bun/git/ref/tags/v2.2.0"
+    },
+    "actions/upload-artifact": {
+      "tag": "v6.0.0",
+      "sha": "b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+      "source": "https://api.github.com/repos/actions/upload-artifact/git/ref/tags/v6.0.0"
+    }
+  },
+  "sandbox_tools": {
+    "gjc": {
+      "version": "0.16.3",
+      "url": "https://github.com/Yeachan-Heo/gajae-code/releases/download/v0.16.3/gjc-linux-x64",
+      "sha256": "6a62e0d268d84ab75af4a58513e849b03c30c17f487b7b524dd4783dca8cf5af",
+      "source": "https://api.github.com/repos/Yeachan-Heo/gajae-code/releases/tags/v0.16.3"
+    },
+    "bubblewrap": {
+      "version": "0.9.0-1ubuntu0.1",
+      "url": "https://security.ubuntu.com/ubuntu/pool/main/b/bubblewrap/bubblewrap_0.9.0-1ubuntu0.1_amd64.deb",
+      "sha256": "1b506492bd9c7fd0cdb4f02ac822f1d3e336b0aead5113c1239baf8db5db562a",
+      "source": "https://security.ubuntu.com/ubuntu/dists/noble-security/main/binary-amd64/Packages.xz"
+    }
+  }
+}

@@ -1,0 +1,3 @@
+.local-ci/
+artifacts/
+__pycache__/
