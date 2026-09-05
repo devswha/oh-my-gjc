@@ -562,6 +562,185 @@ cleanup_retired_user_runtime_state() {
 
 MISSING=()
 
+# Selected native files are recoverable as a set, but marketplace/cache changes made by GJC
+# are outside this journal. Readers may observe publication in progress; the root
+# binding is published last. No whole-install atomicity or generation symlinks.
+# Single-capability installs update only that target and the shared binding; other
+# native files retain their previous versions. Recovery covers process interruption,
+# not power-loss durability (no fsync protocol).
+NATIVE_TXN=""
+NATIVE_STAGE=""
+NATIVE_SCOPE=""
+NATIVE_PARENT=""
+
+native_destination() { # journal keys are an allowlist, never persisted absolute paths
+  local name
+  case "$1" in
+    root) printf '%s/root\n' "$NATIVE_PARENT"; return 0 ;;
+    s-*)
+      for name in "${EXPECTED_SKILLS[@]}"; do
+        if [ "$1" = "s-$name" ]; then printf '%s/%s/SKILL.md\n' "$(skills_dir "$NATIVE_SCOPE")" "$name"; return 0; fi
+      done ;;
+    c-*)
+      for name in "${EXPECTED_COMMANDS[@]}"; do
+        if [ "$1" = "c-$name" ]; then
+          if [ "$name" = omg ]; then printf '%s/omg.md\n' "$(commands_dir "$NATIVE_SCOPE")"
+          else printf '%s/omg:%s.md\n' "$(commands_dir "$NATIVE_SCOPE")" "$name"; fi
+          return 0
+        fi
+      done ;;
+  esac
+  echo "❌ invalid native journal entry: $1" >&2
+  return 1
+}
+
+native_restore() {
+  local key dest seen=" "
+  [ -e "$NATIVE_TXN" ] || return 0
+  private_directory "$NATIVE_TXN" 700 &&
+    private_file "$NATIVE_TXN/format" 600 &&
+    [ "$(<"$NATIVE_TXN/format")" = omg-native-v1 ] || return 1
+  # A committed set only needs journal disposal. Before commit, validate EVERY
+  # destination before restoring any: user edits after interruption are conflicts.
+  if [ ! -e "$NATIVE_TXN/committed" ]; then
+    private_file "$NATIVE_TXN/items" 600 || return 1
+    for key in old new absent pending publish; do private_directory "$NATIVE_TXN/$key" 700 || return 1; done
+    while IFS= read -r key; do
+      dest="$(native_destination "$key")" || return 1
+      case "$seen" in *" $key "*) return 1 ;; esac
+      seen="$seen$key "
+      reject_symlinked_components "$dest" || return 1
+      [ ! -e "$dest" ] || [ -f "$dest" ] || return 1
+      [ -f "$NATIVE_TXN/new/$key" ] && [ ! -L "$NATIVE_TXN/new/$key" ] || return 1
+      if [ -e "$NATIVE_TXN/old/$key" ]; then
+        [ -f "$NATIVE_TXN/old/$key" ] && [ ! -L "$NATIVE_TXN/old/$key" ] || return 1
+        [ ! -e "$NATIVE_TXN/absent/$key" ] || return 1
+      else
+        private_file "$NATIVE_TXN/absent/$key" 600 || return 1
+      fi
+      [ -e "$NATIVE_TXN/pending/$key" ] || continue
+      private_file "$NATIVE_TXN/pending/$key" 600 || return 1
+      if [ -e "$dest" ]; then
+        if ! cmp -s "$dest" "$NATIVE_TXN/new/$key" && ! cmp -s "$dest" "$NATIVE_TXN/old/$key"; then
+          echo "❌ native recovery conflict — preserve user changes and journal: $dest" >&2
+          return 1
+        fi
+      elif [ -e "$NATIVE_TXN/old/$key" ]; then
+        echo "❌ native recovery conflict — previously existing file is missing: $dest" >&2
+        return 1
+      fi
+    done < "$NATIVE_TXN/items"
+    # Keep backups until the complete restore succeeds: recovery itself is repeatable.
+    while IFS= read -r key; do
+      [ -e "$NATIVE_TXN/pending/$key" ] || continue
+      dest="$(native_destination "$key")" || return 1
+      if [ -e "$NATIVE_TXN/old/$key" ]; then
+        if cmp -s "$dest" "$NATIVE_TXN/old/$key" &&
+           [ "$(stat_mode "$dest")" = "$(stat_mode "$NATIVE_TXN/old/$key")" ] &&
+           [ ! "$dest" -nt "$NATIVE_TXN/old/$key" ] && [ ! "$dest" -ot "$NATIVE_TXN/old/$key" ]; then continue; fi
+        cp -p "$NATIVE_TXN/old/$key" "$NATIVE_TXN/publish/$key" &&
+          mv -f "$NATIVE_TXN/publish/$key" "$dest" || return 1
+      else
+        rm -f "$dest" || return 1
+      fi
+    done < "$NATIVE_TXN/items"
+    echo "✓ restored previous native files and suite binding ($NATIVE_SCOPE)" >&2
+  else
+    private_file "$NATIVE_TXN/committed" 600 || return 1
+  fi
+  # Rename first: an interrupted recursive disposal must never leave a half journal
+  # that the next run mistakes for an install requiring restoration.
+  local discarded
+  discarded="$(mktemp -d "$NATIVE_PARENT/.native-discard.XXXXXX")" || return 1
+  mv "$NATIVE_TXN" "$discarded/journal" || return 1
+  rm -rf "$discarded"
+}
+
+native_exit() {
+  local rc=$?
+  trap - EXIT HUP INT TERM
+  if [ -n "$NATIVE_TXN" ] && ! native_restore; then
+    echo "❌ native recovery incomplete; journal retained at $NATIVE_TXN. Re-run after resolving the failure/conflict." >&2
+    rc=1
+  fi
+  [ -z "$NATIVE_STAGE" ] || rm -rf "$NATIVE_STAGE"
+  exit "$rc"
+}
+
+prepare_native_transaction() { # serialize install, recovery, and uninstall in this scope
+  local lock
+  NATIVE_SCOPE="$1"
+  NATIVE_PARENT="$(prepare_suite_runtime_parent "$1")"
+  lock="$NATIVE_PARENT/.native-install.lock"
+  reject_symlinked_components "$lock"
+  if [ ! -e "$lock" ]; then (umask 077; set -o noclobber; : > "$lock") || return 1; fi
+  private_file "$lock" 600 || return 1
+  exec 8<>"$lock"
+  if command -v flock >/dev/null 2>&1; then
+    flock -n 8 || { echo "❌ another native install holds the scope lock" >&2; return 1; }
+  else
+    # macOS has no stock flock CLI. fcntl.flock uses the same inherited open file
+    # description: this shell's fd 8 retains the lock after the helper exits, and
+    # the kernel releases it on process exit, including SIGKILL. No package install.
+    command -v python3 >/dev/null 2>&1 || {
+      echo "❌ native install/recovery needs python3 when the flock command is unavailable" >&2; return 1;
+    }
+    python3 -I - <<'PY' || { echo "❌ another native install holds the scope lock (or locking failed)" >&2; return 1; }
+import fcntl
+import sys
+try:
+    fcntl.flock(8, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError:
+    sys.exit(1)
+PY
+  fi
+  NATIVE_TXN="$NATIVE_PARENT/.native-install"
+  trap native_exit EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  reject_symlinked_components "$NATIVE_TXN"
+  native_restore
+}
+
+stage_native_file() { # $1=owned key $2=source; no live destination is changed here
+  local dest
+  dest="$(native_destination "$1")"
+  reject_symlinked_components "$dest"
+  [ ! -e "$dest" ] || [ -f "$dest" ] || { echo "❌ malformed native destination: $dest" >&2; return 1; }
+  cp -p "$2" "$NATIVE_STAGE/new/$1"
+  if [ -e "$dest" ]; then cp -p "$dest" "$NATIVE_STAGE/old/$1"
+  else (umask 077; : > "$NATIVE_STAGE/absent/$1"); fi
+  printf '%s\n' "$1" >> "$NATIVE_STAGE/items"
+}
+
+begin_native_stage() {
+  local name
+  NATIVE_STAGE="$(mktemp -d "$NATIVE_PARENT/.native-stage.XXXXXX")"
+  for name in old new absent pending publish; do mkdir -m 700 "$NATIVE_STAGE/$name"; done
+  (umask 077; printf 'omg-native-v1\n' > "$NATIVE_STAGE/format"; : > "$NATIVE_STAGE/items")
+}
+
+publish_native_stage() {
+  local key dest
+  # Binding is the last item, after every requested skill and command was staged.
+  (umask 077; printf '%s\n' "$PLUGIN_ROOT" > "$NATIVE_STAGE/root")
+  stage_native_file root "$NATIVE_STAGE/root"
+  mv "$NATIVE_STAGE" "$NATIVE_TXN"
+  NATIVE_STAGE=""
+  while IFS= read -r key; do
+    dest="$(native_destination "$key")"
+    reject_symlinked_components "$dest"
+    mkdir -p "$(dirname "$dest")"
+    cp -p "$NATIVE_TXN/new/$key" "$NATIVE_TXN/publish/$key"
+    (umask 077; : > "$NATIVE_TXN/pending/$key")
+    mv -f "$NATIVE_TXN/publish/$key" "$dest"
+    echo "✓ native ($NATIVE_SCOPE): $dest"
+  done < "$NATIVE_TXN/items"
+  (umask 077; : > "$NATIVE_TXN/committed")
+  native_restore
+}
+
 install_skill() { # $1=name $2=scope
   local src dir
   if [ "$1" = "insane-review" ]; then
@@ -585,17 +764,13 @@ install_skill() { # $1=name $2=scope
   fi
   src="$PLUGIN_ROOT/skills/$1/SKILL.md"
   [ -f "$src" ] || { MISSING+=("skills/$1/SKILL.md"); return 0; }
-  dir="$(skills_dir "$2")/$1"; mkdir -p "$dir"; cp -f "$src" "$dir/SKILL.md"
-  echo "✓ skill   ($2): $dir/SKILL.md"
+  stage_native_file "s-$1" "$src"
 }
 install_command() { # $1=name $2=scope
   local src dir
   src="$PLUGIN_ROOT/templates/$1.md"
   [ -f "$src" ] || { MISSING+=("templates/$1.md"); return 0; }
-  dir="$(commands_dir "$2")"; mkdir -p "$dir"
-  if [ "$1" = "omg" ]; then cp -f "$src" "$dir/omg.md"; echo "✓ command ($2): $dir/omg.md  → /omg"; return 0; fi
-  cp -f "$src" "$dir/omg:$1.md"
-  echo "✓ command ($2): $dir/omg:$1.md  → /omg:$1"
+  stage_native_file "c-$1" "$src"
 }
 uninstall_skill()     { rm -rf "$(skills_dir "$2")/$1"; echo "✓ removed skill: $1"; }
 owns_legacy_command_alias() {
@@ -657,6 +832,7 @@ case "$mode" in
     [ "$#" -le 2 ] || usage
     case "$scope" in user|project) ;; *) usage ;; esac
     prepare_native_surface_paths "$scope" verify
+    prepare_native_transaction "$scope"
     if [ "$target" = "all" ]; then
       for s in "${EXPECTED_SKILLS[@]}";     do uninstall_skill     "$s" "$scope"; done
       for c in "${EXPECTED_COMMANDS[@]}";   do uninstall_command   "$c" "$scope"; done
@@ -677,11 +853,13 @@ case "$mode" in
   user|project)
     [ "$#" -le 1 ] || usage
     prepare_native_surface_paths "$mode" create
+    prepare_native_transaction "$mode"
+    begin_native_stage
     if [ "$target" = "all" ]; then
       preflight_all
-      install_suite_root_binding "$mode"
       for s in "${EXPECTED_SKILLS[@]}";     do install_skill     "$s" "$mode"; done
       for c in "${EXPECTED_COMMANDS[@]}";   do install_command   "$c" "$mode"; done
+      publish_native_stage
       cleanup_legacy_commands "$mode"
       cleanup_removed "$mode"
       if [ "$mode" = "user" ]; then
@@ -693,10 +871,10 @@ case "$mode" in
       cleanup_retired_branchflow_marker
       report_missing
     else
-      install_suite_root_binding "$mode"
       if [ -d "$PLUGIN_ROOT/skills/$target" ];       then install_skill   "$target" "$mode"; fi
       if [ -f "$PLUGIN_ROOT/templates/$target.md" ]; then install_command "$target" "$mode"; fi
       report_missing
+      publish_native_stage
     fi
     if [ "$mode" = "user" ]; then
       echo "  → /omg:no-english remains an explicit command; other skills keep their documented triggers."
