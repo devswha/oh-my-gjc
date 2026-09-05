@@ -118,3 +118,33 @@ SDK hosting, MCP and session persistence disabled: **rc=0, VERDICT: APPROVE** af
 found no material defects. [Full report](v0.37.0-review.md). The snapshot egress
 scan returned rc=0. Publication and the operator upgrade follow this verification;
 these records are documentation-only additions outside the tested plugin payload.
+
+## Published and installed
+
+- **v0.37.0** published at **2026-09-05T10:40:28Z**, tag commit
+  `c1ec0b761e50946a11f61638be9777225ff77e03`. Main and dev advanced atomically.
+  The release is neither a draft nor a prerelease; no prior tag was moved.
+- Release-commit GitHub Actions **33961291518** completed **success**. The
+  earlier branch-dispatch artifact was also downloaded and its counts, versions,
+  source commit and explicit exclusions verified.
+- Final tag-HEAD complete-tree attestation and release-range gitleaks scan
+  returned rc=0. The release preparation changed documentation only outside the
+  already tested 111-file plugin payload and unchanged root installer.
+- The canonical main/install.sh bytes matched the reviewed script before the
+  operator upgrade. Upgrade rc=0, installed version **0.37.0**, all ten native
+  files match source, binding mode 0600. No customized native file was replaced.
+- The actual operator cache passed the complete-tree provenance gate against
+  the release commit: all **111 files** and directory shape match, with the
+  aggregate digest above. The installed review engine and journal module match
+  the final live-tested hashes above.
+- Installed session inspection: rc=0, browser/login ok, **GPT-6 Astra / 최대**.
+  Installed image prerequisite check and public-search body JSON canary: rc=0;
+  no image generated. Installed static setup: rc=0, zero errors, live readiness
+  correctly remains unverified by that static command.
+- User model-file and old-identity binding fingerprints match their pre-upgrade
+  records. No updater schedule was enabled. The dedicated browser/login remain
+  available and private response artifacts are retained.
+
+This final evidence followup changes no installed runtime bytes. The control-tower
+notification follows its push; the API receipt is retained locally with the other
+release logs.
