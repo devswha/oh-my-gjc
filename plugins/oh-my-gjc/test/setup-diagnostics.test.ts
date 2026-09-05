@@ -125,6 +125,13 @@ describe("/omg:setup aggregate static diagnostic", () => {
     expect(report.checks.filter((r: any) => r.scope === "user" && r.status === "ok")).toHaveLength(10);
   });
 
+  test("ignores project modules while running standard-library diagnostics", () => {
+    const f = fixture(); f.install("user");
+    f.write(join(f.project, "json.py"), 'raise RuntimeError("project module must not execute")\n');
+    f.write(join(f.project, "sitecustomize.py"), 'raise RuntimeError("site customization must not execute")\n');
+    expect(f.run().rc).toBe(0);
+  });
+
   test("runs no provider, runtime, process, network, or third-party imports", () => {
     const result = spawnSync("python3", ["-c", `import ast, sys\nt=ast.parse(sys.stdin.read())\nmods={n.names[0].name for n in ast.walk(t) if isinstance(n, ast.Import)} | {n.module for n in ast.walk(t) if isinstance(n, ast.ImportFrom)}\nassert mods <= {'hashlib','json','os','pathlib','re','stat','sys'}, mods\nassert not any(isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute) and n.func.attr in ('system','popen','spawn','execv','execve') for n in ast.walk(t))`], {
       input: code.split("\n").slice(1, -1).join("\n"), encoding: "utf8",

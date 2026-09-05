@@ -21,7 +21,7 @@ provider CLI, 엔진 runtime, `--check-env`, `--inspect-session`, 의존성 impo
 정적 증거이며 GJC의 실제 YAML 해석, discovery 설정, 자연어 활성화를 증명하지 않는다.
 
 ```bash
-python3 - <<'PY_SETUP'
+python3 -I -S - <<'PY_SETUP'
 import hashlib
 import json
 import os
