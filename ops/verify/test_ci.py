@@ -142,7 +142,8 @@ class InventoryTest(unittest.TestCase):
         normalized = {k.lower().replace('_', '-'): v for k, v in locked.items()}
         for name, version in direct.items():
             self.assertEqual(normalized[name.lower().replace('_', '-')], version)
-        for forbidden in ('playwright', 'yt-dlp', 'openai', 'pytest', 'pymupdf'):
+        self.assertEqual(normalized['yt-dlp'], '2026.8.19')
+        for forbidden in ('playwright', 'openai', 'pytest', 'pymupdf'):
             self.assertNotIn(forbidden, normalized)
 
     def test_workflow_uses_only_verified_full_action_shas(self):
