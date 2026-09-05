@@ -90,9 +90,12 @@ bash plugins/oh-my-gjc/bin/omg-autoupdate.sh disable           # 해제
 ```
 
 - 갱신은 신뢰된 canonical `install.sh` 재실행(또는 `--local` checkout)이다. **root 실행 금지**, 단일 실행 잠금, 모든 실행을 `${XDG_STATE_HOME:-~/.local/state}/oh-my-gjc/autoupdate.log`에 기록한다.
+- `--local`은 설치 프로그램과 실제 플러그인 파일을 모두 해당 checkout에서 가져온다. 기존 설치에서도 재설치·업그레이드하며 원격으로 대체하지 않는다. 직접 실행은 `bash /path/to/checkout/install.sh --local /path/to/checkout`이며 Python 3와 GJC의 `--force` 지원이 필요하다.
 - `enable`은 이 스크립트의 안정 복사본을 상태 디렉터리에 두고 타이머가 그것을 가리키게 해서, 플러그인 캐시 경로가 버전마다 바뀌어도 스케줄이 깨지지 않는다.
 - 무인 원격 실행(`curl | bash`) 위험을 인지하고 쓰는 것이다. 오프라인·감사 필요 환경은 `--local`을 쓴다.
 - `install-skill.sh uninstall … user`는 이 타이머도 함께 해제한다.
+
+네이티브 파일은 준비가 끝난 뒤 교체하며 루트 바인딩을 마지막에 갱신한다. 교체 실패는 이전 파일로 복구하고, 중단된 교체는 다음 실행에서 복구한다. GJC의 marketplace·cache 변경과 이후 제거 기능 정리는 별도 단계다. 복구 충돌이 보고되면 사용자 수정본과 `.native-install` 기록을 보존하고 충돌을 해결한 뒤 다시 실행한다. 전체 갱신에는 원샷 설치를 사용한다.
 
 ## 마이그레이션
 

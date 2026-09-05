@@ -9,6 +9,7 @@ Do exactly the following in a terminal. Do not improvise other steps.
 
 ## Preconditions
 - `gjc` must be on PATH (`command -v gjc`). If missing, stop and tell the human to install Gajae Code first.
+- Native installation uses `flock` for its scope lock, or Python 3's standard-library `fcntl` when that command is unavailable. Local-source validation also requires Python 3. No packages are installed automatically.
 - Plugin management is gjc's **shell CLI only** — there is no in-session `/plugin` slash command for it; run `gjc plugin …` in a terminal. A `/plugin …` line in a gjc chat is ordinary chat text, not an install/uninstall command.
 
 ## Fastest path (one shot)
@@ -24,7 +25,15 @@ bash oh-my-gjc/install.sh
 ```
 This invokes the same hardened installer as the one-shot path: it refreshes the `oh-my-gjc` marketplace, binds native handoff to the plugin version reported by the current install operation, then writes the exact mode-0600 user-scope suite-root binding at `~/.gjc/agent/runtimes/oh-my-gjc/root`. Asset consumers resolve a project binding when one was installed separately, then this user binding, then the checkout fallback; missing or malformed bindings fail closed. The former newest-cache sequence is historical and non-executable; never reproduce it.
 
-The native installer copies every bundled skill + command in one shot and fails loudly (with a missing list) if anything expected is absent — never a partial install.
+The native installer checks the complete bundle before publishing the five skills and five commands. It stages native files, retains their previous bytes and modes, and publishes the suite-root binding last. Catchable publication failures restore those snapshots; a subsequent native invocation recovers interrupted publication. Marketplace and cache changes made by GJC are outside that recovery.
+
+### Install from an existing local checkout
+
+```sh
+bash /path/to/oh-my-gjc/install.sh --local /path/to/oh-my-gjc
+```
+
+This selects both the local catalog and plugin payload, including on an already installed HOME. It supports repeated installs and upgrades without a remote catalog refresh or remote fallback. It requires GJC's `--force` install option; unsupported versions fail rather than reuse an old cache. `--candidate-ref` remains the separate fresh-HOME release-testing mode.
 ## v0.28.0 identity cutover and migration
 
 2026-08-31: the suite returns to `oh-my-gjc` — canonical repository, marketplace/plugin identity, `./plugins/oh-my-gjc` source, and local checkout name.
@@ -62,8 +71,12 @@ Tell the human: open a **new** gjc session (or `/move .`) so the command palette
 ## Safety
 Idempotent — re-running re-copies the 5 skills and 5 commands, removes explicitly retired suite-owned native surfaces, the retired private multi-harness runtime, and well-formed owned `gate-always` marker blocks after backup. It preserves marker-external bytes, malformed markers, unrelated user state, multi-harness research artifacts, external and user authentication/configuration, credentials, and models. `no-english` loads only through session-local `/omg:no-english`; `insane-review` needs ChatGPT+Chromium. `insane-search` reads public pages only, checks its Python dependencies without installing them, and does not bypass authentication, CAPTCHAs, paywalls, or its pinned transport with a browser fallback. `gpt-image` loads only through `/omg:gpt-image`, requires POSIX deadline enforcement and the dedicated logged-in ChatGPT CDP profile, and cannot run concurrently with `insane-review`.
 
+Use the root installer to update the whole suite. A named-target invocation of `install-skill.sh` updates only that capability and the shared binding; other native instructions can remain at an older version. Native publication is recoverable, but concurrent readers can see intermediate replacements and power-loss durability is not guaranteed. Retired cleanup follows native publication; re-running retries a failed cleanup. If recovery reports a user-edit conflict, preserve `<native-root>/runtimes/oh-my-gjc/.native-install`, resolve the reported file conflict, then re-run the installer.
+
 ### Auto-update (opt-in)
 Auto-update is OFF by default; the installer never schedules it. From the repository root, run `bash plugins/oh-my-gjc/bin/omg-autoupdate.sh enable` to opt in (systemd `--user` timer, cron fallback; `--interval <OnCalendar>`, `--local <checkout>` for offline). Each run re-executes the trusted `install.sh` under a single-flight lock, never as root, logging to `${XDG_STATE_HOME:-~/.local/state}/oh-my-gjc/autoupdate.log`. `bash plugins/oh-my-gjc/bin/omg-autoupdate.sh disable` removes it, and `install-skill.sh uninstall … user` disables it too.
+
+`--local <checkout>` forwards that checkout to `install.sh --local`, so scheduled runs use its payload as well as its installer. Keep the checkout at a stable path and update its contents deliberately.
 
 ### v0.26.0 tombstone
 
