@@ -51,6 +51,7 @@ below. [Installer evidence](installer-local-recovery-2026-09-05.md),
 | Actual blocked-network local installs | rc=0; 17 tests including fresh, changed same-version and upgraded payloads through GJC 0.16.0; private-network socket creation blocked in child processes |
 | New isolated-HOME root installer | rc=0; v0.37.0 installed; gjc plugin list rc=0; all ten native files match source; binding 0600 |
 | Complete installed payload attestation | rc=0; **111 tracked files**, exact bytes and directory shape match candidate and cache |
+| Release-range secret scan | rc=0; `gitleaks git . --log-opts=v0.36.1..HEAD --redact --no-banner`, no leaks; final documentation followup rescanned before publication |
 | JSON, shell, Python, skill checks | rc=0; both active manifests, root/all suite shell scripts, py_compile of 46 relevant Python files, three changed skills validated |
 | Real PDF parser comparison | rc=0; nine cases across pypdf 5.0.0, pdfplumber 0.11.4 and combined fallback; 2/80 pages retained, 81-page input reports total=81, processed=80, page_limit, incomplete |
 | Live body JSON and JSONL | Expected rc=1 for mixed batch; example.com strong_ok followed by a blocked loopback URL, indices 0/1 preserved; **zero network attempts** for the private URL |
