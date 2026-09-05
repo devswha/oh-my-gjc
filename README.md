@@ -59,11 +59,15 @@ bash oh-my-gjc/install.sh
 
 검증하지 못한 모델, 첨부되지 않은 패킹 파일, 잘린 프롬프트, 시간 초과, 빈 응답에서는 실패로 종료합니다. 결과 파일은 프로젝트 `.insane-review/`에 저장되며 외부 웹 서비스로 코드를 보낼 수 있으므로 개인 구독 용도로만 사용합니다.
 
+전송을 시도한 뒤에는 자동으로 다시 보내지 않습니다. 실패 시 표시한 실행 기록을 `--harvest-only <기록 경로>` 또는 `--resume <기록 경로>`로 넘기면 같은 요청의 응답만 회수합니다. 대화·요청·첨부 코드가 일치해야 하며, `--followup`은 별도의 새 질문입니다. 자세한 내용은 [복구 안내](plugins/oh-my-gjc/skills/insane-review/references/recovery.md)를 확인합니다.
+
 ### `insane-search`
 
 일반 `read` 또는 웹 접근이 402·403·WAF·challenge·불완전한 SPA로 막혔을 때, 또는 명시적인 공개 자막·미디어 추출 요청에서만 자동 활성화합니다. 일반 검색이나 이미 읽을 수 있는 페이지에는 사용하지 않습니다.
 
 공식 공개 route를 먼저 사용하고, 그 밖의 공개 URL은 SSRF-pinned TLS grid로 읽습니다. API 키나 로그인은 필요하지 않으며 CAPTCHA, paywall, 인증 우회는 하지 않습니다. 검색 실행은 의존성을 확인만 하고 자동 설치하지 않으며, 가져온 페이지 본문은 항상 신뢰하지 않는 외부 데이터로 취급합니다.
+
+여러 URL의 본문과 출처를 한 번에 `--body-json` 또는 `--jsonl`로 받을 수 있습니다. PDF·JSON-LD의 페이지·길이 제한과 추출 실패는 메타데이터에 표시합니다. 공개 YouTube 자막은 `--captions --caption-language ko --caption-source manual`처럼 언어와 소스를 지정하며, 시간 정보와 겹치는 자막을 보존합니다. [출력 계약](plugins/oh-my-gjc/skills/insane-search/references/output.md)과 [자막 지원 범위](plugins/oh-my-gjc/skills/insane-search/references/media.md)를 참고합니다.
 
 처음 환경을 준비할 때만 저장소에서 아래 명령을 실행하면 전용 가상환경을 만듭니다. 이후 검색은 이를 자동 재사용하며, 브라우저 로그인이나 ChatGPT 모델 설정이 필요하지 않습니다.
 
