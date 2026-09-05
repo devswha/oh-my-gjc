@@ -21,6 +21,8 @@ No new marketplace entry or public command is planned. The five skills and five 
 
 The existing `record_provenance.py` correctly compares the full tracked plugin tree, but its separate mandatory marker list still references retired onboarding and multi-harness files. Its unit fixtures reproduce those retired files, hiding the mismatch with the real suite. Update the inventory and exercise the actual tracked candidate/cache pair before release; do not replace the complete-tree verifier.
 
+The PDF finding was reproduced with real parsers before integration. Synthetic reportlab documents of 2, 80 and 81 pages were passed to the existing extraction helpers using pypdf 5.0.0 and pdfplumber 0.11.4 in a temporary environment. Both returned all page markers for 2 and 80 pages, but only 80 markers for the 81-page input. The pypdf error field remained empty; neither helper returned coverage metadata. These fixtures contain no user data. The parser environment is separate from the operator's managed search environment.
+
 ## Status
 
 Implementation and final evidence are in progress. A passing local fixture does not establish live ChatGPT recovery, public caption availability, model-driven natural-language selection, or a published installation. Final outcomes and limitations will be recorded in the release verification document.
