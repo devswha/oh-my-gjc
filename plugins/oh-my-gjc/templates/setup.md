@@ -193,14 +193,15 @@ for path in marker_files:
     except (OSError, ValueError, UnicodeError):
         add('markers', path, 'invalid', 'marker file unreadable/unsafe; contents not printed')
 
-profile = Path(os.environ.get('INSANE_REVIEW_PROFILE', str(home / '.insane-review/browser-profile'))).expanduser().absolute()
+profile = os.environ.get('INSANE_REVIEW_PROFILE', str(home / '.insane-review/browser-profile'))
 try:
+    profile = Path(profile).expanduser().absolute()
     info = safe_info(profile)
     if not stat.S_ISDIR(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o700 or info.st_uid != os.getuid():
         raise ValueError('unsafe profile directory')
     add('browser', profile, 'ok', 'owned private directory exists; contents never read')
-except (OSError, ValueError):
-    add('browser', profile, 'unverified', 'dedicated profile absent or unsafe; not created')
+except (OSError, ValueError, RuntimeError):
+    add('browser', profile, 'unverified', 'dedicated profile absent, unsafe, or unresolvable; not created')
 add('browser', profile, 'unverified', 'CDP binding, login, subscription, model, effort, image UI readiness not checked')
 add('dependencies', '', 'unverified', 'provider credentials and runtime dependencies not executed or inspected')
 add('discovery', '', 'unverified', 'ancestor/custom skill roots and trust settings: separate user-run GJC discovery')

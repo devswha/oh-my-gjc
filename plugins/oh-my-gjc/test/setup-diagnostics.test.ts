@@ -27,10 +27,10 @@ function fixture() {
     }
     write(join(native[scope], "runtimes/oh-my-gjc/root"), suite + "\n");
   }
-  function run() {
+  function run(profile = join(home, ".insane-review/browser-profile")) {
     const result = spawnSync("bash", ["-c", code], {
       cwd: project, encoding: "utf8", timeout: 10000,
-      env: { HOME: home, PATH: process.env.PATH, INSANE_REVIEW_PROFILE: join(home, ".insane-review/browser-profile") },
+      env: { HOME: home, PATH: process.env.PATH, INSANE_REVIEW_PROFILE: profile },
     });
     expect(result.error).toBeUndefined();
     expect(result.stderr).toBe("");
@@ -58,6 +58,24 @@ describe("/omg:setup aggregate static diagnostic", () => {
     expect(report.error_count).toBe(11);
     expect(report.checks.filter((r: any) => r.scope === "project").every((r: any) => r.status === "not_installed")).toBe(true);
     expect(report.live_readiness).toBe("unverified");
+  });
+
+  test.each([false, true])("preserves aggregate diagnostics for an unresolved profile (installed: %s)", (installed) => {
+    const f = fixture();
+    if (installed) f.install("user");
+    const profile = "~omg_review_no_such_account_20260905/profile";
+    const before = snapshot(f.root);
+    const { rc, report } = f.run(profile);
+    expect(rc).toBe(installed ? 0 : 1);
+    expect(report.static_ok).toBe(installed);
+    expect(report.error_count).toBe(installed ? 0 : 11);
+    expect(report.checks.filter((r: any) => r.scope === "user" && r.status === "missing")).toHaveLength(installed ? 0 : 11);
+    expect(report.checks.some((r: any) => r.scope === "browser" && r.path === profile && r.status === "unverified")).toBe(true);
+    expect(report.checks.some((r: any) => r.scope === "dependencies" && r.status === "unverified")).toBe(true);
+    expect(report.checks.some((r: any) => r.scope === "discovery" && r.status === "unverified")).toBe(true);
+    expect(report.live_readiness).toBe("unverified");
+    expect(report.writes).toBe(0);
+    expect(snapshot(f.root)).toEqual(before);
   });
 
   test.each(["user", "project"] as const)("accepts complete %s install but never claims browser login or dependency readiness", (scope) => {

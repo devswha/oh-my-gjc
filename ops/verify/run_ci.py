@@ -90,9 +90,11 @@ def parse_test_output(output: str) -> dict:
     if match:
         counts.update(passed=int(match[1]), failed=int(match[2]),
                       tests=int(match[1]) + int(match[2]))
-    match = re.search(r'(?m)^OK \(skipped=(\d+)\)', output)
-    if match and int(match[1]):
-        skips.append(f'unittest skipped={match[1]}')
+    for summary in re.findall(r'(?m)^OK \(([^)\r\n]*)\)[ \t]*$', output):
+        for field in summary.split(','):
+            match = re.fullmatch(r'\s*skipped=(\d+)\s*', field)
+            if match and int(match[1]):
+                skips.append(f'unittest skipped={match[1]}')
     return {'counts': counts, 'skips': skips}
 
 
@@ -186,7 +188,8 @@ def source_identity() -> dict:
             'plugin_working_tree_sha256': provenance.payload_aggregate_digest(payloads),
             'kind': 'working-tree snapshot; use record_provenance.py for installed-cache attestation',
             'files': {str(p.relative_to(ROOT)): sha256(p) for p in
-                      [ROOT / '.github/workflows/test.yml', *sorted(HERE.glob('*.py')),
+                      [ROOT / 'install.sh', ROOT / '.claude-plugin/marketplace.json',
+                       ROOT / '.github/workflows/test.yml', *sorted(HERE.glob('*.py')),
                        *sorted(HERE.glob('*.json')), *sorted(HERE.glob('requirements-ci.*'))]}}
 
 

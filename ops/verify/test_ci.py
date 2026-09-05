@@ -1,5 +1,6 @@
 """Orchestration contracts; these tests make no NLP activation claims."""
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -48,10 +49,26 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(result['status'], 'passed')
 
     def test_unittest_and_bun_skips_fail(self):
-        for text in ['Ran 2 tests in 0.1s\nOK (skipped=1)', ' 2 pass\n 1 skip\n 0 fail\n']:
+        for text in ['Ran 2 tests in 0.1s\nOK (skipped=1)',
+                     'Ran 2 tests in 0.1s\nOK (expected failures=1, skipped=1)',
+                     ' 2 pass\n 1 skip\n 0 fail\n']:
             with self.subTest(text=text):
                 result = self.run_command(f'print({text!r})', test_output=True)
                 self.assertEqual(result['status'], 'failed')
+
+    def test_real_unittest_skip_with_expected_failure_is_not_green(self):
+        result = self.run_command('''import unittest
+class Fixture(unittest.TestCase):
+    @unittest.skip("fixture missing dependency")
+    def test_skipped(self): pass
+    @unittest.expectedFailure
+    def test_expected_failure(self): self.fail("fixture known failure")
+unittest.main()
+''', test_output=True)
+        self.assertEqual(result['rc'], 0)
+        self.assertEqual(result['counts']['tests'], 2)
+        self.assertEqual(result['status'], 'failed')
+        self.assertEqual(result['skips'], ['unittest skipped=1'])
 
     def test_no_tests_is_not_green(self):
         for output in ('', 'OK: 0/0 passed', '0 passed, 0 failed', '1 passed, 1 failed', ' 1 pass\n 1 fail'):
@@ -103,6 +120,60 @@ class RunnerTest(unittest.TestCase):
 
 
 class InventoryTest(unittest.TestCase):
+    def test_source_identity_tracks_dirty_root_installer_and_marketplace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scratch = Path(directory)
+            candidate = scratch / 'candidate'
+            files = {
+                'install.sh': b'#!/bin/sh\nexit 0\n',
+                '.claude-plugin/marketplace.json': b'{"name":"fixture"}\n',
+                'plugins/oh-my-gjc/.claude-plugin/plugin.json': b'{"name":"oh-my-gjc"}\n',
+                '.github/workflows/test.yml': b'name: fixture\n',
+                'ops/verify/pins.json': b'{}\n',
+            }
+            for relative, data in files.items():
+                path = candidate / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+            env = ci.isolated_environment(scratch)
+
+            def git(*arguments):
+                return subprocess.check_output(['git', *arguments], cwd=candidate,
+                                               env=env, text=True).strip()
+
+            git('init', '-q')
+            git('add', '.')
+            git('-c', 'user.name=CI Fixture', '-c', 'user.email=ci@example.test',
+                '-c', 'commit.gpgsign=false', 'commit', '-qm', 'fixture')
+            self.assertEqual(git('status', '--porcelain'), '')
+            with mock.patch.dict(os.environ, env, clear=True), \
+                 mock.patch.object(ci, 'ROOT', candidate), \
+                 mock.patch.object(ci, 'HERE', candidate / 'ops/verify'):
+                before = ci.source_identity()
+                changes = {
+                    'install.sh': b'#!/bin/sh\nexit 97\n',
+                    '.claude-plugin/marketplace.json': b'{"name":"changed-fixture"}\n',
+                }
+                for relative, data in changes.items():
+                    with self.subTest(relative=relative):
+                        path = candidate / relative
+                        path.write_bytes(data)
+                        try:
+                            self.assertEqual(git('diff', '--name-only'), relative)
+                            after = ci.source_identity()
+                            self.assertEqual(after['git_head'], before['git_head'])
+                            self.assertEqual(after['plugin_working_tree_sha256'],
+                                             before['plugin_working_tree_sha256'])
+                            self.assertNotEqual(after, before)
+                            self.assertEqual(after['files'][relative], hashlib.sha256(data).hexdigest())
+                            self.assertEqual(before['files'][relative], hashlib.sha256(files[relative]).hexdigest())
+                            self.assertEqual({p for p in after['files'] if after['files'][p] != before['files'][p]},
+                                             {relative})
+                        finally:
+                            path.write_bytes(files[relative])
+                self.assertEqual(ci.source_identity(), before)
+                self.assertEqual(git('status', '--porcelain'), '')
+
     def test_markers_exist_in_actual_tracked_repository(self):
         # git's index supplies the actual inventory; no manufactured legacy files.
         paths = subprocess.check_output(['git', 'ls-files', '-z', '--', 'plugins/oh-my-gjc'], cwd=ROOT)
