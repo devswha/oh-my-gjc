@@ -145,7 +145,7 @@ for scope, native in scopes.items():
         except (OSError, ValueError, UnicodeError):
             add(scope, path, 'invalid', 'native file unreadable/unsafe or invalid frontmatter fields')
     if bound:
-        for relative in ('bin/install-skill.sh', 'bin/pack_and_ask.py', 'bin/gpt_image_web.py',
+        for relative in ('bin/install-skill.sh', 'bin/pack_and_ask.py', 'bin/review_journal.py', 'bin/gpt_image_web.py',
                          'bin/cdp_lock.py', 'bin/insane_search.py', 'bin/setup_insane_search.py'):
             try:
                 data = read_file(bound / relative)

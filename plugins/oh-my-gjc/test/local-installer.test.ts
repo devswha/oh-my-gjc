@@ -198,5 +198,11 @@ describe("explicit local payload installer", () => {
   }
   // Explicit opt-in: executes the installed GJC binary only in an isolated HOME,
   // with Linux seccomp denying IPv4/IPv6 to every installer child process.
-  test.skipIf(!process.env.OMG_REAL_GJC)("real GJC: blocked-network fresh/repeat/upgrade", () => cycle(process.env.OMG_REAL_GJC), 120000);
+  if (process.env.OMG_REAL_GJC) {
+    test("real GJC: blocked-network fresh/repeat/upgrade", () => cycle(process.env.OMG_REAL_GJC), 120000);
+  } else {
+    console.error('OMG_LOCAL_INSTALL_COVERAGE ' + JSON.stringify({
+      status: "not-run", reason: "Set OMG_REAL_GJC for the separate blocked-network real-GJC lane; fixture installs are covered.",
+    }));
+  }
 });

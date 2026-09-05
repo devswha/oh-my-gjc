@@ -45,6 +45,7 @@ MARKERS = [
     '.claude-plugin/plugin.json',
     'bin/omg-autoupdate.sh',
     'bin/pack_and_ask.py',
+    'bin/review_journal.py',
     'bin/cdp_lock.py',
     'bin/insane_search.py',
     'bin/setup_insane_search.py',

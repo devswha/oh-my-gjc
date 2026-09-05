@@ -25,14 +25,16 @@ ENGINE_SUITES = (
     'test_t4_maincontent.py', 'test_t5_pdfplumber.py', 'test_t6_differential.py',
     'test_t7_browser_gate.py', 'test_u1.py', 'test_u5.py', 'test_u7.py',
     'test_u8.py', 'test_u9.py',
+    'test_search_completeness.py', 'test_search_outputs.py', 'test_public_captions.py',
 )
 EXCLUDED = {
     f'{ENGINE}/test_smoke.py': 'online endpoint smoke tests; outside the reviewed offline inventory',
     f'{ENGINE}/test_u4.py': 'contains real SessionPool/root warmup requests; not an offline suite',
     'skill-activation-casebank.json': 'manual/optional model evaluation; stub loading does not prove NLP activation',
     'live-browser-canaries': 'requires a dedicated logged-in browser; no browser or paid calls in CI',
+    'local-installer-real-gjc': 'separate blocked-network root install reproduction requires explicit OMG_REAL_GJC; fixture installer tests run here',
 }
-IMPORTS = ('curl_cffi', 'bs4', 'yaml', 'markdownify', 'pypdf', 'pdfplumber',
+IMPORTS = ('curl_cffi', 'bs4', 'yaml', 'markdownify', 'pypdf', 'pdfplumber', 'yt_dlp',
            'resiliparse.extract.html2text', 'resiliparse.parse.html')
 SKIP_LINE = re.compile(r'^\s*(?:⚠\s*)?skipped\s*:', re.I)
 

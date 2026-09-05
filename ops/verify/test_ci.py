@@ -119,8 +119,11 @@ class InventoryTest(unittest.TestCase):
 
     def test_reviewed_allowlist_has_no_online_suite(self):
         expected = {'t1', 't2', 't3', 't4', 't5', 't6', 't7', 'u1', 'u5', 'u7', 'u8', 'u9'}
-        self.assertEqual({re.match(r'test_([tu]\d+)', p)[1] for p in ci.ENGINE_SUITES}, expected)
-        self.assertEqual(len(ci.ENGINE_SUITES), 12)
+        numbered = {match[1] for p in ci.ENGINE_SUITES if (match := re.match(r'test_([tu]\d+)', p))}
+        self.assertEqual(numbered, expected)
+        self.assertEqual({p for p in ci.ENGINE_SUITES if not re.match(r'test_[tu]\d+', p)},
+                         {'test_search_completeness.py', 'test_search_outputs.py', 'test_public_captions.py'})
+        self.assertEqual(len(ci.ENGINE_SUITES), 15)
         for name in ci.ENGINE_SUITES:
             self.assertTrue((ROOT / ci.ENGINE / name).is_file())
         self.assertNotIn('test_u4.py', ci.ENGINE_SUITES)
