@@ -38,6 +38,7 @@ BIN_DIR = Path(__file__).resolve().parent
 if str(BIN_DIR) not in sys.path:
     sys.path.insert(0, str(BIN_DIR))
 from cdp_lock import CdpLease
+from review_journal import RunJournal, canonical, source_identity, text_hash, file_hash, private_read, digest, packed_file_inventory, ANCHOR
 
 # 파이프/리다이렉트로 실행해도 진행 로그가 즉시 흘러가게 라인 버퍼링(백그라운드
 # 실행 + 로그 폴링 중계 패턴에서 필수). 증분 스트림 출력은 개별 print에서 flush.
@@ -199,7 +200,7 @@ def pack_repo(target: Path, *, include: str | None, ignore: str | None,
               compress: bool, style: str, token_budget: int | None,
               out_path: Path, line_numbers: bool = True,
               no_default_patterns: bool = False,
-              no_gitignore: bool = False) -> tuple[Path, int | None]:
+              no_gitignore: bool = False, identity_out: dict | None = None) -> tuple[Path, int | None]:
     if shutil.which("npx") is None:
         sys.exit("❌ npx가 없습니다. Node.js를 설치하세요.")
 
@@ -215,6 +216,9 @@ def pack_repo(target: Path, *, include: str | None, ignore: str | None,
             if re.search(r"""['"]?enableSecurityCheck['"]?\s*:\s*false""", raw):
                 sys.exit(f"❌ {cfg}에서 보안검사(enableSecurityCheck)가 꺼져 있음 — 시크릿 유출 위험으로 중단.\n"
                          "     보안검사를 켜거나 해당 설정을 제거한 뒤 다시 실행하세요.")
+
+    if compress and identity_out is not None:
+        sys.exit("❌ durable review requires full packed source; --compress is available only with --pack-only")
 
     if compress:
         print("  ⚠️  --compress: 함수 본문이 제거된다(시그니처 골격만). 정확성 리뷰/원인분석엔 부적합 —\n"
@@ -316,13 +320,11 @@ def pack_repo(target: Path, *, include: str | None, ignore: str | None,
     # 누락 검증(감사): 패킹된 파일 수/목록 노출 → 빠진 게 있으면 눈에 띄게
     mf = re.search(r"Total Files:\s*([\d,]+)", out)          # repomix stdout(신뢰가능 카운트)
     n_files = int(mf.group(1).replace(",", "")) if mf else None
-    flist = []
     try:
-        body = out_path.read_text(encoding="utf-8", errors="replace")
-        if style == "markdown":                              # 구조 헤더 '## File:'는 컬럼0(라인번호 없음)
-            flist = re.findall(r"(?m)^## File:\s+(.+?)\s*$", body)
-    except OSError:
-        pass
+        body = out_path.read_text(encoding="utf-8")
+        flist = packed_file_inventory(body, style, n_files)
+    except (OSError, UnicodeError, ValueError) as exc:
+        sys.exit(f"❌ 패킹 파일 목록 검증 실패: {exc}")
     cnt = n_files if n_files is not None else len(flist)
     shown = (": " + ", ".join(flist[:10]) + (f" … (+{len(flist) - 10})" if len(flist) > 10 else "")) if flist else ""
     print(f"  📦 패킹 포함 {cnt}개 파일{shown}")
@@ -348,6 +350,8 @@ def pack_repo(target: Path, *, include: str | None, ignore: str | None,
     if tokens and tokens > 120_000:
         print(f"  ⚠️  pack이 큼(~{tokens:,} 토큰) — ChatGPT 웹에서 잘릴(truncation) 수 있다. "
               "--include로 좁히거나 여러 번 나눠 보내라.")
+    if identity_out is not None:
+        identity_out.update(source_identity(target, flist, packed=(body, style, line_numbers)))
     return out_path, tokens
 
 
@@ -2054,33 +2058,31 @@ def verified_effort_label(*, slider_label: str | None, slider_used: bool,
 
 
 def write_response_artifact(path: Path, body: str) -> None:
-    """Create a new private response without following or replacing an artifact."""
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    fd = os.open(path, flags, 0o600)
-    identity = os.fstat(fd)
+    """Publish only a complete fsynced private response; never replace a file."""
+    path = canonical(path)
+    if path.exists():
+        raise FileExistsError(path)
+    temp = path.with_name(f".response-{uuid.uuid4().hex}.tmp")
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
-        try:
-            os.fchmod(fd, 0o600)
-        except AttributeError:
-            os.chmod(path, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            fd = -1
+            if hasattr(os, "fchmod"):
+                os.fchmod(stream.fileno(), 0o600)
             stream.write(body)
-    except Exception:
-        if fd >= 0:
+            stream.flush()
+            os.fsync(stream.fileno())
+        canonical(path)
+        os.link(temp, path)  # exclusive atomic publication, no partial final name
+        temp.unlink()
+        if os.name != "nt":
+            dfd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
             try:
-                os.close(fd)
-            except OSError:
-                pass
-        try:
-            current = os.stat(path, follow_symlinks=False)
-            if (current.st_dev, current.st_ino) == (identity.st_dev, identity.st_ino):
-                os.unlink(path)
-        except OSError:
-            pass
-        raise
+                os.fsync(dfd)
+            finally:
+                os.close(dfd)
+    finally:
+        if temp.exists():
+            temp.unlink()
 
 
 # ---- 첨부 / 입력 / 전송 ----
@@ -2217,24 +2219,27 @@ def clear_composer(page) -> bool:
     return False
 
 
-def click_send(page) -> bool:
-    """전송 버튼이 visible·enabled 될 때까지 폴링 후 클릭(첨부 처리 시간 대비). 끝까지 안 되면 Enter."""
-    for _ in range(15):  # 최대 ~15s 대기
+def click_send(page, before_send=None) -> bool:
+    """Poll only before sending. A click error is unknown delivery, never a fallback.
+
+    The caller durably latches the send boundary immediately before btn.click().
+    There is no Enter fallback: a missing/disabled button is a pre-send failure.
+    """
+    for _ in range(15):
         for sel in SEND_BTN_SELECTORS:
             try:
                 btn = page.query_selector(sel)
-                if btn and btn.is_visible() and btn.is_enabled():
-                    btn.click()
-                    print("  ✓ 전송 버튼 클릭")
-                    time.sleep(1)
-                    return True
+                ready = btn and btn.is_visible() and btn.is_enabled()
             except Exception:
-                continue
+                continue  # read-only failure; no irreversible input yet
+            if ready:
+                if before_send is not None:
+                    before_send()
+                btn.click()  # deliberately outside the retry exception handler
+                print("  ✓ 전송 버튼 클릭")
+                return True
         time.sleep(1)
-    print("  ⚠️  전송 버튼이 enabled 안 됨 → Enter 폴백")
-    page.keyboard.press("Enter")
-    time.sleep(1)
-    return False
+    raise RuntimeError("전송 버튼 확인 실패 — 아직 전송 시도 없음")
 
 
 def click_answer_now(page) -> bool:
@@ -2285,12 +2290,15 @@ def click_answer_now(page) -> bool:
 def wait_for_turn_response(page, force_after=None, max_wait=None,
                            base_user: int = 0, base_assistant: int = 0,
                            base_ids: set | None = None, conv_url: str | None = None,
-                           stream: bool = False) -> tuple[str, str]:
+                           stream: bool = False, journal=None, harvest_only=False) -> tuple[str, str]:
     """새 user 턴(전송 전 기준개수 대비 증가) 기준 응답 회수.
     base_user/base_assistant: 전송 직전의 메시지 수 — 이전 응답을 성공으로 오인하지 않도록 결속.
     base_ids: 전송 직전 data-message-id 집합 — 회수 대상을 그 차집합의 신규 턴으로 한정한다.
     stream=True면 생성 중인 assistant 텍스트를 stdout에 증분 출력(완료 판정에는 영향 없음).
-    반환: (status, text) — status ∈ {'ok','timeout','not_sent','quota'}."""
+    반환: (status, text) — status ∈ {'ok','timeout','unknown','quota'}."""
+    if journal is not None:
+        return wait_for_bound_response(page, journal, max_wait=max_wait, stream=stream,
+                                       force_after=None if harvest_only else force_after)
     mw = max_wait if max_wait else MAX_WAIT_SECS
     start = time.monotonic()
     last_status = 0
@@ -2298,7 +2306,7 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
     streamed = ""      # 이미 스트리밍 출력한 접두부
     stream_header = False
 
-    # 1) 우리 user 턴이 '새로' 떴는지 확인(전송 전 기준보다 증가). 안 떴으면 not_sent → 호출자가 재전송
+    # Missing user-turn observation means unknown delivery, never proof of non-send.
     sent = False
     while time.monotonic() - start < 25:
         if count_msgs(page, USER_MSG_SELECTORS) > base_user:
@@ -2306,7 +2314,7 @@ def wait_for_turn_response(page, force_after=None, max_wait=None,
             break
         time.sleep(1)
     if not sent:
-        return ("not_sent", "")
+        return ("unknown", "")
 
     # 2) assistant 턴 완료까지 대기 (stop-button 사라짐 + copy 버튼 + 텍스트 안정)
     print(f"    응답 대기 중... (최대 {mw}s"
@@ -2617,6 +2625,194 @@ def ensure_project(page, name: str, cache_key: str, cache_path: Path) -> str | N
 # ===========================================================================
 # main
 # ===========================================================================
+def strict_turn_snapshot(page) -> list[dict]:
+    """One ordered DOM read; transport failures and missing IDs are never zero."""
+    rows = page.eval_on_selector_all("[data-message-id]", """els => els.map(el => {
+        const roleNode = el.matches('[data-message-author-role]') ? el :
+            el.querySelector('[data-message-author-role]');
+        return {id: el.getAttribute('data-message-id'),
+                role: roleNode && roleNode.getAttribute('data-message-author-role'),
+                text: roleNode ? roleNode.innerText : ''};
+    }).filter(row => row.role === 'user' || row.role === 'assistant')""")
+    if not isinstance(rows, list):
+        raise RuntimeError("message snapshot unavailable")
+    ids = []
+    for row in rows:
+        if (not isinstance(row, dict) or set(row) != {"id", "role", "text"}
+                or not isinstance(row["id"], str) or not ANCHOR.fullmatch(row["id"])
+                or row["role"] not in ("user", "assistant") or not isinstance(row["text"], str)):
+            raise RuntimeError("message snapshot has invalid turn anchors")
+        ids.append(row["id"])
+    if len(ids) != len(set(ids)):
+        raise RuntimeError("ambiguous duplicate message anchors")
+    return rows
+
+
+def observe_bound_turn(page, journal: RunJournal):
+    """Bind only one exact new request and its immediate assistant successor.
+
+    Baseline order, the run marker, normalized full prompt hash, conversation ID
+    and persisted anchors all have to agree. A later question or regeneration is
+    ambiguous and rejected, including during recovery after a process restart.
+    """
+    data = journal.data
+    url = page.evaluate("() => location.href")  # fail closed on transport errors
+    if data["conversation"] and not same_conversation(data["conversation"], url):
+        raise RuntimeError("wrong bound conversation")
+    if not CONV_URL_RE.fullmatch(url or ""):
+        return None  # URL not assigned yet: delivery remains unknown
+    if not data["conversation"]:
+        journal.update(conversation=url)
+    rows = strict_turn_snapshot(page)
+    baseline = data["baseline"]
+    prefix = [{"id": r["id"], "role": r["role"]} for r in rows[:len(baseline)]]
+    if prefix != baseline:
+        if len(prefix) < len(baseline) and prefix == baseline[:len(prefix)]:
+            return None  # recorded conversation is still hydrating; never re-anchor
+        raise RuntimeError("conversation baseline changed")
+    fresh = rows[len(baseline):]
+    if not fresh:
+        return None  # absence is incomplete observation, not evidence of another request
+    if len(fresh) > 2 or fresh[0]["role"] != "user":
+        raise RuntimeError("ambiguous request/response sequence")
+    user = fresh[0]
+    if (text_hash(user["text"]) != data["request_sha256"]
+            or f"[insane-review request: {data['run_tag']}]" not in user["text"]):
+        raise RuntimeError("wrong request text/run marker")
+    if data["user_turn"] and user["id"] != data["user_turn"]:
+        raise RuntimeError("wrong request turn")
+    if not data["user_turn"]:
+        journal.update(user_turn=user["id"], send_state="observed")
+    if len(fresh) == 1:
+        return None  # wait for the recorded assistant; never substitute a different ID
+    assistant = fresh[1]
+    if assistant["role"] != "assistant":
+        raise RuntimeError("assistant is not adjacent to the exact request")
+    if data["assistant_turn"] and assistant["id"] != data["assistant_turn"]:
+        raise RuntimeError("wrong assistant turn; edited/regenerated branch is not this run")
+    if not data["assistant_turn"]:
+        journal.update(assistant_turn=assistant["id"])
+    nodes = page.query_selector_all(f'[data-message-id="{assistant["id"]}"]')
+    if len(nodes) != 1:
+        raise RuntimeError("assistant anchor does not resolve uniquely")
+    return nodes[0]
+
+
+def wait_for_bound_response(page, journal, max_wait=None, stream=False, force_after=None):
+    start = time.monotonic()
+    limit = max_wait if max_wait is not None else MAX_WAIT_SECS
+    stable_since = None
+    stall_since = None
+    reloads = force_tries = 0
+    last_text = streamed = ""
+    last_status = 0
+    while time.monotonic() - start < limit:
+        elapsed = time.monotonic() - start
+        target = observe_bound_turn(page, journal)
+        blocked = detect_quota_block(page)
+        if blocked:
+            return "quota", ""
+        # Do not interpret selector/transport exceptions as absent streaming.
+        streaming = any(page.query_selector(sel) is not None for sel in STREAMING_BTN_SELECTORS)
+        cur = (target.inner_text() or "") if target is not None else ""
+        if stream and cur.startswith(streamed) and cur != streamed:
+            if not streamed:
+                print("    ── 실시간 응답(생성 중) ──")
+            print(cur[len(streamed):], end="", flush=True)
+        streamed = cur
+        if elapsed - last_status >= STATUS_INTERVAL and not stream:
+            print(f"    {int(elapsed)}s | {'생성중' if streaming else '확인중'}")
+            last_status = elapsed
+        if force_after and elapsed >= force_after and force_tries < FORCE_MAX_TRIES and streaming:
+            force_tries += 1
+            if click_answer_now(page):
+                force_tries = FORCE_MAX_TRIES
+        if (target is not None and cur.strip() and not streaming and elapsed >= MIN_WAIT_SECS
+                and turn_terminal(page, target)):
+            if normalize(cur) != normalize(last_text):
+                last_text, stable_since = cur, time.monotonic()
+            elif stable_since is not None and time.monotonic() - stable_since >= STABLE_CHECK_SECS:
+                # Recheck exact anchors after copy; never return a stale branch.
+                txt = copy_turn(page, target, expected=cur) or cur
+                confirmed = observe_bound_turn(page, journal)
+                if confirmed is None or normalize(confirmed.inner_text()) != normalize(cur):
+                    raise RuntimeError("answer changed during harvest")
+                return "ok", txt
+        else:
+            stable_since = None
+        if not cur.strip() and not streaming:
+            if stall_since is None:
+                stall_since = time.monotonic()
+            if (journal.data["conversation"] and time.monotonic() - stall_since >= STALL_RELOAD_SECS
+                    and reloads < STALL_MAX_RELOADS):
+                reloads += 1
+                page.goto(journal.data["conversation"], wait_until="domcontentloaded", timeout=30000)
+                stable_since = stall_since = None
+        else:
+            stall_since = None
+        time.sleep(2)
+    return ("timeout" if journal.data["user_turn"] else "unknown"), ""
+
+
+def harvest_run(args):
+    """Bundled recovery: no packing, composer, send, model selection or bootstrap."""
+    journal = RunJournal.read(Path(args.harvest_only))
+    journal.require_recovery()  # immutable identity and sufficient evidence before CDP
+    data = journal.data
+    if sync_playwright is None:
+        raise RuntimeError("playwright unavailable")
+    real_stdout = sys.stdout
+    if args.council:
+        sys.stdout = sys.stderr
+    try:
+        with CdpLease(CDP_PORT) as lease:
+            if not _cdp_matches_dedicated_profile():
+                raise RuntimeError("existing CDP does not prove the dedicated profile")
+            with sync_playwright() as pw:
+                browser = pw.chromium.connect_over_cdp(CDP_URL)
+                ctx = pick_context(browser)
+                if ctx is None:
+                    raise RuntimeError("no existing browser context")
+                page = ctx.new_page()
+                _guard_dialogs(ctx, page)
+                try:
+                    page.goto(data["conversation"], wait_until="load", timeout=60000)
+                    if wait_for_login_state(page) != "ok":
+                        raise RuntimeError("login unavailable/unknown; harvest stopped")
+                    if not lease.still_binding():
+                        raise RuntimeError("CDP lease no longer bound")
+                    status, response = wait_for_turn_response(page, max_wait=args.max_wait,
+                                                             stream=args.stream, journal=journal,
+                                                             harvest_only=True)
+                    if status != "ok" or not response.strip():
+                        raise RuntimeError(f"harvest {status}; no partial response saved; no messages sent")
+                    if rejection := rejection_reason(response, data["prompt"]):
+                        raise RuntimeError(f"harvest rejected: {rejection}")
+                    journal.verify_identity()
+                    if observe_bound_turn(page, journal) is None:
+                        raise RuntimeError("exact answer anchor missing")
+                finally:
+                    page.close()
+            path = Path(data["out_dir"]) / f"response_{data['label']}_{data['run_tag']}.md"
+            if path.exists() or path.is_symlink():
+                if file_hash(path, private=True) != data["response_sha256"]:
+                    raise RuntimeError("response exists without matching completed journal; no overwrite")
+            else:
+                body = (f"# {data['label']} — GPT 응답 (구독 ChatGPT)\n\n"
+                        f"- 모델: `{data['verified_model']}`\n- 대화: {data['conversation']}\n"
+                        f"- Run journal: {journal.path}\n- Source/pack SHA-256: {data['identity_sha256']}\n"
+                        f"- Recovery: harvest-only (zero messages sent)\n\n---\n\n{response}\n")
+                journal.update(response_sha256=digest(body.encode("utf-8")))
+                write_response_artifact(path, body)
+            journal.update(send_state="complete", response_sha256=file_hash(path, private=True))
+            print(f"[완료] 응답 저장: {path}")
+            if args.council:
+                real_stdout.write(response + "\n")
+                real_stdout.flush()
+    finally:
+        sys.stdout = real_stdout
+
+
 def main():
     ap = argparse.ArgumentParser(description="repomix → 검증된 구독 ChatGPT Pro 분석")
     ap.add_argument("--target", default=None, help="분석 대상 폴더(생략 시 프롬프트만 = 의견 모드)")
@@ -2637,6 +2833,8 @@ def main():
     ap.add_argument("--followup", default=None, metavar="CHAT_URL|RESPONSE_MD",
                     help="기존 대화에 재패킹 없이 후속 질문(코드 재전송·모델 재선택 없음). "
                          "값은 대화 URL 또는 이전 response_*.md 경로")
+    ap.add_argument("--harvest-only", "--resume", dest="harvest_only", metavar="RUN_JSON",
+                    help="기록된 정확한 대화/요청의 완료 응답만 회수: 전송·패킹·모델 재선택 없음")
     ap.add_argument("--prompt", default=None)
     ap.add_argument("--prompt-file", default=None)
     ap.add_argument("--model", default=None, help='추론단계 선택(예: "pro")')
@@ -2671,11 +2869,22 @@ def main():
     ap.add_argument("--install", action="store_true")
     ap.add_argument("--council", action="store_true",
                     help="agent-council 멤버 모드: 로그는 stderr, 응답만 stdout")
-    ap.add_argument("--retries", type=int, default=1)
+    ap.add_argument("--retries", type=int, default=1, help="전송 시도 전 실패만 재시도; 전송 후에는 --harvest-only")
     ap.add_argument("--stream", action="store_true",
                     help="응답 생성 중인 텍스트를 stdout에 실시간 증분 출력(파이프/로그 중계용)")
     ap.add_argument("prompt_args", nargs="*", help="프롬프트(위치인자 — council 호환)")
     args = ap.parse_args()
+
+    if args.harvest_only:
+        # Reject mode mixtures before any environment/bootstrap/browser operation.
+        allowed = {"--harvest-only", "--resume", "--max-wait", "--stream", "--council"}
+        if any(a.startswith("--") and a.split("=", 1)[0] not in allowed for a in sys.argv[1:]) or args.prompt_args:
+            ap.error("--harvest-only accepts only --max-wait, --stream and --council")
+        try:
+            harvest_run(args)
+        except (OSError, ValueError, RuntimeError) as exc:
+            sys.exit(f"❌ harvest-only: {exc}")
+        return
 
     if args.inspect_session:
         with CdpLease(CDP_PORT):
@@ -2732,8 +2941,8 @@ def main():
     if args.council:
         sys.stdout = sys.stderr
 
-    out_dir = Path(args.out_dir).expanduser() if args.out_dir else OUT_DIR
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = canonical(Path(args.out_dir).expanduser() if args.out_dir else OUT_DIR)
+    out_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     print(f"  출력 폴더: {out_dir}")
     # 폴더명→프로젝트URL 캐시(per-repo) — 평소엔 사이드바 안 건드리고 바로 프로젝트로 goto
     project_cache_path = out_dir / "projects.json"
@@ -2753,6 +2962,8 @@ def main():
     tokens = None
     label = "prompt"
     verified_model_name = None
+    source = None
+    inherited_pack = None
 
     # 후속 질문: 기존 대화로 돌아가 프롬프트만 보낸다. 코드는 이미 그 대화에
     # 첨부돼 있으므로 재패킹하지 않고, 모델도 그 대화에 고정돼 있으므로 다시
@@ -2765,9 +2976,26 @@ def main():
             sys.exit("❌ --followup은 --pack-only와 함께 쓸 수 없습니다.")
         followup_url = resolve_followup_target(args.followup)
         label = "followup"
+        if not CONV_URL_RE.fullmatch(args.followup.strip()):
+            artifact = canonical(Path(args.followup))
+            raw = private_read(artifact).decode("utf-8")
+            header = raw.split("\n---\n", 1)[0]
+            recorded = re.findall(r"(?m)^- Run journal: (.+)$", header)
+            if recorded:
+                if len(recorded) != 1:
+                    sys.exit("❌ ambiguous followup journal")
+                previous = RunJournal.read(Path(recorded[0]))
+                previous.require_recovery()
+                if (not same_conversation(followup_url, previous.data["conversation"])
+                        or previous.data["send_state"] != "complete"
+                        or file_hash(artifact, private=True) != previous.data["response_sha256"]):
+                    sys.exit("❌ followup artifact does not match its completed review")
+                source = previous.data["source"]
+                inherited_pack = Path(previous.data["pack"]["path"]) if previous.data["pack"] else None
+                verified_model_name = previous.data["verified_model"]
 
     if args.target:
-        target = Path(args.target).resolve()
+        target = canonical(Path(args.target))
         if not target.exists():
             sys.exit(f"❌ 대상 폴더 없음: {target}")
         label = re.sub(r"[^A-Za-z0-9_.-]", "-", target.name)
@@ -2782,13 +3010,14 @@ def main():
             print(f"  ↳ 출력 폴더가 대상 내부 → ignore 자동 추가: {rel_glob}")
         except ValueError:
             pass  # 대상 밖 → self-inclusion 없음
+        source = {} if not args.pack_only else None
         print(f"\n[1/3] repomix 패킹 — {label}")
         pack_path, tokens = pack_repo(
             target, include=args.include, ignore=eff_ignore, compress=args.compress,
             style=args.style, token_budget=args.token_budget, out_path=pack_path,
             line_numbers=not args.no_line_numbers,
             no_default_patterns=args.no_default_patterns,
-            no_gitignore=args.no_gitignore)
+            no_gitignore=args.no_gitignore, identity_out=source)
         if args.pack_only:
             print(f"\n[pack-only] 산출물: {pack_path}")
             return
@@ -2810,210 +3039,245 @@ def main():
               or (Path(args.prompt_file).read_text(encoding="utf-8") if args.prompt_file else None)
               or DEFAULT_PROMPT)
 
+    journal = RunJournal.create(out_dir, run_tag, label, prompt, source=source,
+                                pack_path=pack_path or inherited_pack, followup=bool(followup_url))
+    journal.verify_identity()
+    print(f"  Run journal: {journal.path}")
+
     try:
         cdp_lease = CdpLease(CDP_PORT).acquire()
     except RuntimeError as exc:
         sys.exit(f"❌ {exc}")
 
-    resolved_browser = resolve_browser(args.browser)
-    bname = resolved_browser[0] if resolved_browser else (args.browser or "자동감지")
-    print(f"\n[2/3] 브라우저 준비 ({bname})")
-    if not ensure_browser(args.browser):
-        sys.exit(1)
-    # 명시적 지정(--browser)일 때만 영속화 — 자동감지 폴백을 사용자 선택처럼 굳히지 않는다.
-    if args.browser and resolved_browser:
-        save_browser_choice(resolved_browser[0])
-
-    print("\n[3/3] ChatGPT 투입 & 응답 회수")
-    response = ""
-    conv_url = None
-    attempts = max(1, args.retries + 1)
-    for attempt in range(1, attempts + 1):
-        if attempt > 1:
-            print(f"  ↻ 재시도 {attempt - 1}/{args.retries} ...")
-            time.sleep(3)
-        try:
-            with sync_playwright() as pw:
-                browser = pw.chromium.connect_over_cdp(CDP_URL)
-                ctx = pick_context(browser)
-                if ctx is None:
-                    raise RuntimeError("브라우저 context 없음 (로그인된 Comet/Chrome 필요)")
-                page = ctx.new_page()
-                _guard_dialogs(ctx, page)
-                try:
-                    entry_url = followup_url or CHATGPT_URL
-                    page.goto(entry_url, wait_until="load", timeout=60000)
-                    time.sleep(3)
-                    for _ in range(10):
-                        if find_input(page):
-                            break
-                        time.sleep(1)
-                    session_login = login_state(page)
-                    if session_login != "ok":
-                        hint = ("기존 전용 브라우저에서 로그인" if session_login == "no"
-                                else "페이지 로딩/접속 상태 확인; 재로그인이나 프로필 초기화는 하지 않음")
-                        raise RuntimeError(f"ChatGPT login={session_login} — {hint}")
-
-                    if followup_url:
-                        # 목표 대화에 실제로 들어왔는지 확인한다. SPA가 조용히
-                        # 리디렉트했는데 계속 진행하면 엉뚱한 대화에 질문이 흘러간다.
-                        landed = current_url(page)
-                        if not same_conversation(followup_url, landed):
-                            raise RuntimeError(f"후속 대상 대화에 진입 실패(현재: {landed[:80]}) → 중단(fail-closed)")
-                        conv_url = landed
-                        print(f"  🔗 대화 재진입: {conv_url}")
-
-                    # 프로젝트 그룹핑(기본 on): 현재 폴더명 프로젝트로 채팅을 정리(일반 채팅목록 오염 방지).
-                    # 어떤 실패(예외 포함)에도 하드중단 X — 컴포저가 확인되는 일반 채팅으로 폴백(#3).
-                    if not args.no_project and not followup_url:
-                        proj_url = ensure_project(page, project_name, project_cache_key, project_cache_path)
-                        entered = False
-                        if proj_url:
-                            try:
-                                page.goto(proj_url, wait_until="load", timeout=60000)
-                                time.sleep(2)
-                                for _ in range(10):
-                                    if find_input(page):
-                                        break
-                                    time.sleep(1)
-                                entered = find_input(page) is not None  # 컴포저 최종 확인
-                            except Exception as pexc:
-                                print(f"  ⚠️  프로젝트 진입 예외({str(pexc)[:50]})")
-                                entered = False
-                        if entered:
-                            print(f"  🗂  프로젝트 '{project_name}'에 채팅 정리 → {proj_url}")
-                        else:
-                            # 폴백: 프로젝트 미확보/진입 실패 모두 일반 채팅으로(컴포저 보장)
-                            print(f"  ⚠️  프로젝트 '{project_name}' 사용 불가 → 일반 채팅으로 진행(폴백)")
-                            try:
-                                page.goto(CHATGPT_URL, wait_until="load", timeout=60000)
-                                time.sleep(2)
-                                for _ in range(10):
-                                    if find_input(page):
-                                        break
-                                    time.sleep(1)
-                            except Exception:
-                                pass
-
-                    print(f"  현재 pill: {read_model_pills(page)}")
-                    if args.model and followup_url:
-                        # 그 대화는 이미 검증된 모델로 시작됐다. 재선택은 이득 없이
-                        # 조작 실패로 멀쩡한 대화를 깨뜨릴 위험만 있다.
-                        print("  ↩︎  후속 질문 — 모델/추론단계는 기존 대화 설정을 그대로 사용(재선택 생략)")
-                    elif args.model:
-                        print(f"  모델/추론단계 선택: '{args.model}'"
-                               + (f" (모델명 검증='{args.require_model}')" if args.require_model else ""))
-                        verified, v_name = select_model(page, args.model, require_model=args.require_model)
-                        if not verified:
-                            raise RuntimeError(f"모델/추론단계 검증 실패 (model={args.model}, require={args.require_model}) — 전송 중단")
-                        verified_model_name = v_name
-
-                    # 본문은 '첨부'가 기본. 첨부 실패 시:
-                    #  - --attach면 fail-closed(중단)
-                    #  - 아니면 pack이 상한 내일 때만 프롬프트에 인라인 붙여 폴백, 초과면 fail-closed(잘린 전송 방지)
-                    send_prompt = prompt
-                    if pack_path is not None and not attach_file(page, pack_path):
-                        if args.attach:
-                            raise RuntimeError("코드 첨부 확인 실패 + --attach(첨부 강제) → 중단(fail-closed)")
-                        send_prompt = build_paste_fallback(prompt, pack_path)
-                        if send_prompt is None:
-                            raise RuntimeError("코드 첨부 실패 + pack이 커서 붙여넣기 폴백 불가 → 중단(fail-closed)")
-                        print(f"  ↩︎  첨부 실패 → pack을 프롬프트에 인라인 붙여넣기 폴백({len(send_prompt):,}자, 상한 내)")
-
-                    # 전송 직전 기준개수 포착(턴-스코프 결속 — 이전 응답을 성공으로 오인 방지).
-                    # 조회 실패를 0으로 숨기면 기존 DOM이 '새 턴'으로 오인되므로 fail-closed 카운터 사용.
-                    base_user = count_msgs_strict(page, USER_MSG_SELECTORS)
-                    base_assistant = count_msgs_strict(page, ASSISTANT_MSG_SELECTORS)
-                    base_ids = msg_id_set(page)
-
-                    put_text(page, send_prompt)
-                    # 보낼 텍스트 '전체'가 입력창에 들어갔는지 검증 — 아니면 composer 비우고 1회 재입력, 그래도 불일치면 중단
-                    # (첨부만/잘린 질문이 전송되어 '오염된 응답'을 성공저장하는 fail-open 차단)
-                    if not composer_has_prompt(page, send_prompt):
-                        clear_composer(page)
-                        put_text(page, send_prompt)
-                        if not composer_has_prompt(page, send_prompt):
-                            raise RuntimeError("프롬프트가 입력창에 온전히 안 들어감 → 중단(첨부만/잘린 전송 방지, fail-closed)")
-                    # 전송은 되돌릴 수 없고 Pro 메시지를 태운다. 그 직전에 CDP
-                    # 단일비행이 여전히 유효한지 확인한다 — 리스 파일이 지워졌다면
-                    # 우리 flock은 orphan inode를 지키고 있고, 다른 실행이 같은
-                    # 브라우저를 동시에 몰 수 있다.
-                    if not cdp_lease.still_binding():
-                        raise RuntimeError(
-                            "CDP 단일비행 리스가 무효화됨(리스 파일 교체/삭제) → 전송 중단(fail-closed)")
-                    click_send(page)
-                    # 전송 직후 대화 URL을 결속한다 — 스트림이 끊겨도 이 URL로
-                    # 재로드해 같은 대화에서 답을 회수할 수 있다(재전송 아님).
-                    if not followup_url:
-                        conv_url = capture_conv_url(page)
-                        if conv_url:
-                            print(f"  🔗 대화 결속: {conv_url}")
-                        else:
-                            print("  ⚠️  대화 URL 포착 실패 — 스톨 시 재로드 복구 불가")
-                    status, text = wait_for_turn_response(page, force_after=args.force_answer_after,
-                                                          max_wait=args.max_wait,
-                                                          base_user=base_user, base_assistant=base_assistant,
-                                                          base_ids=base_ids, conv_url=conv_url,
-                                                          stream=args.stream)
-                    if status == "not_sent":
-                        print("  ⚠️  user 턴 미생성(전송 안 됨) → 재시도")
-                        continue
-                    if status == "quota":
-                        # 한도 차단은 재시도해도 같은 벽이다 — 메시지만 더 태운다.
-                        sys.exit("❌ ChatGPT 사용량 한도에 막혔습니다. 한도가 풀린 뒤 다시 실행하세요.")
-                    if status == "timeout":
-                        print("  ⚠️  타임아웃 — 미완성 응답은 성공저장 안 함(fail-closed) → 재시도")
-                        continue
-                    if status == "ok" and text and text.strip():
-                        response = text
-                    else:
-                        print(f"  ⚠️  응답 비었거나 너무 짧음(status={status}) → 재시도")
-                finally:
-                    try:
-                        page.close()
-                    except Exception:
-                        pass
-            if response:
-                break
-            print(f"  ⚠️  시도 {attempt}: 응답 비어있음")
-        except Exception as exc:
-            print(f"  ⚠️  시도 {attempt} 실패: {str(exc)[:160]}")
-
-    if not response:
-        sys.exit("❌ 응답 회수 실패 (모든 재시도 소진)")
-
-    # 패킹 파일 시크릿 위생은 응답 판정과 무관하게 --delete-pack 계약을 지킨다.
-    if pack_path is not None and args.delete_pack:
-        try:
-            pack_path.unlink()
-            print(f"  🔒 패킹 파일 삭제됨(--delete-pack)")
-        except OSError as exc:
-            sys.exit(f"❌ 패킹 파일 삭제 실패(--delete-pack): {str(exc)[:120]}")
-
-    rejection = rejection_reason(response, prompt)
-    if rejection:
-        sys.exit(f"❌ 회수한 페이지를 답변으로 인정하지 않음(fail-closed): {rejection}")
-
-    resp_path = out_dir / f"response_{label}_{run_tag}.md"
-    pack_line = (f"- 패킹: `{pack_path.name}`" + (f" (~{tokens:,} tokens)\n" if tokens else "\n")
-                 if pack_path is not None else "- 패킹: (없음 / 프롬프트-only)\n")
-    model_line = f"- 모델: `{verified_model_name}`\n" if verified_model_name else ""
-    # 대화 URL을 남긴다 — 이걸로 재패킹 없이 후속 질문(--followup)을 던질 수 있다.
-    conv_line = f"- 대화: {conv_url}\n" if conv_url else ""
-    body = (f"# {label} — GPT 응답 (구독 ChatGPT)\n\n" + pack_line + model_line + conv_line
-            + f"- 프롬프트: {prompt[:80]}...\n\n---\n\n{response}\n")
     try:
-        write_response_artifact(resp_path, body)
-    except FileExistsError:
-        sys.exit(f"❌ 응답 산출물이 이미 존재함 → 덮어쓰지 않고 중단: {resp_path}")
-    print(f"\n[완료] 응답 저장: {resp_path}")
-    if args.council:
-        real_stdout.write(response + "\n")
-        real_stdout.flush()
-    else:
-        print("─" * 50)
-        print(response[:800] + ("\n...(생략)" if len(response) > 800 else ""))
-    cdp_lease.release()
+        resolved_browser = resolve_browser(args.browser)
+        bname = resolved_browser[0] if resolved_browser else (args.browser or "자동감지")
+        print(f"\n[2/3] 브라우저 준비 ({bname})")
+        if not ensure_browser(args.browser):
+            sys.exit(1)
+        # 명시적 지정(--browser)일 때만 영속화 — 자동감지 폴백을 사용자 선택처럼 굳히지 않는다.
+        if args.browser and resolved_browser:
+            save_browser_choice(resolved_browser[0])
+
+        print("\n[3/3] ChatGPT 투입 & 응답 회수")
+        response = ""
+        conv_url = None
+        attempts = max(1, args.retries + 1)
+        for attempt in range(1, attempts + 1):
+            if journal.attempted:
+                break  # every post-send exit, exception and timeout is harvest-only
+            if attempt > 1:
+                print(f"  ↻ 재시도 {attempt - 1}/{args.retries} ...")
+                time.sleep(3)
+            try:
+                with sync_playwright() as pw:
+                    browser = pw.chromium.connect_over_cdp(CDP_URL)
+                    ctx = pick_context(browser)
+                    if ctx is None:
+                        raise RuntimeError("브라우저 context 없음 (로그인된 Comet/Chrome 필요)")
+                    page = ctx.new_page()
+                    _guard_dialogs(ctx, page)
+                    try:
+                        entry_url = followup_url or CHATGPT_URL
+                        page.goto(entry_url, wait_until="load", timeout=60000)
+                        time.sleep(3)
+                        for _ in range(10):
+                            if find_input(page):
+                                break
+                            time.sleep(1)
+                        session_login = login_state(page)
+                        if session_login != "ok":
+                            hint = ("기존 전용 브라우저에서 로그인" if session_login == "no"
+                                    else "페이지 로딩/접속 상태 확인; 재로그인이나 프로필 초기화는 하지 않음")
+                            raise RuntimeError(f"ChatGPT login={session_login} — {hint}")
+
+                        if followup_url:
+                            # 목표 대화에 실제로 들어왔는지 확인한다. SPA가 조용히
+                            # 리디렉트했는데 계속 진행하면 엉뚱한 대화에 질문이 흘러간다.
+                            landed = current_url(page)
+                            if not same_conversation(followup_url, landed):
+                                raise RuntimeError(f"후속 대상 대화에 진입 실패(현재: {landed[:80]}) → 중단(fail-closed)")
+                            conv_url = landed
+                            print(f"  🔗 대화 재진입: {conv_url}")
+
+                        # 프로젝트 그룹핑(기본 on): 현재 폴더명 프로젝트로 채팅을 정리(일반 채팅목록 오염 방지).
+                        # 어떤 실패(예외 포함)에도 하드중단 X — 컴포저가 확인되는 일반 채팅으로 폴백(#3).
+                        if not args.no_project and not followup_url:
+                            proj_url = ensure_project(page, project_name, project_cache_key, project_cache_path)
+                            entered = False
+                            if proj_url:
+                                try:
+                                    page.goto(proj_url, wait_until="load", timeout=60000)
+                                    time.sleep(2)
+                                    for _ in range(10):
+                                        if find_input(page):
+                                            break
+                                        time.sleep(1)
+                                    entered = find_input(page) is not None  # 컴포저 최종 확인
+                                except Exception as pexc:
+                                    print(f"  ⚠️  프로젝트 진입 예외({str(pexc)[:50]})")
+                                    entered = False
+                            if entered:
+                                print(f"  🗂  프로젝트 '{project_name}'에 채팅 정리 → {proj_url}")
+                            else:
+                                # 폴백: 프로젝트 미확보/진입 실패 모두 일반 채팅으로(컴포저 보장)
+                                print(f"  ⚠️  프로젝트 '{project_name}' 사용 불가 → 일반 채팅으로 진행(폴백)")
+                                try:
+                                    page.goto(CHATGPT_URL, wait_until="load", timeout=60000)
+                                    time.sleep(2)
+                                    for _ in range(10):
+                                        if find_input(page):
+                                            break
+                                        time.sleep(1)
+                                except Exception:
+                                    pass
+
+                        print(f"  현재 pill: {read_model_pills(page)}")
+                        if followup_url:
+                            # 그 대화는 이미 검증된 모델로 시작됐다. 재선택은 이득 없이
+                            # 조작 실패로 멀쩡한 대화를 깨뜨릴 위험만 있다.
+                            print("  ↩︎  후속 질문 — 모델/추론단계는 기존 대화 설정을 그대로 사용(재선택 생략)")
+                        else:
+                            print(f"  모델/추론단계 선택: '{args.model}'"
+                                   + (f" (모델명 검증='{args.require_model}')" if args.require_model else ""))
+                            verified, v_name = select_model(page, args.model or "pro", require_model=args.require_model or "current")
+                            if not verified or not v_name:
+                                raise RuntimeError(f"모델/추론단계 검증 실패 (model={args.model}, require={args.require_model}) — 전송 중단")
+                            verified_model_name = v_name
+
+                        # 본문은 '첨부'가 기본. 첨부 실패 시:
+                        #  - --attach면 fail-closed(중단)
+                        #  - 아니면 pack이 상한 내일 때만 프롬프트에 인라인 붙여 폴백, 초과면 fail-closed(잘린 전송 방지)
+                        request_prompt = prompt + f"\n\n[insane-review request: {run_tag}]"
+                        send_prompt = request_prompt
+                        if pack_path is not None and not attach_file(page, pack_path):
+                            if args.attach:
+                                raise RuntimeError("코드 첨부 확인 실패 + --attach(첨부 강제) → 중단(fail-closed)")
+                            send_prompt = build_paste_fallback(request_prompt, pack_path)
+                            if send_prompt is None:
+                                raise RuntimeError("코드 첨부 실패 + pack이 커서 붙여넣기 폴백 불가 → 중단(fail-closed)")
+                            print(f"  ↩︎  첨부 실패 → pack을 프롬프트에 인라인 붙여넣기 폴백({len(send_prompt):,}자, 상한 내)")
+
+                        # 전송 직전 기준개수 포착(턴-스코프 결속 — 이전 응답을 성공으로 오인 방지).
+                        # 조회 실패를 0으로 숨기면 기존 DOM이 '새 턴'으로 오인되므로 fail-closed 카운터 사용.
+                        base_user = count_msgs_strict(page, USER_MSG_SELECTORS)
+                        base_assistant = count_msgs_strict(page, ASSISTANT_MSG_SELECTORS)
+                        baseline = strict_turn_snapshot(page)
+                        base_ids = {row["id"] for row in baseline}
+                        if (sum(row["role"] == "user" for row in baseline) != base_user
+                                or sum(row["role"] == "assistant" for row in baseline) != base_assistant):
+                            raise RuntimeError("메시지 기준선 불일치 → 전송 중단")
+                        journal.update(baseline=[{"id": r["id"], "role": r["role"]} for r in baseline],
+                                       request_sha256=text_hash(send_prompt), verified_model=verified_model_name,
+                                       conversation=conv_url)
+
+                        put_text(page, send_prompt)
+                        # 보낼 텍스트 '전체'가 입력창에 들어갔는지 검증 — 아니면 composer 비우고 1회 재입력, 그래도 불일치면 중단
+                        # (첨부만/잘린 질문이 전송되어 '오염된 응답'을 성공저장하는 fail-open 차단)
+                        if not composer_has_prompt(page, send_prompt):
+                            clear_composer(page)
+                            put_text(page, send_prompt)
+                            if not composer_has_prompt(page, send_prompt):
+                                raise RuntimeError("프롬프트가 입력창에 온전히 안 들어감 → 중단(첨부만/잘린 전송 방지, fail-closed)")
+                        # 전송은 되돌릴 수 없고 Pro 메시지를 태운다. 그 직전에 CDP
+                        # 단일비행이 여전히 유효한지 확인한다 — 리스 파일이 지워졌다면
+                        # 우리 flock은 orphan inode를 지키고 있고, 다른 실행이 같은
+                        # 브라우저를 동시에 몰 수 있다.
+                        if not cdp_lease.still_binding():
+                            raise RuntimeError(
+                                "CDP 단일비행 리스가 무효화됨(리스 파일 교체/삭제) → 전송 중단(fail-closed)")
+                        def before_send():
+                            journal.verify_identity()
+                            if not cdp_lease.still_binding():
+                                raise RuntimeError("CDP lease no longer bound")
+                            journal.begin_send()
+
+                        try:
+                            click_send(page, before_send=before_send)
+                        finally:
+                            if journal.attempted:
+                                # Even an input transport error may follow acceptance.
+                                # Best effort capture adds evidence, never another send.
+                                try:
+                                    observe_bound_turn(page, journal)
+                                except Exception as exc:
+                                    print(f"  ⚠️  전송 후 결속 관찰 실패: {str(exc)[:120]}")
+                        conv_url = journal.data["conversation"]
+                        status, text = wait_for_turn_response(page, force_after=args.force_answer_after,
+                                                              max_wait=args.max_wait,
+                                                              base_user=base_user, base_assistant=base_assistant,
+                                                              base_ids=base_ids, conv_url=conv_url,
+                                                              stream=args.stream, journal=journal)
+                        if status in ("not_sent", "unknown"):
+                            print("  ⚠️  요청 관찰 불명 — 자동 재전송 금지")
+                            break
+                        if status == "quota":
+                            # 한도 차단은 재시도해도 같은 벽이다 — 메시지만 더 태운다.
+                            raise RuntimeError("ChatGPT 사용량 한도 차단 — 한도 해제 후 harvest-only로 회수")
+                        if status == "timeout":
+                            print("  ⚠️  타임아웃 — 미완성 응답 저장·자동 재전송 없음")
+                            break
+                        if status == "ok" and text and text.strip():
+                            response = text
+                        else:
+                            print(f"  ⚠️  응답 비어있음(status={status}) — 자동 재전송 없음")
+                    finally:
+                        try:
+                            page.close()
+                        except Exception:
+                            pass
+                if response:
+                    break
+                print(f"  ⚠️  시도 {attempt}: 응답 비어있음")
+            except Exception as exc:
+                print(f"  ⚠️  시도 {attempt} 실패: {str(exc)[:160]}")
+
+        if not response:
+            print(f"  회수 전용: python3 {shlex.quote(str(Path(__file__).resolve()))} --harvest-only {shlex.quote(str(journal.path))}")
+            sys.exit("❌ 응답 회수 실패; 전송 시도 후에는 재전송하지 않습니다. 결속 증거가 없으면 회수도 중단합니다.")
+
+        journal.verify_identity()
+        if not journal.data["assistant_turn"] or not journal.data["user_turn"]:
+            sys.exit("❌ 정확한 요청/응답 턴 증거 없음 — 저장 중단")
+        conv_url = journal.data["conversation"]
+
+
+        rejection = rejection_reason(response, prompt)
+        if rejection:
+            sys.exit(f"❌ 회수한 페이지를 답변으로 인정하지 않음(fail-closed): {rejection}")
+
+        resp_path = out_dir / f"response_{label}_{run_tag}.md"
+        pack_line = (f"- 패킹: `{pack_path.name}`" + (f" (~{tokens:,} tokens)\n" if tokens else "\n")
+                     if pack_path is not None else "- 패킹: (없음 / 프롬프트-only)\n")
+        model_line = f"- 모델: `{verified_model_name}`\n" if verified_model_name else ""
+        # 대화 URL을 남긴다 — 이걸로 재패킹 없이 후속 질문(--followup)을 던질 수 있다.
+        conv_line = f"- 대화: {conv_url}\n" if conv_url else ""
+        identity_line = f"- Run journal: {journal.path}\n- Source/pack SHA-256: {journal.data['identity_sha256']}\n"
+        body = (f"# {label} — GPT 응답 (구독 ChatGPT)\n\n" + pack_line + model_line + conv_line + identity_line
+                + f"- 프롬프트: {prompt[:80]}...\n\n---\n\n{response}\n")
+        journal.update(response_sha256=digest(body.encode("utf-8")))
+        try:
+            write_response_artifact(resp_path, body)
+        except FileExistsError:
+            sys.exit(f"❌ 응답 산출물이 이미 존재함 → 덮어쓰지 않고 중단: {resp_path}")
+        journal.update(send_state="complete", response_sha256=file_hash(resp_path, private=True))
+        # Delete only after a complete response is durably recorded; failures retain the recovery pack.
+        if pack_path is not None and args.delete_pack:
+            try:
+                pack_path.unlink()
+                print(f"  🔒 패킹 파일 삭제됨(--delete-pack)")
+            except OSError as exc:
+                sys.exit(f"❌ 패킹 파일 삭제 실패(--delete-pack): {str(exc)[:120]}")
+
+        print(f"\n[완료] 응답 저장: {resp_path}")
+        if args.council:
+            real_stdout.write(response + "\n")
+            real_stdout.flush()
+        else:
+            print("─" * 50)
+            print(response[:800] + ("\n...(생략)" if len(response) > 800 else ""))
+    finally:
+        cdp_lease.release()
 
 
 if __name__ == "__main__":

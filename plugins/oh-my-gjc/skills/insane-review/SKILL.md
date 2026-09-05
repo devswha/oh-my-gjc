@@ -113,7 +113,7 @@ Malformed, symlinked, non-canonical, multiline, control-character-containing, or
 - **패킹 후 `📦 패킹 포함 N개 파일` 감사 목록이 네가 의도한 완전한 집합을 담았는지 직접 확인**한다(§3.5). 사용자가 지적하기 전에 네가 잡아라.
 - 결과를 **글롭**(→ `--include "src/auth/**,*.test.ts"`)으로 좁힌다.
 - **코드 리뷰/원인분석은 풀 코드로 보내라 — `--compress` 쓰지 마라.** 압축은 함수 본문(조건·early return·예외·루프 = 버그 판단 근거)을 제거해 리뷰 AI가 구현을 *상상*하게 만든다(본문 손실 → false-positive·fail-open). 
-- 타겟이 너무 커서 컨텍스트를 넘기면 **압축하지 말고 `--include`로 관련 파일만 좁혀 풀로** 보낸다. `--compress`는 오직 "큰 레포 *개요*"(정확성 리뷰 아님)용.
+- 타겟이 너무 커서 컨텍스트를 넘기면 **압축하지 말고 `--include`로 관련 파일만 좁혀 풀로** 보낸다. `--compress`는 `--pack-only` 개요 산출물에만 쓴다. 전송할 리뷰는 소스와 패킹 본문을 대조할 수 있는 풀 코드가 필요하다.
 
 ### 3) 패킹 + 투입 + 회수 — 엔진 실행
 ```bash
@@ -178,6 +178,18 @@ mkdir -p .insane-review && python3 -u "$IR" ...위 플래그... --stream \
 - 응답은 **현재 프로젝트의 `.insane-review/response_*.md`**에 저장되고, stdout 끝에 미리보기가 나온다. gjc `read` 도구로 전문을 읽어라.
 - 그 의견을 읽고 **응답 파일에 기록된 실제 검증 모델의 의견임을 명시**하여 사용자에게 반영/요약한다. 동의/이견을 너의 판단과 함께 제시하라.
 
+### 4.5) 타임아웃·연결 끊김 — 전송 없는 회수
+번들 엔진이 전송을 **시도한 뒤**에는 성공 여부가 불명이어도 새 실행으로 재전송하지 않는다.
+로그의 `Run journal:` 경로를 보존하고 같은 실행의 완료 응답만 회수한다:
+```bash
+python3 "$IR" --harvest-only .insane-review/runs/run_<tag>.json --max-wait 1200
+```
+`--resume`은 같은 회수 전용 별칭이다. 전송·재패킹·모델 재선택을 하지 않는다.
+대화 URL, 정확한 요청 턴, 검증 모델 증거가 부족하면 추측하지 않고 중단한다.
+코드/패킹본이 달라졌거나 턴이 모호해도 저장하지 않는다. 상세 조건은 검증한 suite root의
+`skills/insane-review/references/recovery.md`를 읽는다(네이티브 스킬 옆으로 복사되지 않음).
+lane 실행의 회수에는 lane이 출력한 `lane harvest` 안내를 그대로 사용한다.
+
 ### 5) 후속 질문 — 재패킹 없이 이어서 묻기
 답을 읽고 더 물을 게 생기면 **처음부터 다시 하지 마라.** 응답 파일 헤더의
 `- 대화: <url>`이 그 대화를 가리킨다. 그 파일(또는 URL)을 그대로 넘기면 코드 재전송
@@ -188,7 +200,7 @@ python3 "$IR" --followup .insane-review/response_<label>_<tag>.md \
 ```
 - Pro가 앞 대화를 그대로 기억하므로 "방금 2번 지적을 더 파봐" 같은 질문이 된다.
 - 패킹·프로젝트 정리·모델 재선택을 모두 건너뛴다(그 대화는 이미 검증된 모델이다).
-- 코드가 **바뀌었으면** 후속이 아니라 새 실행이다 — 그 대화의 첨부는 옛 코드다.
+- 코드가 **바뀌었으면** 후속이 아니라 새 실행이다 — 그 대화의 첨부는 옛 코드다. 새 형식의 응답 파일은 journal의 원본 코드·패킹 해시를 검증한 뒤 후속 질문에 상속한다. URL만 넘긴 후속이나 구형 응답에는 그 증거가 없어 회수 전용 재개를 보장하지 않는다.
 - 대상 대화에 진입하지 못하면 중단한다(엉뚱한 대화로 질문이 새지 않게).
 
 ## 주의/가드 (실측 기반)
@@ -198,7 +210,7 @@ python3 "$IR" --followup .insane-review/response_<label>_<tag>.md \
 - **정밀 리뷰엔 `--force-answer-after`를 쓰지 마라** — Pro 추론을 중간에 끊어 "다 생각 안 한 채" 답하게 만든다(fail-open과 곱해져 미완성 답을 정답 저장). 완전 추론이 더 정확. 안전장치는 `--max-wait`(기본 20분, env/`--max-wait`로 조절)만. force-answer는 빠른 의견·짧은 질문·council에만.
 - **fail-closed**: 첨부 미확인 / 모델 미검증(`--require-model`) / timeout·빈 응답 / 거부 페이지 / 긴 프롬프트 echo는 **성공 저장·출력 없이 중단**한다(잘못된 컨텍스트나 답변 아닌 페이지를 리뷰로 저장하지 않음).
 - 큰 콘텐츠는 **파일 첨부**로 들어간다(붙여넣기 X). 스크립트가 자동 처리.
-- 실패 시 `--retries N`으로 전송/회수를 재시도.
+- `--retries N`은 **전송 시도 전** 실패만 재시도한다(기본 1 = 준비 최대 2회). 클릭 오류·요청 턴 미관찰·timeout 이후 자동 재전송은 없다. `--followup`은 새 질문을 실제 전송하므로 회수 대신 쓰지 않는다.
 - 동시에 두 개의 insane-review 잡이 **같은 브라우저**를 몰면 안 된다.
 - 전용 프로필 CDP 브라우저는 CLI 종료 뒤에도 실행 상태를 유지한다. 다음 실행에서 인증 프로필과 쿠키를 재사용하며, 스크립트는 외부 브라우저를 종료하지 않는다.
 
@@ -209,7 +221,7 @@ python3 "$IR" --followup .insane-review/response_<label>_<tag>.md \
 - 이름 바꾸려면 `--project "<이름>"`, 끄려면 `--no-project`.
 
 ## 주요 플래그
-`--target`(생략=프롬프트only) · `--include`(정밀 글롭) · `--ignore` · `--compress` · `--model pro` · `--require-model current`(또는 정확한 모델명) · `--inspect-session` · `--force-answer-after N` · `--max-wait N` · `--retries N` · `--stream`(생성 중 응답 실시간 증분 출력) · `--style xml|markdown|plain` · `--browser <이름|경로>` · `--launch-browser <이름>` · `--list-browsers` · `--project "<이름>"` · `--no-project` · `--pack-only` · `--delete-pack` · `--council`
+`--target`(생략=프롬프트only) · `--include`(정밀 글롭) · `--ignore` · `--compress` · `--model pro` · `--require-model current`(또는 정확한 모델명) · `--inspect-session` · `--harvest-only <run.json>`(`--resume` 동일) · `--followup <response.md|URL>` · `--force-answer-after N` · `--max-wait N` · `--retries N` · `--stream`(생성 중 응답 실시간 증분 출력) · `--style xml|markdown|plain` · `--browser <이름|경로>` · `--launch-browser <이름>` · `--list-browsers` · `--project "<이름>"` · `--no-project` · `--pack-only` · `--delete-pack` · `--council`
 
 ## agent-council 멤버로 쓰기
 검증한 `$IR`의 suite root 아래 `references/council-setup.md` 참고. 네이티브 스킬 옆에는 참고 문서를 복사하지 않으므로 `${IR%/bin/pack_and_ask.py}/references/council-setup.md`를 읽는다. `--council` 모드는 프롬프트를 위치인자로 받고 **응답만 stdout**으로 내보내(진행로그는 stderr) council worker가 그대로 캡처한다. Pro를 웹 전용 council 멤버로 등록하면 다른 모델들과 토론에 참여시킬 수 있다.
