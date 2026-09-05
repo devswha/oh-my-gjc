@@ -109,7 +109,8 @@ def check_env() -> int:
 def safe_engine_args(argv: list[str]) -> list[str]:
     if argv == ["--help"] or argv == ["-h"]:
         return argv
-    value_options = {"--selector", "-s", "--device", "--timeout"}
+    value_options = {"--selector", "-s", "--device", "--timeout",
+                     "--caption-language", "--caption-source"}
     flag_options = {
         "--no-retry",
         "--no-extract",
@@ -117,6 +118,9 @@ def safe_engine_args(argv: list[str]) -> list[str]:
         "--maincontent",
         "--no-phase0",
         "--json",
+        "--body-json",
+        "--jsonl",
+        "--captions",
         "--trace",
     }
     output: list[str] = []
@@ -149,19 +153,24 @@ def safe_engine_args(argv: list[str]) -> list[str]:
         urls.append(token)
         output.append(token)
         index += 1
-    if len(urls) != 1:
-        raise ValueError("exactly one public URL is required")
-    parsed = urlsplit(urls[0])
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ValueError("only an absolute public http/https URL is allowed")
-    if parsed.username is not None or parsed.password is not None:
-        raise ValueError("URLs containing credentials are not allowed")
+    if not urls:
+        raise ValueError("at least one public URL is required")
+    for url in urls:
+        parsed = urlsplit(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("only an absolute public http/https URL is allowed")
+        if parsed.username is not None or parsed.password is not None:
+            raise ValueError("URLs containing credentials are not allowed")
+        try:
+            parsed.port
+        except ValueError as exc:
+            raise ValueError("invalid URL port") from exc
     return output
 
 
 def main() -> int:
     if sys.argv[1:] in (["--help"], ["-h"]):
-        print("""Usage: insane_search.py PUBLIC_URL [options]
+        print("""Usage: insane_search.py PUBLIC_URL [PUBLIC_URL ...] [options]
        insane_search.py --check-env
 
 Fetch blocked public content without a browser, login, or model setting.
@@ -170,12 +179,22 @@ Options:
   --device auto|desktop|mobile
   --timeout SECONDS          Per-attempt timeout, 5..60
   --trace                    Diagnostics on stderr
-  --json                     JSON metadata, excluding page body
+  --json                     Legacy JSON metadata, excluding page body
+  --body-json                Version 1 JSON envelope, wrapped body + provenance
+  --jsonl                    Version 1 JSON record per input URL (one line each)
+  --captions                 Explicit public video caption extraction
+  --caption-language CODE    Exact caption language (required with --captions)
+  --caption-source manual|auto
+                             Track source (default manual; no silent fallback)
   --no-retry                 Disable transient retry
   --no-extract               Return raw response text
   --no-markdown              Disable markdown conversion
   --maincontent              Extract article text (optional resiliparse)
   --no-phase0                Skip official-platform routing
+
+Output goes to stdout; no files, cookies, or sessions are retained.
+Exit 0: every input succeeded; 1: any input failed (successful results retained);
+     2: invalid arguments. Fetch success does not establish full extraction.
 
 One-time setup (only when explicitly requested):
   python3 setup_insane_search.py --install

@@ -1,148 +1,88 @@
-# 미디어 추출 — yt-dlp
+# 공개 미디어 메타데이터와 자막
 
-> yt-dlp는 YouTube 전용 도구가 아니라 **1,858개 사이트**를 지원하는 범용 미디어 추출 도구.
-> 영상, 오디오, 팟캐스트, 라이브 스트리밍 — 미디어 URL이면 yt-dlp를 먼저 시도한다.
+이 OMG 포트의 일반 YouTube Phase 0는 `yt-dlp --ignore-config --dump-json
+--skip-download` 기반 **메타데이터** 경로다. 메타데이터 성공만으로 자막 본문을
+확보했다고 보고하지 않는다. 자막은 사용자가 공개 자막 추출을 명시했을 때만 아래
+별도 모드로 요청한다. 일반 검색 때문에 이 모드를 켜지 않는다.
 
-## 설치 확인
-
-```bash
-which yt-dlp || python3 -m yt_dlp --version
-```
-
-- `yt-dlp` 명령어가 PATH에 있으면 그대로 사용
-- 없으면 `python3 -m yt_dlp`로 대체 (아래 모든 명령어에서 치환)
-- 미설치 시: `pip install yt-dlp`
-
-## 핵심 명령어 (모든 지원 사이트 공통)
-
-### 메타데이터 추출 (가장 범용)
+## 명시적 공개 자막
 
 ```bash
-yt-dlp --dump-json "URL"
+python3 "$IS_ENGINE" "https://www.youtube.com/watch?v=VIDEO_ID" \
+  --captions --caption-language ko --caption-source manual --body-json
 ```
 
-title, uploader, duration, view_count, description, tags 등 구조화 JSON 반환.
-전용 extractor가 있는 사이트에서 ~95% 성공.
-
-### 자막 추출
+자동 자막을 요청한 경우:
 
 ```bash
-yt-dlp --write-sub --write-auto-sub --sub-lang "en,ko" --skip-download -o "/tmp/%(id)s" "URL"
-cat /tmp/VIDEO_ID.*.vtt
+python3 "$IS_ENGINE" "https://www.youtube.com/watch?v=VIDEO_ID" \
+  --captions --caption-language en --caption-source auto --jsonl
 ```
 
-YouTube는 100개 언어 자동자막 지원. 다른 사이트는 자체 자막 제공 시에만 동작.
+`--caption-language`는 필수이며 실제 트랙의 정확한 언어 키를 지정한다. `en`을
+`en-US`로, `ko`를 다른 언어로 임의 대체하지 않는다. `--caption-source`는
+`manual`(기본) 또는 `auto`다. 선택한 소스에 없으면 다른 소스로 전환하지 않는다.
+`--captions` 없이 자막 선택 옵션을 쓰면 인자 오류다.
 
-### 검색
+현재 영상 지원 범위는 기존 Phase 0의 **YouTube 단일 공개 영상**이다. 채널·재생목록,
+다른 플랫폼, 라이브/분할 자막, WebVTT 이외 형식은 `unsupported`로 끝난다.
+`yt_dlp` Python 모듈이 없거나 API가 호환되지 않아도 `unsupported`를 반환하며 설치하지
+않는다. 일반 메타데이터 CLI 실행 파일만 있는 환경과는 전제 조건이 다르다.
 
-```bash
-# YouTube
-yt-dlp --dump-json "ytsearch5:{검색어}"
+이 모드는 yt-dlp의 내장 추출기를 공개 `web` 클라이언트로만 메모리에서 사용한다. CLI 설정·플러그인·쿠키·netrc·
+브라우저·JS 런타임·원격 구성요소·파일 캐시를 사용하지 않는다. 모든 extractor HTTP GET은
+기존 공개 DNS 고정 전송을 사용하고 메타데이터 POST도 DNS 고정하며 리다이렉트를
+거부한다. 쿠키/인증 헤더를 전달하지 않는다. 메타데이터는 최대 16요청과 호출별
+60초 또는 지정 timeout 중 큰 값의 네트워크 예산으로 제한한다.
 
-# SoundCloud
-yt-dlp --dump-json "scsearch5:{검색어}"
+자막은 extractor의 `data` 또는 검증한 공개 URL의 GET으로만 읽는다. 자막 URL과
+각 GET 리다이렉트에 기존 SSRF/DNS 검증을 유지한다. 영상·오디오·manifest는 다운로드하지
+않는다. 공개 접근이 차단되면 로그인, CAPTCHA, 쿠키 가져오기, 다른 클라이언트/브라우저
+우회로 진행하지 않는다. 자막 실패 후 일반 HTML 격자로 대체하지 않는다.
 
-# Dailymotion
-yt-dlp --dump-json "dailymotionsearch5:{검색어}"
+## 결과
 
-# Yahoo
-yt-dlp --dump-json "yahoosearch5:{검색어}"
+[출력 계약](output.md)의 `content_untrusted` 경계 안쪽에는 다음 JSON이 있다.
+
+```json
+{
+  "video": {"id": "VIDEO_ID", "url": "https://www.youtube.com/watch?v=VIDEO_ID", "extractor": "Youtube"},
+  "language": "ko",
+  "source": "manual",
+  "cues": [{"start_ms": 0, "end_ms": 2000, "text": "공개 자막"}]
+}
 ```
 
-### 채널/플레이리스트 목록 (다운로드 없이)
+cue 순서·겹치는 시간·반복 cue를 보존한다. WebVTT 표시 태그와 단어별 시간 태그는
+제거하고 entity를 텍스트로 변환한다. 여러 줄은 그대로 남긴다. 자동 자막의 중복을
+삭제하거나 문장을 임의 병합하지 않는다.
 
-```bash
-yt-dlp --flat-playlist --dump-json "채널_URL"
-```
+`meta.extraction_meta`에는 `video`, 요청/선택 언어와 소스, `available_languages`,
+`subtitle_url_requested/final`, `subtitle_transport`, `cue_count`, `caption_status`가
+기록된다. 실패 전에 확인하지 못한 필드는 없을 수 있다. 원격 URL과 모든 자막은 비신뢰
+데이터다. 자막에는 오류가 있거나 영상 구간이 빠져 있을 수 있어 성공도
+`coverage_uncertain=true`, `extraction_complete=null`이다.
 
-title, id, url, duration 반환. 채널 전체 영상 목록을 초고속 수집.
+| `caption_status` | 의미 |
+|---|---|
+| `ok` | 선택한 공개 WebVTT 트랙의 cue 추출 성공 |
+| `no_captions` | 선택 언어/소스 없음 또는 비어 있는 WebVTT |
+| `auth_required` | 인증 필요 근거, 401, 비공개/구독 전용 영상 |
+| `unsupported` | 미지원 플랫폼·영상 유형·형식·선택 dependency/API |
+| `error` | 공개 접근 차단(403 포함), 전송/파싱 오류, SSRF 거부, 제한 초과 |
 
-### 댓글 추출 (YouTube)
+오류 세부 코드는 `error`에 있다. 403만으로 로그인이 필요하다고 단정하지 않는다.
+자막은 2,000,000 UTF-8 바이트, 50,000 cue까지 해석한다. 잘못된 cue나 제한 초과를
+발견하면 일부 transcript를 성공으로 내보내지 않는다. 종료값은 출력 계약을 따른다.
 
-```bash
-yt-dlp --write-comments --skip-download --write-info-json \
-  --extractor-args "youtube:max_comments=20" \
-  -o "/tmp/%(id)s" "URL"
-```
+## 구현 근거
 
-## 지원 플랫폼 카테고리
+- yt-dlp 공식 `YoutubeDL.py`: Python API 옵션(`cachedir`, `skip_download`,
+  `js_runtimes`, `remote_components`)과 `extract_info(..., download=False, process=False)`.
+- yt-dlp 공식 `networking/common.py`: 메모리 응답 어댑터 `Response`.
+- W3C WebVTT: 타임스탬프, cue payload, 겹치는 cue, NOTE/STYLE/REGION 구문.
 
-### 영상
-
-| 사이트 | 메타데이터 | 자막 | 검색 | 비고 |
-|--------|----------|------|------|------|
-| YouTube | O | O (자동생성 포함) | `ytsearch` | 최고 지원 |
-| Vimeo | O | O (사이트 제공 시) | X | 학술/다큐 콘텐츠 풍부 |
-| Twitch | O (VOD/클립) | X | X | 기술 스트리밍 |
-| TikTok | O | X | X | 공개 계정만 |
-| Dailymotion | O | O | `dailymotionsearch` | |
-| Rumble | O | X | X | |
-| PeerTube | O | X | X | 탈중앙화 |
-
-### 오디오/팟캐스트
-
-| 사이트 | 메타데이터 | 검색 | 비고 |
-|--------|----------|------|------|
-| SoundCloud | O | `scsearch` | 검색까지 가능 — 최고 |
-| Apple Podcasts | O | X | RSS 기반 |
-| TuneIn | O | X | |
-| acast | O | X | 채널 단위 지원 |
-| Spreaker | O | X | |
-| Audius | O | X | 블록체인 기반 |
-
-### 한국 플랫폼
-
-| 사이트 | Extractor | 비고 |
-|--------|-----------|------|
-| Naver TV | `Naver`, `Naver:live` | |
-| Kakao | `Kakao` | |
-| SBS | `SBS`, `sbs.co.kr` | |
-| JTBC | `JTBC`, `JTBC:program` | |
-| Chzzk | `chzzk:video`, `chzzk:live` | 네이버 스트리밍 |
-| Soop (구 AfreecaTV) | `soop`, `soop:live` | |
-| Daum | `daum.net`, `daum.net:clip` | |
-| Weverse | `Weverse`, `WeverseLive` | K-팝 팬덤 |
-
-### 뉴스 VOD
-
-| 사이트 | 비고 |
-|--------|------|
-| BBC | 공개 VOD |
-| ABC (호주) | iview |
-| CBS News | |
-| NBC News | 차단 많음 |
-
-> 뉴스 사이트는 직접 URL보다 **YouTube 공식 채널 경유**가 더 안정적.
-> 예: `ytsearch:BBC News {키워드}`
-
-## yt-dlp 미지원 플랫폼 — Threads
-
-yt-dlp에는 Threads 익스트랙터가 없다 (2026.03 기준 `--list-extractors` 0건, generic 폴백도 `Unsupported URL`).
-영상 포스트는 engine Phase 0 라우트(`engine/phase0.py::_threads`)가 처리한다:
-
-```bash
-python3 -m engine "https://www.threads.com/@{handle}/post/{shortcode}"
-# → content = {"post_code": "...", "video_urls": ["https://scontent-….cdninstagram.com/…"]}
-curl -sL -o /tmp/threads.mp4 "{video_urls[0]}"        # 서명 CDN URL은 plain curl로 충분
-ffprobe -v error -show_entries stream=codec_type,codec_name /tmp/threads.mp4
-# 실측(2026-07-26): h264 720×1280 + AAC progressive 먹싱본 — DASH 합성 불필요
-```
-
-동작 원리 (수동 재현 시): 익명 GET(curl_cffi safari 지문, WAF 챌린지 없이 1회 통과) → HTML 인라인 JSON에
-`video_versions` 블록이 여러 개(관련/추천 포스트 포함, 실측 7개) → URL shortcode(`"code":"…"`)에
-**문자 거리 최근접 블록**이 본 포스트 → URL의 `\/`·유니코드 이스케이프 해제 → 첫 항목(type 101) 사용.
-
-미검증 경계 (실패 시 참고):
-
-- **서명 URL 만료**: `oe` 파라미터가 만료 시각으로 추정 — 추출 즉시 다운로드할 것. URL만 저장해두고 나중에 받는 흐름 금지.
-- **DASH-only 포스트**: 실측 샘플은 progressive였으나 일부 포스트는 `video_dashinit`/`audio_dashinit` 분리 가능성 — 다운로드 후 ffprobe로 오디오 스트림 존재 확인.
-- **캐러셀(다중 영상) 포스트**: 최근접 1블록 규칙이 부족할 수 있음 (미테스트).
-- **이미지/텍스트 포스트**: 라우트가 ok=False로 반환해 일반 체인이 본문을 처리한다.
-- **로그인 월**: 현재 익명 GET 통과. Meta가 막으면 engine이 격자→Playwright로 에스컬레이션.
-
-## 주의사항
-
-- 자동 생성 자막은 행간 중복 → 후처리 필요
-- generic extractor는 성공률 ~30% — 전용 extractor 있는 사이트 우선
-- 페이월/로그인 사이트는 대부분 실패
-- `--dump-json`이 가장 안전한 범용 명령 (다운로드 없음, 메타데이터만)
+공식 출처(2026-09-05 확인):
+[yt-dlp Python API](https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/YoutubeDL.py),
+[Response](https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/networking/common.py),
+[WebVTT](https://www.w3.org/TR/webvtt1/).

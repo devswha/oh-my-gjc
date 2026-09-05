@@ -161,3 +161,16 @@ assert safety.resolve_public('https://user:pass@8.8.8.8/')[0] == []
     expect(result.stderr).toContain("unknown platform(s): unknown-platform");
   });
 });
+
+
+describe("insane-search extraction and structured outputs", () => {
+  for (const file of ["test_search_completeness.py", "test_search_outputs.py", "test_public_captions.py"]) {
+    test(file, () => {
+      const result = spawnSync("python3", [join(engineRoot, "tests", file)], {
+        cwd: pluginRoot,
+        encoding: "utf8",
+      });
+      expect(result.status, result.stderr).toBe(0);
+    });
+  }
+});

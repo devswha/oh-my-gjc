@@ -1,0 +1,18 @@
+WEBVTT - synthetic public-caption fixture
+
+NOTE Deliberately overlapping and repeated cues; do not deduplicate.
+
+intro
+00:00.000 --> 00:02.000 align:start position:10%
+<v Narrator>Hello &amp; welcome.</v>
+
+00:01.500 --> 00:03.000
+<c.emphasis>Overlapping</c> words.
+Second line.
+
+00:01.500 --> 00:03.000
+<c.emphasis>Overlapping</c> words.
+Second line.
+
+00:03.000 --> 00:04.000
+<00:03.100>Word <00:03.600>timing
